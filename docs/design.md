@@ -148,6 +148,76 @@ Frame N execution:                        deltaTime used:
 - [ ] **Design skeletal animation system** — specify `SkeletonComponent` (bone hierarchy, parent array), clip format (.dae? .usdz? custom binary?), sampler algorithm, state transition machine (idle→walk→attack→hurt→death), and GPU skinning shader interface. This spec blocks `AnimationSystem` implementation (Step 10).
 - [ ] **Decide 3D character art source** — original characters required (no TMNT IP). Options: Blender (self-authored), Sketchfab/TurboSquid (licensed), Mixamo (free rigged humans, limited style), AI generation (Meshy.ai). Minimum needed for feel milestone: one rigged character with walk/attack/hurt animations. This decision has the highest schedule risk in the project.
 - [ ] **Write XCTest suite** — target: `BrawlerLogicTests`. Cases: entity lifecycle (create/destroy/deferred flush), AABB overlap/no-overlap, CombatSystem 3-frame hitbox window, HitStopSystem gameDt scaling (N frames to zero, then restore), event bus slot 257 drop test.
+- [ ] **Design ground hazard system (floor-is-lava)** — see section below. Resolve open questions before implementing `PatternSystem` and `HazardSystem`.
+
+## Ground Hazard System Design (floor-is-lava)
+
+Inspired by TMNT: Splintered Fate boss mechanic: boss spawns one or more "lava snakes" that crawl along the ground in looping patterns. Player takes damage on contact.
+
+### ECS mapping
+
+**New components:**
+
+`PathComponent` — defines the route a hazard entity follows. The key design question (open — see below) is how the path is stored and interpolated.
+
+```
+struct PathComponent {
+    // Option A: inline waypoints (simple, fixed max)
+    simd_float2 points[MAX_PATH_POINTS]; // world-space positions on the ground
+    int         numPoints;
+    int         currentTarget;  // index of next waypoint
+    float       speed;          // units/sec
+    bool        loop;           // wrap back to point[0] on completion
+    float       t;              // 0..1 interpolation between currentTarget-1 and currentTarget
+};
+```
+
+`HazardComponent` — marks entity as a passive area-damage source:
+```
+struct HazardComponent {
+    float damageRadius;   // collision radius in world units
+    int   damagePerHit;
+};
+```
+
+`DamageCooldownComponent` — on the **player** entity. Prevents 120 hits/sec from a hazard overlap.
+```
+struct DamageCooldownComponent {
+    float remaining; // seconds until player can take damage again
+};
+```
+
+**New systems (frame order insertion):**
+
+```
+1.   InputSystem
+1.5  EnemyAISystem
+1.7  PatternSystem    ← advances PathComponent.t, writes PositionComponent directly
+2.   PhysicsSystem    ← skips hazard entities (no VelocityComponent)
+3.   CombatSystem
+3.5  HazardSystem     ← player-hazard overlap → damage with cooldown check
+4.   HitStop ...
+```
+
+`PatternSystem` — each tick, advances `t` toward the next waypoint at `speed`. When `t` reaches 1.0, advances `currentTarget` (wraps if `loop`). Writes `PositionComponent` from linear interpolation between waypoints. No `VelocityComponent` on these entities — PhysicsSystem skips them.
+
+`HazardSystem` — for each hazard entity, checks distance to player. If within `damageRadius` and player's `DamageCooldownComponent.remaining <= 0`, deals damage and resets cooldown. Decrements all active cooldowns each tick.
+
+**Boss ownership:** Boss entity calls `defer_create()` to spawn snake entities on phase transition, `defer_destroy()` when boss dies. Snake entities carry a back-reference to the boss entity ID if needed for lifetime coupling.
+
+**Multiple segments:** A snake that appears as a long body is N entities spaced evenly along the same path (each with a different starting `t` offset — e.g., 3 segments at t=0.0, t=0.33, t=0.66). All follow the same waypoints; only `t` and `currentTarget` differ.
+
+### Open questions (resolve before implementing)
+
+1. **Path interpolation:** Linear between waypoints is simple but looks robotic at corners. Catmull-Rom spline through the waypoints gives smooth curves with no extra authoring effort. Decision affects `PatternSystem` complexity. **Recommendation: linear for V1, add spline if it looks bad.**
+
+2. **Path storage:** Inline waypoints in the component (simple, 16-point max) vs. path data referenced by ID from a shared asset table (more flexible, enables multiple snakes sharing one path). **Recommendation: inline for V1 since the boss has one or two distinct patterns.**
+
+3. **Waypoint authoring:** Hardcoded in the boss spawn logic vs. loaded from a data file (JSON). JSON is more tunable without recompiling. **Recommendation: hardcode V1, migrate to JSON when tuning begins.**
+
+4. **Snake visual representation:** Single entity with large collision radius vs. multiple segment entities for a "body" effect. The segment approach looks better but multiplies entity count. **Recommendation: single entity with radius for ECS milestone; add segments for feel milestone.**
+
+5. **Damage cooldown duration:** Long enough that the player can escape (≥0.5s), short enough to feel dangerous. **Recommendation: 0.75s — tune during feel milestone.**
 
 ## Success Criteria
 
