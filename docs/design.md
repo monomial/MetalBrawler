@@ -148,39 +148,40 @@ Frame N execution:                        deltaTime used:
 - [ ] **Design skeletal animation system** — specify `SkeletonComponent` (bone hierarchy, parent array), clip format (.dae? .usdz? custom binary?), sampler algorithm, state transition machine (idle→walk→attack→hurt→death), and GPU skinning shader interface. This spec blocks `AnimationSystem` implementation (Step 10).
 - [ ] **Decide 3D character art source** — original characters required (no TMNT IP). Options: Blender (self-authored), Sketchfab/TurboSquid (licensed), Mixamo (free rigged humans, limited style), AI generation (Meshy.ai). Minimum needed for feel milestone: one rigged character with walk/attack/hurt animations. This decision has the highest schedule risk in the project.
 - [ ] **Write XCTest suite** — target: `BrawlerLogicTests`. Cases: entity lifecycle (create/destroy/deferred flush), AABB overlap/no-overlap, CombatSystem 3-frame hitbox window, HitStopSystem gameDt scaling (N frames to zero, then restore), event bus slot 257 drop test.
-- [ ] **Design ground hazard system (floor-is-lava)** — see section below. Resolve open questions before implementing `PatternSystem` and `HazardSystem`.
+- [ ] **Design ground hazard system (floor-is-lava)** — see section below. Resolve open questions before implementing `WallBounceSystem` and `HazardSystem`.
 
 ## Ground Hazard System Design (floor-is-lava)
 
-Inspired by TMNT: Splintered Fate boss mechanic: boss spawns one or more "lava snakes" that crawl along the ground in looping patterns. Player takes damage on contact.
+Inspired by TMNT: Splintered Fate boss mechanic. During a boss phase, the boss spawns one or more lava snakes that fan out from the boss's current world position, bounce off arena walls, and loop back to the boss — repeating indefinitely. Two snakes travel in opposite directions. Player takes damage on contact.
+
+### How the loop works
+
+The snake is a billiard ball. It spawns at the boss's position, travels in a straight line at constant speed, reflects off walls (angle of incidence = angle of reflection), and the boss chooses a launch angle that produces a **closed loop** — the reflections naturally bring the snake back to the origin. The loop is then continuous.
+
+This means the ECS does not need any "navigate back to boss" logic. The loop closure is a property of the launch angle and the room's aspect ratio, calculated once at spawn time by the boss. The ECS just does wall bouncing.
+
+Two snakes are launched at opposite angles (θ and θ+180°), so they trace mirror-image paths.
 
 ### ECS mapping
 
 **New components:**
 
-`PathComponent` — defines the route a hazard entity follows. The key design question (open — see below) is how the path is stored and interpolated.
-
+`WallBounceComponent` — marks an entity for arena wall reflection. No data needed beyond the tag; arena bounds come from a shared room constant.
 ```
-struct PathComponent {
-    // Option A: inline waypoints (simple, fixed max)
-    simd_float2 points[MAX_PATH_POINTS]; // world-space positions on the ground
-    int         numPoints;
-    int         currentTarget;  // index of next waypoint
-    float       speed;          // units/sec
-    bool        loop;           // wrap back to point[0] on completion
-    float       t;              // 0..1 interpolation between currentTarget-1 and currentTarget
+struct WallBounceComponent {
+    bool active; // tag; presence is the signal
 };
 ```
 
-`HazardComponent` — marks entity as a passive area-damage source:
+`HazardComponent` — marks entity as a passive area-damage source (no attack input required):
 ```
 struct HazardComponent {
-    float damageRadius;   // collision radius in world units
+    float damageRadius; // collision radius in world units
     int   damagePerHit;
 };
 ```
 
-`DamageCooldownComponent` — on the **player** entity. Prevents 120 hits/sec from a hazard overlap.
+`DamageCooldownComponent` — lives on the **player** entity. Prevents 120 hits/sec when overlapping a hazard.
 ```
 struct DamageCooldownComponent {
     float remaining; // seconds until player can take damage again
@@ -192,32 +193,53 @@ struct DamageCooldownComponent {
 ```
 1.   InputSystem
 1.5  EnemyAISystem
-1.7  PatternSystem    ← advances PathComponent.t, writes PositionComponent directly
-2.   PhysicsSystem    ← skips hazard entities (no VelocityComponent)
+2.   PhysicsSystem       ← integrates snake velocity into position (already built)
+2.5  WallBounceSystem    ← reflects VelocityComponent at arena boundary
 3.   CombatSystem
-3.5  HazardSystem     ← player-hazard overlap → damage with cooldown check
+3.5  HazardSystem        ← player-hazard proximity → damage + cooldown
 4.   HitStop ...
 ```
 
-`PatternSystem` — each tick, advances `t` toward the next waypoint at `speed`. When `t` reaches 1.0, advances `currentTarget` (wraps if `loop`). Writes `PositionComponent` from linear interpolation between waypoints. No `VelocityComponent` on these entities — PhysicsSystem skips them.
+`WallBounceSystem` — runs after PhysicsSystem. For each entity with `WallBounceComponent`, checks if position has crossed the arena boundary. If so, clamps position to the boundary and negates the appropriate velocity axis (vx for left/right walls, vy for top/bottom walls).
 
-`HazardSystem` — for each hazard entity, checks distance to player. If within `damageRadius` and player's `DamageCooldownComponent.remaining <= 0`, deals damage and resets cooldown. Decrements all active cooldowns each tick.
+`HazardSystem` — for each entity with `HazardComponent`, computes distance to the player. If within `damageRadius` and the player's `DamageCooldownComponent.remaining <= 0`, deals damage and resets the cooldown timer. Decrements all cooldown timers each tick regardless.
 
-**Boss ownership:** Boss entity calls `defer_create()` to spawn snake entities on phase transition, `defer_destroy()` when boss dies. Snake entities carry a back-reference to the boss entity ID if needed for lifetime coupling.
+**No `PatternSystem` or `PathComponent` needed** — snake motion is entirely handled by the existing `VelocityComponent` + `PhysicsSystem` + the new `WallBounceSystem`.
 
-**Multiple segments:** A snake that appears as a long body is N entities spaced evenly along the same path (each with a different starting `t` offset — e.g., 3 segments at t=0.0, t=0.33, t=0.66). All follow the same waypoints; only `t` and `currentTarget` differ.
+**Boss spawn logic (pseudocode):**
+```
+// Boss activates the phase — spawn two snakes at opposite angles.
+float launchAngle = computeClosedLoopAngle(roomWidth, roomHeight);
+EntityID snake1 = world.defer_create();
+world.add_component<PositionComponent>(snake1) = bossPos;
+world.add_component<VelocityComponent>(snake1) = { cos(launchAngle) * kSnakeSpeed,
+                                                    sin(launchAngle) * kSnakeSpeed };
+world.add_component<WallBounceComponent>(snake1).active = true;
+world.add_component<HazardComponent>(snake1) = { kSnakeRadius, kSnakeDamage };
+
+EntityID snake2 = world.defer_create();
+world.add_component<PositionComponent>(snake2) = bossPos;
+world.add_component<VelocityComponent>(snake2) = { cos(launchAngle + M_PI) * kSnakeSpeed,
+                                                    sin(launchAngle + M_PI) * kSnakeSpeed };
+world.add_component<WallBounceComponent>(snake2).active = true;
+world.add_component<HazardComponent>(snake2)  = { kSnakeRadius, kSnakeDamage };
+```
+
+**Boss death:** Boss calls `defer_destroy(snake1)` and `defer_destroy(snake2)`. Snake entities store a `bossEntityID` if lifetime coupling is needed (so a system can clean them up automatically).
+
+**Multiple segments (visual body):** N segment entities launched at the same angle but with a slight position offset behind the head (e.g., spaced 20 units apart along the reverse direction). All carry `WallBounceComponent` and `HazardComponent`. All bounce independently — they diverge slightly over time, which is fine visually and keeps the ECS simple.
 
 ### Open questions (resolve before implementing)
 
-1. **Path interpolation:** Linear between waypoints is simple but looks robotic at corners. Catmull-Rom spline through the waypoints gives smooth curves with no extra authoring effort. Decision affects `PatternSystem` complexity. **Recommendation: linear for V1, add spline if it looks bad.**
+1. **Closed-loop angle calculation:** For a rectangular room of width W and height H, the angles that produce closed billiard loops are rational multiples of arctan(H/W). This needs a utility function `computeClosedLoopAngle(W, H)` — or the boss can use a hardcoded angle tuned to the specific room size. **Recommendation: hardcode one angle per boss attack pattern; tune visually.**
 
-2. **Path storage:** Inline waypoints in the component (simple, 16-point max) vs. path data referenced by ID from a shared asset table (more flexible, enables multiple snakes sharing one path). **Recommendation: inline for V1 since the boss has one or two distinct patterns.**
+2. **What if the boss moves?** If the boss relocates before the snake loops back, the snake no longer returns to the boss's position — it returns to the original spawn point. This may look fine (the snake is looping in space, not attached to the boss). Decide whether snakes should track the boss's current position or the spawn position. **Recommendation: snap to spawn position for V1; attach to boss only if it looks wrong.**
 
-3. **Waypoint authoring:** Hardcoded in the boss spawn logic vs. loaded from a data file (JSON). JSON is more tunable without recompiling. **Recommendation: hardcode V1, migrate to JSON when tuning begins.**
+3. **Damage cooldown duration:** Long enough that the player can escape (≥0.5s), short enough to feel dangerous. **Recommendation: 0.75s — tune during feel milestone.**
 
-4. **Snake visual representation:** Single entity with large collision radius vs. multiple segment entities for a "body" effect. The segment approach looks better but multiplies entity count. **Recommendation: single entity with radius for ECS milestone; add segments for feel milestone.**
+4. **Snake visual representation:** Single entity (moving circle) vs. multiple segment entities for a trail effect. Segments look better but each is an independent bouncing entity. **Recommendation: single entity for ECS milestone; add segments for feel milestone.**
 
-5. **Damage cooldown duration:** Long enough that the player can escape (≥0.5s), short enough to feel dangerous. **Recommendation: 0.75s — tune during feel milestone.**
+5. **Wall bounce precision:** At high speed, the snake might overshoot a wall by more than one tick's worth of travel. Need to compute the correct reflected position, not just clamp and negate. `WallBounceSystem` should compute `overshoot = position - boundary` and set `position = boundary - overshoot` after reflecting. **This is required for correctness — not optional.**
 
 ## Success Criteria
 
