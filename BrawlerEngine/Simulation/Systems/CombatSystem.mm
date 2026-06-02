@@ -1,6 +1,7 @@
 #include "CombatSystem.h"
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
+#include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
 static constexpr float kAttackRange  = 80.0f; // units — larger than EnemyAI stop radius
@@ -49,5 +50,6 @@ void CombatSystem_update(World& world, float gameDt) {
 
     if (hitAnything) {
         world.trigger_hit_stop(kHitStopTicks);
+        ScreenShakeSystem_trigger(world, 18.f); // 18 world-unit shake magnitude
     }
 }

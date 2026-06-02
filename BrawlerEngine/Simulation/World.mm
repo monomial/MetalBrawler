@@ -3,6 +3,7 @@
 #include "Systems/EnemyAISystem.h"
 #include "Systems/PhysicsSystem.h"
 #include "Systems/CombatSystem.h"
+#include "Systems/ScreenShakeSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -66,9 +67,10 @@ void World::tick(float gameDt) {
     CombatSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
     // 5. AnimationSystem — TODO
-    // 6. AudioSystem     — TODO (T7)
+    // 6. AudioSystem     — TODO
     // 7. HapticsSystem   — TODO
-    // 8. ScreenShakeSystem — TODO
+    // 8. ScreenShakeSystem (uses physicalDt — runs even during HitStop)
+    ScreenShakeSystem_update(*this, gameDt);
     // 9. flush
     flush();
     // 10. RenderSystem — called by the render loop after update() returns

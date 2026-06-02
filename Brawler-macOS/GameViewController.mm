@@ -2,6 +2,7 @@
 #import <MetalKit/MetalKit.h>
 #import <simd/simd.h>
 #include "Simulation/World.h"
+#include "Simulation/Systems/ScreenShakeSystem.h"
 #include "Platform/InputState.h"
 
 // ---------------------------------------------------------------------------
@@ -170,6 +171,11 @@ static simd_float4x4 make_model(float x, float y, float size) {
             break;
         }
     }
+
+    // Apply screen shake offset to camera target.
+    simd_float2 shake = ScreenShakeSystem_offset(_world);
+    target.x += shake.x;
+    target.y += shake.y;
 
     // Z-up world: camera sits above-and-behind the target at kCamPitch degrees.
     simd_float3 eye = {
