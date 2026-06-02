@@ -1,5 +1,6 @@
 #include "World.h"
 #include "Systems/InputSystem.h"
+#include "Systems/EnemyAISystem.h"
 #include "Systems/PhysicsSystem.h"
 #include <cassert>
 
@@ -56,6 +57,8 @@ void World::tick(float gameDt) {
 
     // 1. InputSystem — reads current_input(), writes player velocity
     InputSystem_update(*this);
+    // 1.5. EnemyAISystem — steers enemies toward player
+    EnemyAISystem_update(*this, gameDt);
     // 2. PhysicsSystem
     PhysicsSystem_update(*this, gameDt);
     // 3. CombatSystem  — TODO

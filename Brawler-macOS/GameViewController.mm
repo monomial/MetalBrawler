@@ -27,6 +27,13 @@
         _world.add_component<VelocityComponent>(player)        = {0, 0, 0};
         _world.add_component<FactionComponent>(player).type    = FactionComponent::Player;
         _world.add_component<HealthComponent>(player)          = {10, 10};
+
+        // Spawn one enemy offset from the player.
+        EntityID enemy = _world.defer_create();
+        _world.add_component<PositionComponent>(enemy)      = {400, 0, 0};
+        _world.add_component<VelocityComponent>(enemy)      = {0, 0, 0};
+        _world.add_component<FactionComponent>(enemy).type  = FactionComponent::Enemy;
+        _world.add_component<HealthComponent>(enemy)        = {3, 3};
     }
     return self;
 }
