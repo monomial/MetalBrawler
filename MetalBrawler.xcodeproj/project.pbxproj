@@ -77,6 +77,7 @@
 		E108258800EF1B01E5CEF6F7 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = C35BBBB175DED3F3EEEA8394 /* main.mm */; };
 		E554311ECDBAD6D582FBD4A2 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C1CF591F48BAC2512642C39 /* Metal.framework */; };
 		E8B124E0D81B7D76326033C2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E13413F89AC01BF3699C455 /* Cocoa.framework */; };
+		EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */; };
 		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
 		F326708B5F0FB965A5BE1833 /* InputSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF5371A1FA10DE17872A35 /* InputSystem.mm */; };
 		F5CF922E3DFE3B3F5F8E1DC6 /* World.mm in Sources */ = {isa = PBXBuildFile; fileRef = B8A5DCEC930B03043555DCAE /* World.mm */; };
@@ -91,6 +92,7 @@
 		0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = System/Library/Frameworks/CoreHaptics.framework; sourceTree = SDKROOT; };
 		189A9141A8E1CF5522C84640 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EventBusTests.mm; sourceTree = "<group>"; };
 		2377186BA6E74F7009AFB214 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		263059B22BA872FC5E39D9DC /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		286747CEB9E34C0D5FBA2499 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
@@ -102,6 +104,7 @@
 		6E13413F89AC01BF3699C455 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		715BB2286A0CABACE2D77E86 /* InputSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputSystem.h; sourceTree = "<group>"; };
 		72C9832DE95257E6D5A99C41 /* PhysicsSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PhysicsSystem.h; sourceTree = "<group>"; };
+		72EF48FFC9B95A1916C4568A /* EventBus.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EventBus.h; sourceTree = "<group>"; };
 		73B997F413EE7874F18915C7 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
 		74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ScreenShakeSystem.mm; sourceTree = "<group>"; };
 		784575DC4C4D5FF355458A61 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
@@ -331,6 +334,7 @@
 			children = (
 				9B56D567E7D4F96112FC6281 /* CombatTests.mm */,
 				9872E2A72357EB6205023978 /* EnemyAITests.mm */,
+				2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */,
 				F8EA69DF4FB6B3FAF54FA58D /* InputTests.mm */,
 				082F14CDBDD078DD1EFF688D /* PhysicsTests.mm */,
 				DCDB3F619B92B9629E4A3149 /* WorldTests.mm */,
@@ -350,6 +354,7 @@
 			isa = PBXGroup;
 			children = (
 				68EFA4044C94C89BE86E76FE /* Components.h */,
+				72EF48FFC9B95A1916C4568A /* EventBus.h */,
 				80CCA7F1EB204F0A878A068A /* World.h */,
 				B8A5DCEC930B03043555DCAE /* World.mm */,
 				0310E196BF0510628246446A /* Systems */,
@@ -529,6 +534,7 @@
 				1A24493F2CEA9F3111464437 /* CombatTests.mm in Sources */,
 				1D86F9EC26F02B9310D9F094 /* EnemyAISystem.mm in Sources */,
 				AC53FC267E4DAEF5AA7CBDEE /* EnemyAITests.mm in Sources */,
+				EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */,
 				B59740CC5C1BA64D43F3CBAB /* InputSystem.mm in Sources */,
 				17724932FEAA1A3A67BB608C /* InputTests.mm in Sources */,
 				2471F779BC0C4BA0956ED4B3 /* PhysicsSystem.mm in Sources */,

@@ -4,6 +4,7 @@
 #include <cassert>
 #include "Components.h"
 #include "Platform/InputState.h"
+#include "EventBus.h"
 
 using EntityID = uint32_t;
 static constexpr EntityID kInvalidEntity = UINT32_MAX;
@@ -73,6 +74,9 @@ public:
 
     uint32_t entity_count() const { return _nextID; }
 
+    // Per-frame event bus — cleared at top of each tick, readable by all systems.
+    EventBus& events() { return _events; }
+
     // Direct pool access for systems that iterate all entities with a component.
     ComponentStorage<PositionComponent>& positions()   { return _positions; }
     ComponentStorage<VelocityComponent>& velocities()  { return _velocities; }
@@ -92,6 +96,7 @@ private:
     uint32_t _nextID;
     uint32_t _deferredDestroyCount;
     EntityID _deferredDestroy[256];
+    EventBus   _events;         // cleared each tick
     float      _accumulator;    // leftover time between fixed ticks
     int        _hitStopTicks;   // remaining ticks at gameDt=0
     InputState _currentInput;   // set by platform each render frame

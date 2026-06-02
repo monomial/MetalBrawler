@@ -54,6 +54,8 @@ void World::flush() {
 }
 
 void World::tick(float gameDt) {
+    _events.clear(); // fresh slate each tick
+
     // Systems run in declared order (see docs/ecs-vocabulary.md).
     // gameDt is 0 during HitStop — systems that use it freeze automatically.
 
