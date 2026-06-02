@@ -5,6 +5,7 @@
 #include "Platform/InputState.h"
 #import "Renderer/BrawlerRenderer.h"
 #import "Haptics/HapticsEngine.h"
+#import "Audio/AudioEngine.h"
 
 // ---------------------------------------------------------------------------
 // BrawlerDelegate — owns World, drives update + render via BrawlerRenderer
@@ -20,6 +21,7 @@
     id<MTLCommandQueue>  _commandQueue;
     BrawlerRenderer     *_renderer;
     HapticsEngine       *_haptics;
+    AudioEngine         *_audio;
     dispatch_semaphore_t _frameSemaphore;
 }
 
@@ -30,9 +32,11 @@
     _commandQueue   = [device newCommandQueue];
     _lastTime       = CACurrentMediaTime();
     _frameSemaphore = dispatch_semaphore_create(3);
-    _renderer       = [[BrawlerRenderer alloc] initWithDevice:device pixelFormat:pfmt];
-    _haptics        = [[HapticsEngine alloc] init];
+    _renderer = [[BrawlerRenderer alloc] initWithDevice:device pixelFormat:pfmt];
+    _haptics  = [[HapticsEngine alloc] init];
     [_haptics startupInit];
+    _audio    = [[AudioEngine alloc] init];
+    [_audio startupInit];
 
     EntityID player = _world.defer_create();
     _world.add_component<PlayerTagComponent>(player).active = true;
@@ -65,8 +69,9 @@
 
     _world.update(physicalDt, physicalDt);
 
-    // Haptics on hit contact.
+    // Sound + haptics on hit contact.
     _world.events().for_each(EventType::HitContact, [self](const Event&) {
+        [_audio  playHitSound];
         [_haptics playHitHaptic];
     });
 
