@@ -43,13 +43,17 @@ void CombatSystem_update(World& world, float gameDt) {
         hp.current -= kAttackDamage;
         hitAnything = true;
 
+        world.events().emit_hit_contact(playerID, id);
+        world.events().emit_damage(id, kAttackDamage);
+
         if (hp.current <= 0) {
+            world.events().emit_died(id);
             world.defer_destroy(id);
         }
     }
 
     if (hitAnything) {
         world.trigger_hit_stop(kHitStopTicks);
-        ScreenShakeSystem_trigger(world, 18.f); // 18 world-unit shake magnitude
+        ScreenShakeSystem_trigger(world, 18.f);
     }
 }
