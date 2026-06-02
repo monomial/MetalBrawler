@@ -53,6 +53,9 @@ public:
 
     void update(float physicalDt, float gameDt);
 
+    // Trigger N physics ticks at gameDt=0 (combat freeze without pausing render/audio).
+    void trigger_hit_stop(int ticks);
+
     // Deferred lifecycle — buffered and applied at end of frame, after all systems run.
     EntityID defer_create();
     void     defer_destroy(EntityID id);
@@ -78,9 +81,13 @@ private:
     // Specializations are defined in World.mm.
     template<typename T> ComponentStorage<T>& _pool();
 
+    void tick(float gameDt); // one fixed-timestep physics step
+
     uint32_t _nextID;
     uint32_t _deferredDestroyCount;
     EntityID _deferredDestroy[256];
+    float    _accumulator;   // leftover time between fixed ticks
+    int      _hitStopTicks;  // remaining ticks at gameDt=0
 
     ComponentStorage<PositionComponent> _positions;
     ComponentStorage<VelocityComponent> _velocities;

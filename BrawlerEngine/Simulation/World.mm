@@ -1,5 +1,8 @@
 #include "World.h"
+#include "Systems/PhysicsSystem.h"
 #include <cassert>
+
+static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
 
 // _pool<T>() specializations — each returns the matching storage member.
 // To add a new component type: add the member to World.h, then add a line here.
@@ -13,6 +16,8 @@ template<> ComponentStorage<FactionComponent>&  World::_pool() { return _faction
 World::World()
     : _nextID(0)
     , _deferredDestroyCount(0)
+    , _accumulator(0.0f)
+    , _hitStopTicks(0)
 {}
 
 World::~World() {}
@@ -22,8 +27,12 @@ EntityID World::defer_create() {
 }
 
 void World::defer_destroy(EntityID id) {
-    assert(_deferredDestroyCount < 256 && "deferred destroy buffer overflow — increase limit or flush more often");
+    assert(_deferredDestroyCount < 256 && "deferred destroy buffer overflow");
     _deferredDestroy[_deferredDestroyCount++] = id;
+}
+
+void World::trigger_hit_stop(int ticks) {
+    if (ticks > _hitStopTicks) _hitStopTicks = ticks;
 }
 
 void World::flush() {
@@ -37,20 +46,38 @@ void World::flush() {
     _deferredDestroyCount = 0;
 }
 
-void World::update(float physicalDt, float gameDt) {
-    // Frame execution order (see docs/ecs-vocabulary.md):
-    //  1. InputSystem       (physicalDt) — read InputState, write velocity/intent
-    //  2. PhysicsSystem     (gameDt)     — integrate velocity into position
-    //  3. CombatSystem      (gameDt)     — hitboxes, damage events, death events
-    //  4. HitStopSystem     (physical)   — scale gameDt to 0 for N frames on hit
-    //  5. AnimationSystem   (gameDt)     — bone matrices (already scaled)
-    //  6. AudioSystem       (physicalDt) — sound triggers (never freezes)
-    //  7. HapticsSystem     (physicalDt) — CHHapticEngine patterns
-    //  8. ScreenShakeSystem (physicalDt) — camera offset exponential decay
-    //  9. flush             —             deferred create/destroy
-    // 10. RenderSystem      (physicalDt) — mesh draw, present
+void World::tick(float gameDt) {
+    // Systems run in declared order (see docs/ecs-vocabulary.md).
+    // gameDt is 0 during HitStop — systems that use it freeze automatically.
 
-    (void)physicalDt;
-    (void)gameDt;
+    // 1. InputSystem  — TODO (T1)
+    // 2. PhysicsSystem
+    PhysicsSystem_update(*this, gameDt);
+    // 3. CombatSystem  — TODO
+    // 4. HitStopSystem — managed by _hitStopTicks (trigger_hit_stop)
+    // 5. AnimationSystem — TODO
+    // 6. AudioSystem     — TODO (T7)
+    // 7. HapticsSystem   — TODO
+    // 8. ScreenShakeSystem — TODO
+    // 9. flush
     flush();
+    // 10. RenderSystem — called by the render loop after update() returns
+}
+
+void World::update(float physicalDt, float /*gameDt*/) {
+    // Accumulate wall-clock time and drain in fixed 120Hz steps.
+    // Prevents hitbox tunneling and makes physics deterministic.
+    _accumulator += physicalDt;
+    while (_accumulator >= kFixedDt) {
+        _accumulator -= kFixedDt;
+
+        // HitStop: consume one frozen tick, then resume.
+        float tickGameDt = kFixedDt;
+        if (_hitStopTicks > 0) {
+            tickGameDt = 0.0f;
+            --_hitStopTicks;
+        }
+
+        tick(tickGameDt);
+    }
 }
