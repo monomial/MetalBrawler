@@ -82,7 +82,8 @@ public:
     ComponentStorage<VelocityComponent>& velocities()  { return _velocities; }
     ComponentStorage<HealthComponent>&   healths()     { return _healths; }
     ComponentStorage<FactionComponent>&  factions()    { return _factions; }
-    ComponentStorage<PlayerTagComponent>& player_tags(){ return _playerTags; }
+    ComponentStorage<PlayerTagComponent>&      player_tags()      { return _playerTags; }
+    ComponentStorage<DamageCooldownComponent>& damage_cooldowns() { return _damageCooldowns; }
 
 private:
     void flush();
@@ -105,7 +106,8 @@ private:
     ComponentStorage<VelocityComponent>  _velocities;
     ComponentStorage<HealthComponent>    _healths;
     ComponentStorage<FactionComponent>   _factions;
-    ComponentStorage<PlayerTagComponent> _playerTags;
+    ComponentStorage<PlayerTagComponent>      _playerTags;
+    ComponentStorage<DamageCooldownComponent> _damageCooldowns;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -127,4 +129,5 @@ template<> ComponentStorage<PositionComponent>&  World::_pool<PositionComponent>
 template<> ComponentStorage<VelocityComponent>&  World::_pool<VelocityComponent>();
 template<> ComponentStorage<HealthComponent>&    World::_pool<HealthComponent>();
 template<> ComponentStorage<FactionComponent>&   World::_pool<FactionComponent>();
-template<> ComponentStorage<PlayerTagComponent>& World::_pool<PlayerTagComponent>();
+template<> ComponentStorage<PlayerTagComponent>&      World::_pool<PlayerTagComponent>();
+template<> ComponentStorage<DamageCooldownComponent>& World::_pool<DamageCooldownComponent>();

@@ -32,3 +32,9 @@ struct FactionComponent {
 struct PlayerTagComponent {
     bool active; // padding; presence in storage is the real signal
 };
+
+// Prevents rapid-fire damage from area/contact sources.
+// HazardSystem and ContactDamageSystem skip the entity while remaining > 0.
+struct DamageCooldownComponent {
+    float remaining; // seconds until next hit is allowed
+};

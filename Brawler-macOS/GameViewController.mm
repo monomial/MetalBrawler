@@ -6,6 +6,7 @@
 #import "Renderer/BrawlerRenderer.h"
 #import "Haptics/HapticsEngine.h"
 #import "Audio/AudioEngine.h"
+#include "Simulation/Systems/RespawnSystem.h"
 
 // ---------------------------------------------------------------------------
 // BrawlerDelegate — owns World, drives update + render via BrawlerRenderer
@@ -23,6 +24,8 @@
     HapticsEngine       *_haptics;
     AudioEngine         *_audio;
     dispatch_semaphore_t _frameSemaphore;
+    BOOL                 _gameOver;
+    float                _gameOverTimer;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt {
@@ -38,23 +41,35 @@
     _audio    = [[AudioEngine alloc] init];
     [_audio startupInit];
 
-    EntityID player = _world.defer_create();
-    _world.add_component<PlayerTagComponent>(player).active = true;
-    _world.add_component<PositionComponent>(player)         = {0, -100, 0};
-    _world.add_component<VelocityComponent>(player)         = {0, 0, 0};
-    _world.add_component<FactionComponent>(player).type     = FactionComponent::Player;
-    _world.add_component<HealthComponent>(player)           = {10, 10};
-
-    EntityID enemy = _world.defer_create();
-    _world.add_component<PositionComponent>(enemy)          = {200, 300, 0};
-    _world.add_component<VelocityComponent>(enemy)          = {0, 0, 0};
-    _world.add_component<FactionComponent>(enemy).type      = FactionComponent::Enemy;
-    _world.add_component<HealthComponent>(enemy)            = {3, 3};
+    [self _spawnEntities];
 
     return self;
 }
 
+- (void)_spawnEntities {
+    EntityID player = _world.defer_create();
+    _world.add_component<PlayerTagComponent>(player).active   = true;
+    _world.add_component<PositionComponent>(player)           = {0, -100, 0};
+    _world.add_component<VelocityComponent>(player)           = {0, 0, 0};
+    _world.add_component<FactionComponent>(player).type       = FactionComponent::Player;
+    _world.add_component<HealthComponent>(player)             = {10, 10};
+    _world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+
+    EntityID enemy = _world.defer_create();
+    _world.add_component<PositionComponent>(enemy)            = {200, 300, 0};
+    _world.add_component<VelocityComponent>(enemy)            = {0, 0, 0};
+    _world.add_component<FactionComponent>(enemy).type        = FactionComponent::Enemy;
+    _world.add_component<HealthComponent>(enemy)              = {3, 3};
+}
+
 - (void)setInputState:(InputState)state { _world.set_input(state); }
+
+- (void)_restart {
+    _world   = World();
+    _gameOver = NO;
+    [self _spawnEntities];
+    RespawnSystem_reset();
+}
 
 - (void)mtkView:(MTKView *)view drawableSizeWillChange:(CGSize)size {
     [_renderer updateDrawableSize:size];
@@ -67,13 +82,27 @@
     float physicalDt = fminf((float)(now - _lastTime), 0.1f);
     _lastTime = now;
 
-    _world.update(physicalDt, physicalDt);
+    if (!_gameOver) {
+        _world.update(physicalDt, physicalDt);
 
-    // Sound + haptics on hit contact.
-    _world.events().for_each(EventType::HitContact, [self](const Event&) {
-        [_audio  playHitSound];
-        [_haptics playHitHaptic];
-    });
+        _world.events().for_each(EventType::HitContact, [self](const Event&) {
+            [_audio  playHitSound];
+            [_haptics playHitHaptic];
+        });
+
+        // Detect player death → game over.
+        bool playerDied = false;
+        _world.events().for_each(EventType::EntityDied, [&](const Event& e) {
+            if (_world.player_tags().present(e.entityDied.entityID)) playerDied = true;
+        });
+        if (playerDied) {
+            _gameOver      = YES;
+            _gameOverTimer = 3.0f; // restart after 3 seconds
+        }
+    } else {
+        _gameOverTimer -= physicalDt;
+        if (_gameOverTimer <= 0.f) [self _restart];
+    }
 
     id<MTLCommandBuffer> cmd = [_commandQueue commandBuffer];
     __block dispatch_semaphore_t sem = _frameSemaphore;
