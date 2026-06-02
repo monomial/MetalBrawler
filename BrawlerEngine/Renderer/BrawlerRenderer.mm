@@ -1,6 +1,7 @@
 #import "BrawlerRenderer.h"
 #import <simd/simd.h>
 #include "Simulation/World.h"
+#include "Simulation/RoomBounds.h"
 
 typedef struct { simd_float4x4 mvp; simd_float4 color; } DrawUniforms;
 
@@ -42,6 +43,18 @@ static simd_float4x4 make_model(float x, float y, float s) {
     m.columns[0].x = s; m.columns[1].y = s; m.columns[2].z = s;
     m.columns[3] = (simd_float4){x,y,0.f,1.f};
     return m;
+}
+
+// Non-uniform scale — used for floor quad and wall strips.
+static simd_float4x4 make_model_rect(float x, float y, float z, float w, float h) {
+    simd_float4x4 m = matrix_identity_float4x4;
+    m.columns[0].x = w; m.columns[1].y = h; m.columns[2].z = 1.f;
+    m.columns[3] = (simd_float4){x, y, z, 1.f};
+    return m;
+}
+
+static float clampf(float v, float lo, float hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
 }
 
 @implementation BrawlerRenderer {
@@ -94,8 +107,8 @@ static simd_float4x4 make_model(float x, float y, float s) {
     MTLRenderPassDescriptor *rpd = view.currentRenderPassDescriptor;
     if (!rpd || !view.currentDrawable) return;
 
-    // Camera follows player (Z-up world).
-    simd_float3 target = {0,0,0};
+    // Camera follows player, clamped to room so void is never visible.
+    simd_float3 target = {kCameraDefaultTargetX, kCameraDefaultTargetY, 0};
     for (EntityID id = 0; id < world->entity_count(); ++id) {
         if (world->player_tags().present(id) && world->has_component<PositionComponent>(id)) {
             auto& p = world->get_component<PositionComponent>(id);
@@ -103,6 +116,13 @@ static simd_float4x4 make_model(float x, float y, float s) {
             break;
         }
     }
+    // Clamp camera target so the view frustum stays within room bounds.
+    // Padding ≈ half visible ground width at the camera's pitch & FOV.
+    static const float kCamPadX = 320.f;
+    static const float kCamPadY = 220.f;
+    target.x = clampf(target.x, kRoomMinX + kCamPadX, kRoomMaxX - kCamPadX);
+    target.y = clampf(target.y, kRoomMinY + kCamPadY, kRoomMaxY - kCamPadY);
+
     simd_float3 eye = { target.x,
                         target.y - kCamDist * cosf(kCamPitch),
                         kCamDist  * sinf(kCamPitch) };
@@ -116,6 +136,33 @@ static simd_float4x4 make_model(float x, float y, float s) {
     [enc setRenderPipelineState:_pipeline];
     [enc setDepthStencilState:_depthState];
     [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+
+    // Floor quad — drawn first at Z=-1 so entities render on top.
+    {
+        DrawUniforms u;
+        u.mvp   = simd_mul(vp, make_model_rect(kRoomCenterX, kRoomCenterY, -1.f,
+                                               kRoomWidth, kRoomHeight));
+        u.color = (simd_float4){0.13f, 0.13f, 0.18f, 1.f}; // slightly lighter than clear
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+    }
+
+    // Wall outlines — thin quads along each boundary edge, at Z=0.
+    static const simd_float4 kWallColor = {0.30f, 0.30f, 0.40f, 1.f};
+    static const float kWallThick = 20.f;
+    struct { float cx,cy,w,h; } walls[4] = {
+        {kRoomCenterX, kRoomMinY + kWallThick*0.5f, kRoomWidth, kWallThick}, // bottom
+        {kRoomCenterX, kRoomMaxY - kWallThick*0.5f, kRoomWidth, kWallThick}, // top
+        {kRoomMinX + kWallThick*0.5f, kRoomCenterY, kWallThick, kRoomHeight}, // left
+        {kRoomMaxX - kWallThick*0.5f, kRoomCenterY, kWallThick, kRoomHeight}, // right
+    };
+    for (auto& w : walls) {
+        DrawUniforms u;
+        u.mvp   = simd_mul(vp, make_model_rect(w.cx, w.cy, 0.f, w.w, w.h));
+        u.color = kWallColor;
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+    }
 
     for (EntityID eid = 0; eid < world->entity_count(); ++eid) {
         if (!world->has_component<PositionComponent>(eid)) continue;

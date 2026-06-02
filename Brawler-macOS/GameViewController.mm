@@ -40,13 +40,13 @@
 
     EntityID player = _world.defer_create();
     _world.add_component<PlayerTagComponent>(player).active = true;
-    _world.add_component<PositionComponent>(player)         = {0, 0, 0};
+    _world.add_component<PositionComponent>(player)         = {0, -100, 0};
     _world.add_component<VelocityComponent>(player)         = {0, 0, 0};
     _world.add_component<FactionComponent>(player).type     = FactionComponent::Player;
     _world.add_component<HealthComponent>(player)           = {10, 10};
 
     EntityID enemy = _world.defer_create();
-    _world.add_component<PositionComponent>(enemy)          = {400, 0, 0};
+    _world.add_component<PositionComponent>(enemy)          = {200, 300, 0};
     _world.add_component<VelocityComponent>(enemy)          = {0, 0, 0};
     _world.add_component<FactionComponent>(enemy).type      = FactionComponent::Enemy;
     _world.add_component<HealthComponent>(enemy)            = {3, 3};

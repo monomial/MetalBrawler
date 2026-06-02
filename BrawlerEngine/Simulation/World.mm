@@ -3,6 +3,7 @@
 #include "Systems/EnemyAISystem.h"
 #include "Systems/PhysicsSystem.h"
 #include "Systems/CombatSystem.h"
+#include "Systems/WallCollisionSystem.h"
 #include "Systems/ScreenShakeSystem.h"
 #include <cassert>
 
@@ -65,6 +66,8 @@ void World::tick(float gameDt) {
     EnemyAISystem_update(*this, gameDt);
     // 2. PhysicsSystem
     PhysicsSystem_update(*this, gameDt);
+    // 2.5. WallCollisionSystem — clamp entities to room bounds
+    WallCollisionSystem_update(*this, gameDt);
     // 3. CombatSystem
     CombatSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
