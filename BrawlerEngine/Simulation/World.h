@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include "Components.h"
+#include "Platform/InputState.h"
 
 using EntityID = uint32_t;
 static constexpr EntityID kInvalidEntity = UINT32_MAX;
@@ -56,6 +57,10 @@ public:
     // Trigger N physics ticks at gameDt=0 (combat freeze without pausing render/audio).
     void trigger_hit_stop(int ticks);
 
+    // Called by the platform layer once per render frame before update().
+    void       set_input(InputState input) { _currentInput = input; }
+    InputState current_input() const       { return _currentInput; }
+
     // Deferred lifecycle — buffered and applied at end of frame, after all systems run.
     EntityID defer_create();
     void     defer_destroy(EntityID id);
@@ -69,10 +74,11 @@ public:
     uint32_t entity_count() const { return _nextID; }
 
     // Direct pool access for systems that iterate all entities with a component.
-    ComponentStorage<PositionComponent>& positions() { return _positions; }
-    ComponentStorage<VelocityComponent>& velocities() { return _velocities; }
-    ComponentStorage<HealthComponent>&   healths()    { return _healths; }
-    ComponentStorage<FactionComponent>&  factions()   { return _factions; }
+    ComponentStorage<PositionComponent>& positions()   { return _positions; }
+    ComponentStorage<VelocityComponent>& velocities()  { return _velocities; }
+    ComponentStorage<HealthComponent>&   healths()     { return _healths; }
+    ComponentStorage<FactionComponent>&  factions()    { return _factions; }
+    ComponentStorage<PlayerTagComponent>& player_tags(){ return _playerTags; }
 
 private:
     void flush();
@@ -86,13 +92,15 @@ private:
     uint32_t _nextID;
     uint32_t _deferredDestroyCount;
     EntityID _deferredDestroy[256];
-    float    _accumulator;   // leftover time between fixed ticks
-    int      _hitStopTicks;  // remaining ticks at gameDt=0
+    float      _accumulator;    // leftover time between fixed ticks
+    int        _hitStopTicks;   // remaining ticks at gameDt=0
+    InputState _currentInput;   // set by platform each render frame
 
-    ComponentStorage<PositionComponent> _positions;
-    ComponentStorage<VelocityComponent> _velocities;
-    ComponentStorage<HealthComponent>   _healths;
-    ComponentStorage<FactionComponent>  _factions;
+    ComponentStorage<PositionComponent>  _positions;
+    ComponentStorage<VelocityComponent>  _velocities;
+    ComponentStorage<HealthComponent>    _healths;
+    ComponentStorage<FactionComponent>   _factions;
+    ComponentStorage<PlayerTagComponent> _playerTags;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -110,7 +118,8 @@ template<typename T>
 void World::remove_component(EntityID id) { _pool<T>().remove(id); }
 
 // Explicit specialization declarations — bodies are in World.mm.
-template<> ComponentStorage<PositionComponent>& World::_pool<PositionComponent>();
-template<> ComponentStorage<VelocityComponent>& World::_pool<VelocityComponent>();
-template<> ComponentStorage<HealthComponent>&   World::_pool<HealthComponent>();
-template<> ComponentStorage<FactionComponent>&  World::_pool<FactionComponent>();
+template<> ComponentStorage<PositionComponent>&  World::_pool<PositionComponent>();
+template<> ComponentStorage<VelocityComponent>&  World::_pool<VelocityComponent>();
+template<> ComponentStorage<HealthComponent>&    World::_pool<HealthComponent>();
+template<> ComponentStorage<FactionComponent>&   World::_pool<FactionComponent>();
+template<> ComponentStorage<PlayerTagComponent>& World::_pool<PlayerTagComponent>();

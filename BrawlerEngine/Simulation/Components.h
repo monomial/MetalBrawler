@@ -27,3 +27,8 @@ struct HealthComponent {
 struct FactionComponent {
     enum Type : uint8_t { Player = 0, Enemy = 1 } type;
 };
+
+// Tag — marks the single player-controlled entity. No data.
+struct PlayerTagComponent {
+    bool active; // padding; presence in storage is the real signal
+};

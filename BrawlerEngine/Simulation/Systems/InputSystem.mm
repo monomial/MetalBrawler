@@ -1,0 +1,33 @@
+#include "InputSystem.h"
+#include "Simulation/World.h"
+#include "Platform/InputState.h"
+#include <math.h>
+
+static constexpr float kPlayerSpeed = 300.0f; // units per second
+
+void InputSystem_update(World& world) {
+    // Find the player entity — the one with PlayerTagComponent.
+    EntityID playerID = kInvalidEntity;
+    auto& tags = world.player_tags();
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (tags.present(id)) { playerID = id; break; }
+    }
+    if (playerID == kInvalidEntity) return;
+
+    const InputState input = world.current_input();
+
+    // Normalize diagonal movement so speed is constant in all directions.
+    float mx = input.moveX;
+    float my = input.moveY;
+    float len = sqrtf(mx * mx + my * my);
+    if (len > 1.0f) { mx /= len; my /= len; }
+
+    // Ensure player has a VelocityComponent; create it on first input.
+    if (!world.has_component<VelocityComponent>(playerID))
+        world.add_component<VelocityComponent>(playerID) = {};
+
+    VelocityComponent& vel = world.get_component<VelocityComponent>(playerID);
+    vel.vx = mx * kPlayerSpeed;
+    vel.vy = my * kPlayerSpeed;
+    vel.vz = 0.0f;
+}

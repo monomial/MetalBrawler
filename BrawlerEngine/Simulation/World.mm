@@ -1,4 +1,5 @@
 #include "World.h"
+#include "Systems/InputSystem.h"
 #include "Systems/PhysicsSystem.h"
 #include <cassert>
 
@@ -6,10 +7,11 @@ static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
 
 // _pool<T>() specializations — each returns the matching storage member.
 // To add a new component type: add the member to World.h, then add a line here.
-template<> ComponentStorage<PositionComponent>& World::_pool() { return _positions; }
-template<> ComponentStorage<VelocityComponent>& World::_pool() { return _velocities; }
-template<> ComponentStorage<HealthComponent>&   World::_pool() { return _healths; }
-template<> ComponentStorage<FactionComponent>&  World::_pool() { return _factions; }
+template<> ComponentStorage<PositionComponent>&  World::_pool() { return _positions; }
+template<> ComponentStorage<VelocityComponent>&  World::_pool() { return _velocities; }
+template<> ComponentStorage<HealthComponent>&    World::_pool() { return _healths; }
+template<> ComponentStorage<FactionComponent>&   World::_pool() { return _factions; }
+template<> ComponentStorage<PlayerTagComponent>& World::_pool() { return _playerTags; }
 
 // ----
 
@@ -18,6 +20,7 @@ World::World()
     , _deferredDestroyCount(0)
     , _accumulator(0.0f)
     , _hitStopTicks(0)
+    , _currentInput{}
 {}
 
 World::~World() {}
@@ -42,6 +45,7 @@ void World::flush() {
         _velocities.remove(id);
         _healths.remove(id);
         _factions.remove(id);
+        _playerTags.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -50,7 +54,8 @@ void World::tick(float gameDt) {
     // Systems run in declared order (see docs/ecs-vocabulary.md).
     // gameDt is 0 during HitStop — systems that use it freeze automatically.
 
-    // 1. InputSystem  — TODO (T1)
+    // 1. InputSystem — reads current_input(), writes player velocity
+    InputSystem_update(*this);
     // 2. PhysicsSystem
     PhysicsSystem_update(*this, gameDt);
     // 3. CombatSystem  — TODO
