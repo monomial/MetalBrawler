@@ -3,6 +3,7 @@
 #import <GameController/GameController.h>
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
+#include "Platform/SiriRemoteInput.h"
 
 // tvOS input: Siri Remote swipe delta → dead-zone + acceleration curve → InputState.
 // GCController events for MFi gamepads handled via GCController.controllerDidConnectNotification.
@@ -37,6 +38,7 @@
     if (physicalDt > 0.1f) physicalDt = 0.1f;
 
     float gameDt = physicalDt;
+    _world.set_input(_currentInput);
     _world.update(physicalDt, gameDt);
 
     id<MTLCommandBuffer> cmd = [_commandQueue commandBuffer];
@@ -50,6 +52,39 @@
     }
     [cmd presentDrawable:view.currentDrawable];
     [cmd commit];
+}
+
+- (void)_controllerConnected:(NSNotification *)note {
+    GCController *ctrl = note.object;
+    if (!ctrl) return;
+
+    // Siri Remote (micro-gamepad) — swipe delta input.
+    GCMicroGamepad *micro = ctrl.microGamepad;
+    if (micro) {
+        micro.reportsAbsoluteDpadValues = NO; // want delta, not absolute
+        __weak BrawlerDelegate_tvOS *weakSelf = self;
+        micro.dpad.valueChangedHandler = ^(GCControllerDirectionPad *dpad, float x, float y) {
+            InputState state = SiriRemote_processSwipeDelta(x, y);
+            weakSelf->_currentInput = state;
+        };
+        micro.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            weakSelf->_currentInput.attack = pressed;
+        };
+        return;
+    }
+
+    // MFi extended gamepad — left thumbstick.
+    GCExtendedGamepad *ext = ctrl.extendedGamepad;
+    if (ext) {
+        __weak BrawlerDelegate_tvOS *weakSelf = self;
+        ext.leftThumbstick.valueChangedHandler = ^(GCControllerDirectionPad *pad, float x, float y) {
+            weakSelf->_currentInput.moveX = x;
+            weakSelf->_currentInput.moveY = y;
+        };
+        ext.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            weakSelf->_currentInput.attack = pressed;
+        };
+    }
 }
 
 @end
@@ -71,8 +106,13 @@
     _delegate = [[BrawlerDelegate_tvOS alloc] initWithDevice:device];
     _mtkView.delegate = _delegate;
 
-    // TODO T6: Siri Remote swipe delta → dead-zone + acceleration curve → InputState.moveX/Y
-    // TODO: GCController gamepad support via controllerDidConnectNotification
+    // T6: Siri Remote swipe delta → dead-zone + acceleration curve → InputState.
+    [[NSNotificationCenter defaultCenter]
+        addObserver:self
+           selector:@selector(_controllerConnected:)
+               name:GCControllerDidConnectNotification
+             object:nil];
+    [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 }
 
 @end
