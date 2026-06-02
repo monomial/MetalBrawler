@@ -1,0 +1,113 @@
+name: MetalBrawler
+options:
+  bundleIdPrefix: com.michaelsmith.metalbrawler
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+    tvOS: "17.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: false
+
+targets:
+  Brawler-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Brawler-macOS
+      - path: BrawlerEngine
+      - path: Shaders
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: Cocoa.framework
+      - sdk: AVFoundation.framework
+      - sdk: CoreHaptics.framework
+      - sdk: CoreGraphics.framework
+      - sdk: GameController.framework
+    settings:
+      base:
+        INFOPLIST_FILE: Brawler-macOS/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.michaelsmith.metalbrawler.macos
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
+        CLANG_CXX_LIBRARY: libc++
+        GCC_ENABLE_OBJC_EXCEPTIONS: YES
+        HEADER_SEARCH_PATHS: $(SRCROOT)/BrawlerEngine
+        MTL_HEADER_SEARCH_PATHS: $(SRCROOT)/BrawlerEngine
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+  Brawler-iOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Brawler-iOS
+      - path: BrawlerEngine
+      - path: Shaders
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: UIKit.framework
+      - sdk: AVFoundation.framework
+      - sdk: CoreHaptics.framework
+      - sdk: CoreGraphics.framework
+      - sdk: GameController.framework
+    settings:
+      base:
+        INFOPLIST_FILE: Brawler-iOS/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.michaelsmith.metalbrawler.ios
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
+        CLANG_CXX_LIBRARY: libc++
+        GCC_ENABLE_OBJC_EXCEPTIONS: YES
+        HEADER_SEARCH_PATHS: $(SRCROOT)/BrawlerEngine
+        MTL_HEADER_SEARCH_PATHS: $(SRCROOT)/BrawlerEngine
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+
+  Brawler-tvOS:
+    type: application
+    platform: tvOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Brawler-tvOS
+      - path: BrawlerEngine
+      - path: Shaders
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: UIKit.framework
+      - sdk: AVFoundation.framework
+      - sdk: CoreHaptics.framework
+      - sdk: CoreGraphics.framework
+      - sdk: GameController.framework
+    settings:
+      base:
+        INFOPLIST_FILE: Brawler-tvOS/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.michaelsmith.metalbrawler.tvos
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
+        CLANG_CXX_LIBRARY: libc++
+        GCC_ENABLE_OBJC_EXCEPTIONS: YES
+        HEADER_SEARCH_PATHS: $(SRCROOT)/BrawlerEngine
+        MTL_HEADER_SEARCH_PATHS: $(SRCROOT)/BrawlerEngine
+        TARGETED_DEVICE_FAMILY: "3"
+        TVOS_DEPLOYMENT_TARGET: "17.0"
+
+  BrawlerLogicTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: BrawlerLogicTests
+      - path: BrawlerEngine
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: Cocoa.framework
+      - sdk: AVFoundation.framework
+      - sdk: CoreHaptics.framework
+    settings:
+      base:
+        CLANG_CXX_LANGUAGE_STANDARD: c++20
+        CLANG_CXX_LIBRARY: libc++
+        GCC_ENABLE_OBJC_EXCEPTIONS: YES
+        HEADER_SEARCH_PATHS: "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests"

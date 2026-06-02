@@ -1,0 +1,771 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0A0BA8DB85739775A09E298C /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */; };
+		0D4DA439B768BF7A351AE2F4 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
+		1480CCC427C95F8AB5DCDAA6 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
+		1A4F8325E8230AFF75A3129F /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
+		211CEC22717D991D82FF8A78 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 784575DC4C4D5FF355458A61 /* main.mm */; };
+		2205005CB9BC88415861AE2B /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
+		2A09C4314A31A4F77B4E9CDF /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = F589CAA671997CF2E639FC51 /* main.mm */; };
+		2E5CB59EF7C86D833DDCFF59 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
+		30A752048F21D44D1EB86E61 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
+		3300FEC8A9D023386E3AE000 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C1CF591F48BAC2512642C39 /* Metal.framework */; };
+		37172235127E8C412A05EB6F /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
+		39177CE3BAEF02B56A393F9B /* Brawler.metal in Sources */ = {isa = PBXBuildFile; fileRef = 91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */; };
+		487789359F8A0F79A9C6ACFB /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 82F1526BBF752AED74E1FC4E /* AppDelegate.mm */; };
+		488478FA728D5051036692D7 /* GameViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 286747CEB9E34C0D5FBA2499 /* GameViewController.mm */; };
+		50ED2FD06E22B72E86F64103 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
+		5174FD522C2B1B2FCFECFBAD /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
+		54020FB1E9460DAA83B2C42A /* World.mm in Sources */ = {isa = PBXBuildFile; fileRef = B8A5DCEC930B03043555DCAE /* World.mm */; };
+		5DCE9194F444C661CA7CA1DC /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = D31A0F222CD904A069458F57 /* AppDelegate.mm */; };
+		62A56767E4B9F025583090A1 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
+		66D9B003B7F8D43669896681 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
+		6822E4CECB2CE98346489EF4 /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */; };
+		690AC7D04E0ACB5F3D142AAF /* WorldTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = DCDB3F619B92B9629E4A3149 /* WorldTests.mm */; };
+		6A2A8BE8712892D5E4C1C019 /* World.mm in Sources */ = {isa = PBXBuildFile; fileRef = B8A5DCEC930B03043555DCAE /* World.mm */; };
+		706C0DA9128AADC3993C0B1E /* World.mm in Sources */ = {isa = PBXBuildFile; fileRef = B8A5DCEC930B03043555DCAE /* World.mm */; };
+		7DAF6E13CFC057CF63E27625 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */; };
+		8494D6D39EB821E4339CDCAE /* Brawler.metal in Sources */ = {isa = PBXBuildFile; fileRef = 91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */; };
+		86B0D6EC90AC0670A1185EE2 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
+		929D4BACEF301869C19C76B7 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
+		9E51F37359FADBB24271E89D /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */; };
+		9F133B3D66138D96729D3528 /* GameViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F63305F8EE199B9C7E16C758 /* GameViewController.mm */; };
+		A75A3140989E25325213F92C /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = E95542E1A66D947C412352F1 /* AppDelegate.mm */; };
+		A8C3C0EDC5F9C7CB9B8B8F0D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C1CF591F48BAC2512642C39 /* Metal.framework */; };
+		B73A3427D19F336795156CB5 /* GameViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = B36194D2D04F225F413E6837 /* GameViewController.mm */; };
+		B79D22A89C73DD7F51A27241 /* Brawler.metal in Sources */ = {isa = PBXBuildFile; fileRef = 91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */; };
+		BDBADE24F64F889CC36FBA69 /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */; };
+		C913C6F37023E22D97E3CE08 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E13413F89AC01BF3699C455 /* Cocoa.framework */; };
+		D18B90CC2BE05F61F2BC0790 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C1CF591F48BAC2512642C39 /* Metal.framework */; };
+		E108258800EF1B01E5CEF6F7 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = C35BBBB175DED3F3EEEA8394 /* main.mm */; };
+		E554311ECDBAD6D582FBD4A2 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C1CF591F48BAC2512642C39 /* Metal.framework */; };
+		E8B124E0D81B7D76326033C2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E13413F89AC01BF3699C455 /* Cocoa.framework */; };
+		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
+		F5CF922E3DFE3B3F5F8E1DC6 /* World.mm in Sources */ = {isa = PBXBuildFile; fileRef = B8A5DCEC930B03043555DCAE /* World.mm */; };
+		FCDB3D320DE8C5B0E26C0A42 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		027DE2E18E8F3FB22C010E6F /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		0716EB35B0F07AB5DD810FDB /* BrawlerLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BrawlerLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = System/Library/Frameworks/CoreHaptics.framework; sourceTree = SDKROOT; };
+		189A9141A8E1CF5522C84640 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		2377186BA6E74F7009AFB214 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		286747CEB9E34C0D5FBA2499 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
+		464D6EAD162F5B5D40F83D07 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
+		6E13413F89AC01BF3699C455 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		73B997F413EE7874F18915C7 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
+		784575DC4C4D5FF355458A61 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		7C1CF591F48BAC2512642C39 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		80CCA7F1EB204F0A878A068A /* World.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = World.h; sourceTree = "<group>"; };
+		82F1526BBF752AED74E1FC4E /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		856406A32C732664791F661B /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
+		91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Brawler.metal; sourceTree = "<group>"; };
+		944C66793805FF7C35F893F2 /* Brawler-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9961037DF203AB455E73AEA4 /* Brawler-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Brawler-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C58B0820BED229EE2C5D6D9 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		9ED505A1AED5166F0C2EE2B3 /* Brawler-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE4993722C4B0E722982AE16 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		B36194D2D04F225F413E6837 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
+		B3DE47D446C1E666E427C5D0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B8A5DCEC930B03043555DCAE /* World.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = World.mm; sourceTree = "<group>"; };
+		C35BBBB175DED3F3EEEA8394 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		D31A0F222CD904A069458F57 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		DCDB3F619B92B9629E4A3149 /* WorldTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WorldTests.mm; sourceTree = "<group>"; };
+		E95542E1A66D947C412352F1 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		F44352FD41BDCADB1E9D6EE1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F589CAA671997CF2E639FC51 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		F63305F8EE199B9C7E16C758 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
+		F801FF1900BB8BE0890D8F46 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
+		FAF3F21DD7E270F0BC8FA7AC /* InputState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputState.h; sourceTree = "<group>"; };
+		FEBA70EAAA83493ED7BCE052 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1545E6BBA65D5A384908FF58 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E554311ECDBAD6D582FBD4A2 /* Metal.framework in Frameworks */,
+				2E5CB59EF7C86D833DDCFF59 /* MetalKit.framework in Frameworks */,
+				7DAF6E13CFC057CF63E27625 /* UIKit.framework in Frameworks */,
+				1480CCC427C95F8AB5DCDAA6 /* AVFoundation.framework in Frameworks */,
+				9E51F37359FADBB24271E89D /* CoreHaptics.framework in Frameworks */,
+				0D4DA439B768BF7A351AE2F4 /* CoreGraphics.framework in Frameworks */,
+				62A56767E4B9F025583090A1 /* GameController.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		97E1EE9CFD736E2F93162D74 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3300FEC8A9D023386E3AE000 /* Metal.framework in Frameworks */,
+				2205005CB9BC88415861AE2B /* MetalKit.framework in Frameworks */,
+				FCDB3D320DE8C5B0E26C0A42 /* UIKit.framework in Frameworks */,
+				5174FD522C2B1B2FCFECFBAD /* AVFoundation.framework in Frameworks */,
+				0A0BA8DB85739775A09E298C /* CoreHaptics.framework in Frameworks */,
+				50ED2FD06E22B72E86F64103 /* CoreGraphics.framework in Frameworks */,
+				37172235127E8C412A05EB6F /* GameController.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9DAFA23D108B2870CBE63182 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A8C3C0EDC5F9C7CB9B8B8F0D /* Metal.framework in Frameworks */,
+				1A4F8325E8230AFF75A3129F /* MetalKit.framework in Frameworks */,
+				E8B124E0D81B7D76326033C2 /* Cocoa.framework in Frameworks */,
+				F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */,
+				BDBADE24F64F889CC36FBA69 /* CoreHaptics.framework in Frameworks */,
+				929D4BACEF301869C19C76B7 /* CoreGraphics.framework in Frameworks */,
+				30A752048F21D44D1EB86E61 /* GameController.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1E439A18E4C69B5A0AA2BFE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D18B90CC2BE05F61F2BC0790 /* Metal.framework in Frameworks */,
+				86B0D6EC90AC0670A1185EE2 /* MetalKit.framework in Frameworks */,
+				C913C6F37023E22D97E3CE08 /* Cocoa.framework in Frameworks */,
+				66D9B003B7F8D43669896681 /* AVFoundation.framework in Frameworks */,
+				6822E4CECB2CE98346489EF4 /* CoreHaptics.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0E55A42A14572F3C483C0484 /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				FAF3F21DD7E270F0BC8FA7AC /* InputState.h */,
+			);
+			path = Platform;
+			sourceTree = "<group>";
+		};
+		2CAC442BB0397260635883AC /* BrawlerEngine */ = {
+			isa = PBXGroup;
+			children = (
+				0E55A42A14572F3C483C0484 /* Platform */,
+				F1CCEC3F98535B435A15C9D3 /* Simulation */,
+			);
+			path = BrawlerEngine;
+			sourceTree = "<group>";
+		};
+		2FFF9A22AFE335CF6590E0F7 = {
+			isa = PBXGroup;
+			children = (
+				CA32A4D36D5DE347FD638CBD /* Brawler-iOS */,
+				D0180AA65EB15F0F32AAC508 /* Brawler-macOS */,
+				58F2B8C2347D3E4264A45FD8 /* Brawler-tvOS */,
+				2CAC442BB0397260635883AC /* BrawlerEngine */,
+				DA1C63B59C009ED2E482400B /* BrawlerLogicTests */,
+				E1F865C1EEDB10553D880B2F /* Shaders */,
+				BB4B767B8EE4D539D4EE6216 /* Frameworks */,
+				79FC4C13936A55F988726DF3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		58F2B8C2347D3E4264A45FD8 /* Brawler-tvOS */ = {
+			isa = PBXGroup;
+			children = (
+				FEBA70EAAA83493ED7BCE052 /* AppDelegate.h */,
+				E95542E1A66D947C412352F1 /* AppDelegate.mm */,
+				F801FF1900BB8BE0890D8F46 /* GameViewController.h */,
+				B36194D2D04F225F413E6837 /* GameViewController.mm */,
+				2377186BA6E74F7009AFB214 /* Info.plist */,
+				F589CAA671997CF2E639FC51 /* main.mm */,
+			);
+			path = "Brawler-tvOS";
+			sourceTree = "<group>";
+		};
+		79FC4C13936A55F988726DF3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9ED505A1AED5166F0C2EE2B3 /* Brawler-iOS.app */,
+				9961037DF203AB455E73AEA4 /* Brawler-macOS.app */,
+				944C66793805FF7C35F893F2 /* Brawler-tvOS.app */,
+				0716EB35B0F07AB5DD810FDB /* BrawlerLogicTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BB4B767B8EE4D539D4EE6216 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AE4993722C4B0E722982AE16 /* AVFoundation.framework */,
+				6E13413F89AC01BF3699C455 /* Cocoa.framework */,
+				7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */,
+				0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */,
+				856406A32C732664791F661B /* GameController.framework */,
+				7C1CF591F48BAC2512642C39 /* Metal.framework */,
+				189A9141A8E1CF5522C84640 /* MetalKit.framework */,
+				0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CA32A4D36D5DE347FD638CBD /* Brawler-iOS */ = {
+			isa = PBXGroup;
+			children = (
+				027DE2E18E8F3FB22C010E6F /* AppDelegate.h */,
+				D31A0F222CD904A069458F57 /* AppDelegate.mm */,
+				464D6EAD162F5B5D40F83D07 /* GameViewController.h */,
+				286747CEB9E34C0D5FBA2499 /* GameViewController.mm */,
+				B3DE47D446C1E666E427C5D0 /* Info.plist */,
+				784575DC4C4D5FF355458A61 /* main.mm */,
+			);
+			path = "Brawler-iOS";
+			sourceTree = "<group>";
+		};
+		D0180AA65EB15F0F32AAC508 /* Brawler-macOS */ = {
+			isa = PBXGroup;
+			children = (
+				9C58B0820BED229EE2C5D6D9 /* AppDelegate.h */,
+				82F1526BBF752AED74E1FC4E /* AppDelegate.mm */,
+				73B997F413EE7874F18915C7 /* GameViewController.h */,
+				F63305F8EE199B9C7E16C758 /* GameViewController.mm */,
+				F44352FD41BDCADB1E9D6EE1 /* Info.plist */,
+				C35BBBB175DED3F3EEEA8394 /* main.mm */,
+			);
+			path = "Brawler-macOS";
+			sourceTree = "<group>";
+		};
+		DA1C63B59C009ED2E482400B /* BrawlerLogicTests */ = {
+			isa = PBXGroup;
+			children = (
+				DCDB3F619B92B9629E4A3149 /* WorldTests.mm */,
+			);
+			path = BrawlerLogicTests;
+			sourceTree = "<group>";
+		};
+		E1F865C1EEDB10553D880B2F /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */,
+			);
+			path = Shaders;
+			sourceTree = "<group>";
+		};
+		F1CCEC3F98535B435A15C9D3 /* Simulation */ = {
+			isa = PBXGroup;
+			children = (
+				80CCA7F1EB204F0A878A068A /* World.h */,
+				B8A5DCEC930B03043555DCAE /* World.mm */,
+			);
+			path = Simulation;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0E95CA60B1C5E3112E259CE3 /* Brawler-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C2B6762C688FA0A20A3AFC5A /* Build configuration list for PBXNativeTarget "Brawler-macOS" */;
+			buildPhases = (
+				F0895CC3CD1040387E1CB9B1 /* Sources */,
+				9DAFA23D108B2870CBE63182 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Brawler-macOS";
+			packageProductDependencies = (
+			);
+			productName = "Brawler-macOS";
+			productReference = 9961037DF203AB455E73AEA4 /* Brawler-macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		57F14CBB3393D5CFD5644D60 /* BrawlerLogicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0FA7841183ED9CB2563AD119 /* Build configuration list for PBXNativeTarget "BrawlerLogicTests" */;
+			buildPhases = (
+				FAE20014491A566573CAD495 /* Sources */,
+				F1E439A18E4C69B5A0AA2BFE /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BrawlerLogicTests;
+			packageProductDependencies = (
+			);
+			productName = BrawlerLogicTests;
+			productReference = 0716EB35B0F07AB5DD810FDB /* BrawlerLogicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FBB83EE4C899C12C358BEBAB /* Brawler-tvOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B50F96DD517A7526FC368590 /* Build configuration list for PBXNativeTarget "Brawler-tvOS" */;
+			buildPhases = (
+				489814D878257D310150CC01 /* Sources */,
+				97E1EE9CFD736E2F93162D74 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Brawler-tvOS";
+			packageProductDependencies = (
+			);
+			productName = "Brawler-tvOS";
+			productReference = 944C66793805FF7C35F893F2 /* Brawler-tvOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FBDFF26E822F29604DAE21C8 /* Brawler-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 54FB2A5D60EC2BB9F1619A00 /* Build configuration list for PBXNativeTarget "Brawler-iOS" */;
+			buildPhases = (
+				CDE8765FC002290E03809781 /* Sources */,
+				1545E6BBA65D5A384908FF58 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Brawler-iOS";
+			packageProductDependencies = (
+			);
+			productName = "Brawler-iOS";
+			productReference = 9ED505A1AED5166F0C2EE2B3 /* Brawler-iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D76C2E57D5E4E7D4FCD953ED /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 5B064B3242CF9581D2D7BAC2 /* Build configuration list for PBXProject "MetalBrawler" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 2FFF9A22AFE335CF6590E0F7;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 79FC4C13936A55F988726DF3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FBDFF26E822F29604DAE21C8 /* Brawler-iOS */,
+				0E95CA60B1C5E3112E259CE3 /* Brawler-macOS */,
+				FBB83EE4C899C12C358BEBAB /* Brawler-tvOS */,
+				57F14CBB3393D5CFD5644D60 /* BrawlerLogicTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		489814D878257D310150CC01 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A75A3140989E25325213F92C /* AppDelegate.mm in Sources */,
+				8494D6D39EB821E4339CDCAE /* Brawler.metal in Sources */,
+				B73A3427D19F336795156CB5 /* GameViewController.mm in Sources */,
+				6A2A8BE8712892D5E4C1C019 /* World.mm in Sources */,
+				2A09C4314A31A4F77B4E9CDF /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CDE8765FC002290E03809781 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5DCE9194F444C661CA7CA1DC /* AppDelegate.mm in Sources */,
+				39177CE3BAEF02B56A393F9B /* Brawler.metal in Sources */,
+				488478FA728D5051036692D7 /* GameViewController.mm in Sources */,
+				F5CF922E3DFE3B3F5F8E1DC6 /* World.mm in Sources */,
+				211CEC22717D991D82FF8A78 /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0895CC3CD1040387E1CB9B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				487789359F8A0F79A9C6ACFB /* AppDelegate.mm in Sources */,
+				B79D22A89C73DD7F51A27241 /* Brawler.metal in Sources */,
+				9F133B3D66138D96729D3528 /* GameViewController.mm in Sources */,
+				706C0DA9128AADC3993C0B1E /* World.mm in Sources */,
+				E108258800EF1B01E5CEF6F7 /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FAE20014491A566573CAD495 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				54020FB1E9460DAA83B2C42A /* World.mm in Sources */,
+				690AC7D04E0ACB5F3D142AAF /* WorldTests.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		00C800058D1A0BDAD5930194 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				INFOPLIST_FILE = "Brawler-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.ios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1C69432C5C7D1DBF4199C729 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				INFOPLIST_FILE = "Brawler-tvOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.tvos;
+				SDKROOT = appletvos;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+		202D89C6E227928B2546BE5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+		2BA39B95D3F24ACCA8993FB6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.BrawlerLogicTests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		2FAF1EE7A97213795C077EE2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				INFOPLIST_FILE = "Brawler-macOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.macos;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		322D7CD9EC6473CC6FF7F2E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				INFOPLIST_FILE = "Brawler-macOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.macos;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		48A93DAEE5EA6CFA279CD590 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				INFOPLIST_FILE = "Brawler-tvOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.tvos;
+				SDKROOT = appletvos;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		6EE902AA1B894959AC3BBC5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				INFOPLIST_FILE = "Brawler-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.ios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B8FBBAFB73E33EDF9721B709 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
+		CC62A1482DB1FA11FEF134E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelsmith.metalbrawler.BrawlerLogicTests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0FA7841183ED9CB2563AD119 /* Build configuration list for PBXNativeTarget "BrawlerLogicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2BA39B95D3F24ACCA8993FB6 /* Debug */,
+				CC62A1482DB1FA11FEF134E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		54FB2A5D60EC2BB9F1619A00 /* Build configuration list for PBXNativeTarget "Brawler-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00C800058D1A0BDAD5930194 /* Debug */,
+				6EE902AA1B894959AC3BBC5E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5B064B3242CF9581D2D7BAC2 /* Build configuration list for PBXProject "MetalBrawler" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B8FBBAFB73E33EDF9721B709 /* Debug */,
+				202D89C6E227928B2546BE5E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B50F96DD517A7526FC368590 /* Build configuration list for PBXNativeTarget "Brawler-tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				48A93DAEE5EA6CFA279CD590 /* Debug */,
+				1C69432C5C7D1DBF4199C729 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C2B6762C688FA0A20A3AFC5A /* Build configuration list for PBXNativeTarget "Brawler-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2FAF1EE7A97213795C077EE2 /* Debug */,
+				322D7CD9EC6473CC6FF7F2E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D76C2E57D5E4E7D4FCD953ED /* Project object */;
+}
