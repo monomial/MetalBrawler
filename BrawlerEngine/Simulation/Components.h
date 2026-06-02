@@ -1,0 +1,29 @@
+#pragma once
+#include <stdint.h>
+
+// All component structs for MetalBrawler.
+// Rules: plain C structs only. No methods. No logic. Only data.
+// Adding a new component: add struct here, add storage member to World, add
+// _pool<T>() specialization in World.mm.
+
+// --- Spatial ---
+
+struct PositionComponent {
+    float x, y, z;
+};
+
+struct VelocityComponent {
+    float vx, vy, vz;
+};
+
+// --- Game state ---
+
+struct HealthComponent {
+    int current;
+    int max;
+};
+
+// Which side this entity is on — used by AI and CombatSystem.
+struct FactionComponent {
+    enum Type : uint8_t { Player = 0, Enemy = 1 } type;
+};

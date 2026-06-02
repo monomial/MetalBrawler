@@ -115,3 +115,4 @@ targets:
         CLANG_CXX_LIBRARY: libc++
         GCC_ENABLE_OBJC_EXCEPTIONS: YES
         HEADER_SEARCH_PATHS: "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests"
+        GENERATE_INFOPLIST_FILE: YES
