@@ -25,6 +25,7 @@ targets:
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
       - sdk: GameController.framework
+      - sdk: QuartzCore.framework
     settings:
       base:
         INFOPLIST_FILE: Brawler-macOS/Info.plist
@@ -52,6 +53,7 @@ targets:
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
       - sdk: GameController.framework
+      - sdk: QuartzCore.framework
     settings:
       base:
         INFOPLIST_FILE: Brawler-iOS/Info.plist
@@ -80,6 +82,7 @@ targets:
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
       - sdk: GameController.framework
+      - sdk: QuartzCore.framework
     settings:
       base:
         INFOPLIST_FILE: Brawler-tvOS/Info.plist
@@ -105,6 +108,7 @@ targets:
       - sdk: Cocoa.framework
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
+      - sdk: QuartzCore.framework
     settings:
       base:
         CLANG_CXX_LANGUAGE_STANDARD: c++20
