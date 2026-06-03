@@ -30,7 +30,7 @@ World::World()
     , _deferredDestroyCount(0)
     , _accumulator(0.0f)
     , _hitStopTicks(0)
-    , _currentInput{}
+    , _inputs{}
 {}
 
 World::~World() {}

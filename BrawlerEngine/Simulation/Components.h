@@ -28,9 +28,11 @@ struct FactionComponent {
     enum Type : uint8_t { Player = 0, Enemy = 1 } type;
 };
 
-// Tag — marks the single player-controlled entity. No data.
+// Tag — marks a player-controlled entity.
+// playerIndex (0–3) maps to World::_inputs[playerIndex] for input routing.
 struct PlayerTagComponent {
-    bool active; // padding; presence in storage is the real signal
+    bool    active;      // padding; presence in storage is the real signal
+    uint8_t playerIndex; // 0 = P1, 1 = P2, 2 = P3, 3 = P4
 };
 
 // Last non-zero movement direction, kept as a normalized 2D vector.

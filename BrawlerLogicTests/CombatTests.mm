@@ -13,7 +13,7 @@ static constexpr float kActiveEnd    = kAttackDur * 0.60f;
 static EntityID spawnPlayer(World& world, float x = 0, float y = 0,
                             float facingDx = 1.f, float facingDy = 0.f) {
     EntityID e = world.defer_create();
-    world.add_component<PlayerTagComponent>(e).active = true;
+    world.add_component<PlayerTagComponent>(e) = {true, 0};
     world.add_component<PositionComponent>(e)         = {x, y, 0};
     world.add_component<FactionComponent>(e).type     = FactionComponent::Player;
     world.add_component<HealthComponent>(e)           = {10, 10};

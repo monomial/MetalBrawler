@@ -12,7 +12,7 @@ static constexpr float kActiveMid   = kAttackDur * 0.475f;
 
 static EntityID spawn_player(World& w) {
     EntityID e = w.defer_create();
-    w.add_component<PlayerTagComponent>(e).active = true;
+    w.add_component<PlayerTagComponent>(e) = {true, 0};
     w.add_component<PositionComponent>(e) = {0, 0, 0};
     w.add_component<FactionComponent>(e).type = FactionComponent::Player;
     w.add_component<HealthComponent>(e) = {10, 10};
@@ -76,7 +76,7 @@ static EntityID spawn_enemy_full(World& w, float x) {
     // Player exists (PlayerTag) but has no PositionComponent.
     World world;
     EntityID player = world.defer_create();
-    world.add_component<PlayerTagComponent>(player).active = true;
+    world.add_component<PlayerTagComponent>(player) = {true, 0};
     world.add_component<FactionComponent>(player).type = FactionComponent::Player;
     spawn_enemy_full(world, 50);
 
@@ -115,7 +115,7 @@ static EntityID spawn_enemy_full(World& w, float x) {
     // Player tag exists but no Position — AI should bail early.
     World world;
     EntityID player = world.defer_create();
-    world.add_component<PlayerTagComponent>(player).active = true;
+    world.add_component<PlayerTagComponent>(player) = {true, 0};
     EntityID enemy = world.defer_create();
     world.add_component<PositionComponent>(enemy) = {200, 0, 0};
     world.add_component<FactionComponent>(enemy).type = FactionComponent::Enemy;

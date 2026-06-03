@@ -46,12 +46,14 @@ static const simd_float3 kQuadVerts[6] = {
     { 0.5f,-0.5f,0.f},{ 0.5f, 0.5f,0.f},{-0.5f, 0.5f,0.f},
 };
 
-static const float kEntitySize = 40.0f;
-static const float kCamDist    = 800.0f;
-static const float kCamPitch   = 55.0f * ((float)M_PI / 180.0f);
-static const float kFOVY       = 70.0f * ((float)M_PI / 180.0f);
-static const float kNear       = 1.0f;
-static const float kFar        = 3000.0f;
+static const float kEntitySize   = 40.0f;
+static const float kCamDist      = 800.0f;  // base camera distance (single player)
+static const float kCamDistMax   = 1500.0f; // max zoom-out (players very far apart)
+static const float kCamZoomScale = 0.5f;    // extra distance added per unit of player spread
+static const float kCamPitch     = 55.0f * ((float)M_PI / 180.0f);
+static const float kFOVY         = 70.0f * ((float)M_PI / 180.0f);
+static const float kNear         = 1.0f;
+static const float kFar          = 3000.0f;
 
 static simd_float4x4 make_perspective(float fovY, float aspect, float n, float f) {
     float t = 1.f / tanf(fovY * .5f);
@@ -220,25 +222,42 @@ static float clampf(float v, float lo, float hi) {
     MTLRenderPassDescriptor *rpd = view.currentRenderPassDescriptor;
     if (!rpd || !view.currentDrawable) return;
 
-    // Camera follows player, clamped to room so void is never visible.
-    simd_float3 target = {kCameraDefaultTargetX, kCameraDefaultTargetY, 0};
+    // Multi-player camera: track centroid of all alive players.
+    // Zoom out proportionally to player spread so everyone stays in frame.
+    float pMinX =  1e9f, pMaxX = -1e9f;
+    float pMinY =  1e9f, pMaxY = -1e9f;
+    int   pCount = 0;
     for (EntityID id = 0; id < world->entity_count(); ++id) {
-        if (world->player_tags().present(id) && world->has_component<PositionComponent>(id)) {
-            auto& p = world->get_component<PositionComponent>(id);
-            target = {p.x, p.y, 0};
-            break;
-        }
+        if (!world->player_tags().present(id)) continue;
+        if (!world->has_component<PositionComponent>(id)) continue;
+        if (world->has_component<AnimationComponent>(id) &&
+            world->get_component<AnimationComponent>(id).dying) continue;
+        auto& p = world->get_component<PositionComponent>(id);
+        pMinX = fminf(pMinX, p.x); pMaxX = fmaxf(pMaxX, p.x);
+        pMinY = fminf(pMinY, p.y); pMaxY = fmaxf(pMaxY, p.y);
+        pCount++;
     }
+    if (pCount == 0) { pMinX = pMaxX = kCameraDefaultTargetX;
+                       pMinY = pMaxY = kCameraDefaultTargetY; }
+
+    float centX   = (pMinX + pMaxX) * 0.5f;
+    float centY   = (pMinY + pMaxY) * 0.5f;
+    float spread  = fmaxf(pMaxX - pMinX, pMaxY - pMinY);
+    float camDist = clampf(kCamDist + spread * kCamZoomScale, kCamDist, kCamDistMax);
+
     // Clamp camera target so the view frustum stays within room bounds.
-    // Padding ≈ half visible ground width at the camera's pitch & FOV.
-    static const float kCamPadX = 320.f;
-    static const float kCamPadY = 220.f;
-    target.x = clampf(target.x, kRoomMinX + kCamPadX, kRoomMaxX - kCamPadX);
-    target.y = clampf(target.y, kRoomMinY + kCamPadY, kRoomMaxY - kCamPadY);
+    // Padding scales with camDist so walls stay out of frame at any zoom level.
+    float padScale = camDist / kCamDist;
+    float kCamPadX = 320.f * padScale;
+    float kCamPadY = 220.f * padScale;
+    simd_float3 target;
+    target.x = clampf(centX, kRoomMinX + kCamPadX, kRoomMaxX - kCamPadX);
+    target.y = clampf(centY, kRoomMinY + kCamPadY, kRoomMaxY - kCamPadY);
+    target.z = 0;
 
     simd_float3 eye = { target.x,
-                        target.y - kCamDist * cosf(kCamPitch),
-                        kCamDist  * sinf(kCamPitch) };
+                        target.y - camDist * cosf(kCamPitch),
+                        camDist   * sinf(kCamPitch) };
     simd_float4x4 vp = simd_mul(_proj, make_look_at(eye, target, (simd_float3){0,0,1}));
 
     rpd.colorAttachments[0].clearColor  = MTLClearColorMake(0.08,0.08,0.12,1);

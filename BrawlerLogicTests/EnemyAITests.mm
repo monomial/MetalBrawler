@@ -7,7 +7,7 @@ static constexpr float kStopRadius = 30.0f;
 
 static EntityID spawnPlayer(World& world, float x, float y) {
     EntityID e = world.defer_create();
-    world.add_component<PlayerTagComponent>(e).active = true;
+    world.add_component<PlayerTagComponent>(e) = {true, 0};
     world.add_component<PositionComponent>(e)         = {x, y, 0};
     world.add_component<FactionComponent>(e).type     = FactionComponent::Player;
     return e;

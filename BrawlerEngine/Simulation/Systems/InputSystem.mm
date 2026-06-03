@@ -7,53 +7,53 @@
 static constexpr float kPlayerSpeed = 300.0f; // units per second
 
 void InputSystem_update(World& world) {
-    // Find the player entity — the one with PlayerTagComponent.
-    EntityID playerID = kInvalidEntity;
+    uint32_t count = world.entity_count();
     auto& tags = world.player_tags();
-    for (EntityID id = 0; id < world.entity_count(); ++id) {
-        if (tags.present(id)) { playerID = id; break; }
-    }
-    if (playerID == kInvalidEntity) return;
-    // Ignore input while player is dying — zero velocity so they stop in place.
-    if (world.has_component<AnimationComponent>(playerID) &&
-        world.get_component<AnimationComponent>(playerID).dying) {
-        if (world.has_component<VelocityComponent>(playerID)) {
-            VelocityComponent& vel = world.get_component<VelocityComponent>(playerID);
-            vel.vx = vel.vy = vel.vz = 0.0f;
+
+    // Process every player entity independently using its playerIndex.
+    for (EntityID id = 0; id < count; ++id) {
+        if (!tags.present(id)) continue;
+
+        const PlayerTagComponent& tag = world.get_component<PlayerTagComponent>(id);
+
+        // Ignore input while dying.
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) {
+            if (world.has_component<VelocityComponent>(id)) {
+                VelocityComponent& vel = world.get_component<VelocityComponent>(id);
+                vel.vx = vel.vy = vel.vz = 0.0f;
+            }
+            continue;
         }
-        return;
-    }
 
-    const InputState input = world.current_input();
+        const InputState input = world.current_input(tag.playerIndex);
 
-    // Normalize diagonal movement so speed is constant in all directions.
-    float mx = input.moveX;
-    float my = input.moveY;
-    float len = sqrtf(mx * mx + my * my);
-    if (len > 1.0f) { mx /= len; my /= len; }
+        float mx = input.moveX;
+        float my = input.moveY;
+        float len = sqrtf(mx * mx + my * my);
+        if (len > 1.0f) { mx /= len; my /= len; }
 
-    // Ensure player has a VelocityComponent; create it on first input.
-    if (!world.has_component<VelocityComponent>(playerID))
-        world.add_component<VelocityComponent>(playerID) = {};
+        if (!world.has_component<VelocityComponent>(id))
+            world.add_component<VelocityComponent>(id) = {};
 
-    VelocityComponent& vel = world.get_component<VelocityComponent>(playerID);
-    vel.vx = mx * kPlayerSpeed;
-    vel.vy = my * kPlayerSpeed;
-    vel.vz = 0.0f;
+        VelocityComponent& vel = world.get_component<VelocityComponent>(id);
+        vel.vx = mx * kPlayerSpeed;
+        vel.vy = my * kPlayerSpeed;
+        vel.vz = 0.0f;
 
-    // Update facing whenever the player is actually moving.
-    // Stays at last value when standing still so punching while idle faces correctly.
-    if ((mx * mx + my * my) > 0.01f && world.has_component<FacingComponent>(playerID)) {
-        FacingComponent& facing = world.get_component<FacingComponent>(playerID);
-        facing.dx = mx; // already normalized above
-        facing.dy = my;
-    }
+        // Update facing whenever the player is actually moving.
+        if ((mx * mx + my * my) > 0.01f && world.has_component<FacingComponent>(id)) {
+            FacingComponent& facing = world.get_component<FacingComponent>(id);
+            facing.dx = mx;
+            facing.dy = my;
+        }
 
-    if (world.has_component<AnimationComponent>(playerID)) {
-        bool moving = (mx * mx + my * my) > 0.01f;
-        AnimClipID want = input.attack ? AnimClipID::Attack
-                        : moving       ? AnimClipID::Walk
-                                       : AnimClipID::Idle;
-        AnimationSystem_request_clip(world, playerID, want);
+        if (world.has_component<AnimationComponent>(id)) {
+            bool moving = (mx * mx + my * my) > 0.01f;
+            AnimClipID want = input.attack ? AnimClipID::Attack
+                            : moving       ? AnimClipID::Walk
+                                           : AnimClipID::Idle;
+            AnimationSystem_request_clip(world, id, want);
+        }
     }
 }

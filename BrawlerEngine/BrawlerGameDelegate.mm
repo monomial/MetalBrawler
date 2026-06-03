@@ -55,35 +55,42 @@
     [_renderer setPlayerCharacter:player enemyCharacter:player];
 }
 
+- (void)_spawnPlayer:(uint8_t)index at:(float)x y:(float)y {
+    EntityID e = _world.defer_create();
+    _world.add_component<PlayerTagComponent>(e) = {true, index};
+    _world.add_component<PositionComponent>(e)  = {x, y, 0};
+    _world.add_component<VelocityComponent>(e)  = {0, 0, 0};
+    _world.add_component<FactionComponent>(e).type = FactionComponent::Player;
+    _world.add_component<HealthComponent>(e)    = {10, 10};
+    _world.add_component<DamageCooldownComponent>(e).remaining = 0.f;
+    _world.add_component<AnimationComponent>(e);
+    _world.add_component<FacingComponent>(e); // default (0,1) = facing +Y
+}
+
 - (void)_spawnEntities {
-    EntityID player = _world.defer_create();
-    _world.add_component<PlayerTagComponent>(player).active   = true;
-    _world.add_component<PositionComponent>(player)           = {0, -100, 0};
-    _world.add_component<VelocityComponent>(player)           = {0, 0, 0};
-    _world.add_component<FactionComponent>(player).type       = FactionComponent::Player;
-    _world.add_component<HealthComponent>(player)             = {10, 10};
-    _world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
-    _world.add_component<AnimationComponent>(player);
-    _world.add_component<FacingComponent>(player); // default (0,1) = facing +Y
+    [self _spawnPlayer:0 at:-150 y:-100]; // P1 — left of centre
+    [self _spawnPlayer:1 at: 150 y:-100]; // P2 — right of centre
 
     EntityID enemy = _world.defer_create();
-    _world.add_component<PositionComponent>(enemy)            = {200, 300, 0};
+    _world.add_component<PositionComponent>(enemy)            = {0, 300, 0};
     _world.add_component<VelocityComponent>(enemy)            = {0, 0, 0};
     _world.add_component<FactionComponent>(enemy).type        = FactionComponent::Enemy;
     _world.add_component<HealthComponent>(enemy)              = {3, 3};
     _world.add_component<AnimationComponent>(enemy);
-    _world.add_component<FacingComponent>(enemy);              // updated each tick toward player
-    _world.add_component<EnemyAttackCooldownComponent>(enemy); // starts at 0 = ready to attack
+    _world.add_component<FacingComponent>(enemy);
+    _world.add_component<EnemyAttackCooldownComponent>(enemy);
 }
 
-- (void)setInputState:(InputState)state { _world.set_input(state); }
-- (InputState)currentInputState         { return _world.current_input(); }
+- (void)setInputState:(InputState)state forPlayer:(int)p { _world.set_input(state, p); }
+- (InputState)currentInputStateForPlayer:(int)p          { return _world.current_input(p); }
+- (void)setInputState:(InputState)state                  { _world.set_input(state, 0); }
+- (InputState)currentInputState                          { return _world.current_input(0); }
 
 - (void)triggerAttack  { _attackPulse = YES; }
 
 - (void)resetInput {
     InputState zero = {};
-    _world.set_input(zero);
+    for (int i = 0; i < 4; ++i) _world.set_input(zero, i);
     _attackPulse = NO;
 }
 
@@ -123,14 +130,17 @@
     });
 
     if (!_gameOver) {
+        // Game over only when ALL players are dying — one alive player keeps the run going.
+        int alivePlayers = 0;
         for (EntityID id = 0; id < _world.entity_count(); ++id) {
             if (!_world.player_tags().present(id)) continue;
-            if (_world.has_component<AnimationComponent>(id) &&
-                _world.get_component<AnimationComponent>(id).dying) {
-                _gameOver      = YES;
-                _gameOverTimer = 3.0f;
-            }
-            break;
+            bool dying = _world.has_component<AnimationComponent>(id) &&
+                         _world.get_component<AnimationComponent>(id).dying;
+            if (!dying) alivePlayers++;
+        }
+        if (alivePlayers == 0) {
+            _gameOver      = YES;
+            _gameOverTimer = 3.0f;
         }
     } else {
         _gameOverTimer -= physicalDt;

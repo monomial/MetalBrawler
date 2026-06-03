@@ -10,17 +10,23 @@ static constexpr float kEnemyAttackCooldown = 2.0f;   // seconds between attack 
 void EnemyAISystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // HitStop — enemies freeze
 
-    EntityID playerID = kInvalidEntity;
-    auto& tags = world.player_tags();
-    uint32_t count = world.entity_count();
-    for (EntityID id = 0; id < count; ++id) {
-        if (tags.present(id)) { playerID = id; break; }
+    // Collect all alive player positions (up to 4) — each enemy targets the nearest.
+    PositionComponent playerPositions[4];
+    int playerCount = 0;
+    {
+        auto& tags = world.player_tags();
+        uint32_t count = world.entity_count();
+        for (EntityID id = 0; id < count && playerCount < 4; ++id) {
+            if (!tags.present(id)) continue;
+            if (!world.has_component<PositionComponent>(id)) continue;
+            if (world.has_component<AnimationComponent>(id) &&
+                world.get_component<AnimationComponent>(id).dying) continue;
+            playerPositions[playerCount++] = world.get_component<PositionComponent>(id);
+        }
     }
-    if (playerID == kInvalidEntity) return;
-    if (!world.has_component<PositionComponent>(playerID)) return;
+    if (playerCount == 0) return;
 
-    const PositionComponent playerPos = world.get_component<PositionComponent>(playerID);
-
+    uint32_t count = world.entity_count();
     auto& factions = world.factions();
     for (EntityID id = 0; id < count; ++id) {
         if (!factions.present(id)) continue;
@@ -30,9 +36,19 @@ void EnemyAISystem_update(World& world, float gameDt) {
             world.get_component<AnimationComponent>(id).dying) continue;
 
         const PositionComponent& ePos = world.get_component<PositionComponent>(id);
-        float dx   = playerPos.x - ePos.x;
-        float dy   = playerPos.y - ePos.y;
-        float dist = sqrtf(dx * dx + dy * dy);
+
+        // Find nearest alive player.
+        PositionComponent playerPos = playerPositions[0];
+        float dist = sqrtf((playerPos.x-ePos.x)*(playerPos.x-ePos.x) +
+                           (playerPos.y-ePos.y)*(playerPos.y-ePos.y));
+        for (int pi = 1; pi < playerCount; ++pi) {
+            float d = sqrtf((playerPositions[pi].x-ePos.x)*(playerPositions[pi].x-ePos.x) +
+                            (playerPositions[pi].y-ePos.y)*(playerPositions[pi].y-ePos.y));
+            if (d < dist) { dist = d; playerPos = playerPositions[pi]; }
+        }
+
+        float dx = playerPos.x - ePos.x;
+        float dy = playerPos.y - ePos.y;
 
         // Always face toward the player.
         if (world.has_component<FacingComponent>(id) && dist > 0.001f) {

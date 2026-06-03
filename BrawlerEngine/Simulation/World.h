@@ -59,8 +59,13 @@ public:
     void trigger_hit_stop(int ticks);
 
     // Called by the platform layer once per render frame before update().
-    void       set_input(InputState input) { _currentInput = input; }
-    InputState current_input() const       { return _currentInput; }
+    // playerIndex 0–3 maps to the player entity with matching PlayerTagComponent.playerIndex.
+    void       set_input(InputState input, int playerIndex = 0) {
+        if (playerIndex >= 0 && playerIndex < 4) _inputs[playerIndex] = input;
+    }
+    InputState current_input(int playerIndex = 0) const {
+        return (playerIndex >= 0 && playerIndex < 4) ? _inputs[playerIndex] : InputState{};
+    }
 
     // Deferred lifecycle — buffered and applied at end of frame, after all systems run.
     EntityID defer_create();
@@ -103,7 +108,7 @@ private:
     EventBus   _events;         // cleared each tick
     float      _accumulator;    // leftover time between fixed ticks
     int        _hitStopTicks;   // remaining ticks at gameDt=0
-    InputState _currentInput;   // set by platform each render frame
+    InputState _inputs[4];      // one slot per player (0–3), set by platform each render frame
 
     ComponentStorage<PositionComponent>  _positions;
     ComponentStorage<VelocityComponent>  _velocities;

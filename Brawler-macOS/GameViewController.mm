@@ -1,11 +1,13 @@
 #import "GameViewController.h"
 #import <MetalKit/MetalKit.h>
+#import <GameController/GameController.h>
 #import "BrawlerGameDelegate.h"
 #include "Platform/InputState.h"
 
 @implementation GameViewController {
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
+    // P1: keyboard
     BOOL _left, _right, _up, _down, _attack, _dodge;
 }
 
@@ -24,8 +26,17 @@
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.drawableSize];
     _mtkView.delegate = _delegate;
 
+    // P1: keyboard at 120Hz
     [NSTimer scheduledTimerWithTimeInterval:1.0/120.0 target:self
-                                   selector:@selector(_feedInput) userInfo:nil repeats:YES];
+                                   selector:@selector(_feedKeyboardInput) userInfo:nil repeats:YES];
+
+    // P2: first connected GCController
+    [[NSNotificationCenter defaultCenter]
+        addObserver:self
+           selector:@selector(_controllerConnected:)
+               name:GCControllerDidConnectNotification
+             object:nil];
+    [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 }
 
 - (void)viewDidAppear {
@@ -35,11 +46,15 @@
 
 - (BOOL)acceptsFirstResponder { return YES; }
 
-- (void)_feedInput {
+// ---------------------------------------------------------------------------
+// P1 — keyboard
+// ---------------------------------------------------------------------------
+
+- (void)_feedKeyboardInput {
     float mx = (_right ? 1.f : 0.f) - (_left ? 1.f : 0.f);
     float my = (_up    ? 1.f : 0.f) - (_down ? 1.f : 0.f);
     InputState s = { mx, my, (bool)_attack, (bool)_dodge, false };
-    [_delegate setInputState:s];
+    [_delegate setInputState:s forPlayer:0];
     _attack = NO;
     _dodge  = NO;
 }
@@ -73,6 +88,33 @@
         case 125: _down  = NO; break;
         default: [super keyUp:event];
     }
+}
+
+// ---------------------------------------------------------------------------
+// P2 — first connected GCController (extended gamepad only)
+// ---------------------------------------------------------------------------
+
+- (void)_controllerConnected:(NSNotification *)note {
+    GCController *ctrl = note.object;
+    if (!ctrl) return;
+    GCExtendedGamepad *ext = ctrl.extendedGamepad;
+    if (!ext) return;
+
+    __weak GameViewController *weakSelf = self;
+    ext.leftThumbstick.valueChangedHandler = ^(GCControllerDirectionPad *pad, float x, float y) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        InputState s = [vc->_delegate currentInputStateForPlayer:1];
+        s.moveX = x; s.moveY = y;
+        [vc->_delegate setInputState:s forPlayer:1];
+    };
+    ext.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        InputState s = [vc->_delegate currentInputStateForPlayer:1];
+        s.attack = pressed;
+        [vc->_delegate setInputState:s forPlayer:1];
+    };
 }
 
 @end

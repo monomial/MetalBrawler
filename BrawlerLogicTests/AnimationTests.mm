@@ -190,7 +190,7 @@ static void advance(World& w, float seconds) {
 - (void)test_dying_player_notDestroyedByAnimationSystem {
     World world;
     EntityID e = make_animated(world, FactionComponent::Player);
-    world.add_component<PlayerTagComponent>(e).active = true;
+    world.add_component<PlayerTagComponent>(e) = {true, 0};
     auto& anim = world.get_component<AnimationComponent>(e);
     anim.currentClip   = AnimClipID::Death;
     anim.requestedClip = AnimClipID::Death;

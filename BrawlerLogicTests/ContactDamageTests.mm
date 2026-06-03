@@ -12,7 +12,7 @@ static constexpr float kCooldown      = 0.75f;
 
 static EntityID make_player(World& w) {
     EntityID e = w.defer_create();
-    w.add_component<PlayerTagComponent>(e).active = true;
+    w.add_component<PlayerTagComponent>(e) = {true, 0};
     w.add_component<PositionComponent>(e)         = {0, 0, 0};
     w.add_component<FactionComponent>(e).type     = FactionComponent::Player;
     w.add_component<HealthComponent>(e)           = {10, 10};
@@ -114,7 +114,7 @@ static EntityID make_enemy(World& w, float x, float y) {
 - (void)test_playerWithNoHealth_doesNotCrash {
     World world;
     EntityID p = world.defer_create();
-    world.add_component<PlayerTagComponent>(p).active = true;
+    world.add_component<PlayerTagComponent>(p) = {true, 0};
     world.add_component<PositionComponent>(p) = {0, 0, 0};
     world.add_component<FactionComponent>(p).type = FactionComponent::Player;
     // No HealthComponent intentionally

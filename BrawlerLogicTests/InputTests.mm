@@ -8,7 +8,7 @@ static constexpr float kSpeed    = 300.0f; // must match InputSystem kPlayerSpee
 
 static EntityID spawnPlayer(World& world) {
     EntityID e = world.defer_create();
-    world.add_component<PlayerTagComponent>(e).active = true;
+    world.add_component<PlayerTagComponent>(e) = {true, 0};
     world.add_component<PositionComponent>(e) = {0, 0, 0};
     world.add_component<FactionComponent>(e).type = FactionComponent::Player;
     return e;
