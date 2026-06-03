@@ -14,9 +14,15 @@ void InputSystem_update(World& world) {
         if (tags.present(id)) { playerID = id; break; }
     }
     if (playerID == kInvalidEntity) return;
-    // Ignore input while player is dying.
+    // Ignore input while player is dying — zero velocity so they stop in place.
     if (world.has_component<AnimationComponent>(playerID) &&
-        world.get_component<AnimationComponent>(playerID).dying) return;
+        world.get_component<AnimationComponent>(playerID).dying) {
+        if (world.has_component<VelocityComponent>(playerID)) {
+            VelocityComponent& vel = world.get_component<VelocityComponent>(playerID);
+            vel.vx = vel.vy = vel.vz = 0.0f;
+        }
+        return;
+    }
 
     const InputState input = world.current_input();
 

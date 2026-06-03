@@ -16,6 +16,7 @@
 
 @interface BrawlerDelegate_tvOS : NSObject <MTKViewDelegate>
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt;
+- (void)resetInput;
 @end
 
 @implementation BrawlerDelegate_tvOS {
@@ -84,9 +85,12 @@
     _world.add_component<AnimationComponent>(enemy);
 }
 
+- (void)resetInput { _currentInput = {}; }
+
 - (void)_restart {
     _world    = World();
     _gameOver = NO;
+    _currentInput = {};
     [self _spawnEntities];
     RespawnSystem_reset();
 }
@@ -209,7 +213,10 @@
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 }
 
-- (void)pauseRendering  { _mtkView.paused = YES; }
-- (void)resumeRendering { _mtkView.paused = NO;  }
+- (void)pauseRendering {
+    [_delegate resetInput];
+    _mtkView.paused = YES;
+}
+- (void)resumeRendering { _mtkView.paused = NO; }
 
 @end
