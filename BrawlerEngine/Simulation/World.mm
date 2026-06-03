@@ -21,6 +21,7 @@ template<> ComponentStorage<FactionComponent>&   World::_pool() { return _factio
 template<> ComponentStorage<PlayerTagComponent>&      World::_pool() { return _playerTags; }
 template<> ComponentStorage<DamageCooldownComponent>& World::_pool() { return _damageCooldowns; }
 template<> ComponentStorage<AnimationComponent>&      World::_pool() { return _animations; }
+template<> ComponentStorage<FacingComponent>&         World::_pool() { return _facings; }
 
 // ----
 
@@ -57,6 +58,7 @@ void World::flush() {
         _playerTags.remove(id);
         _damageCooldowns.remove(id);
         _animations.remove(id);
+        _facings.remove(id);
     }
     _deferredDestroyCount = 0;
 }

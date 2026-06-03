@@ -73,6 +73,7 @@
     _world.add_component<HealthComponent>(player)             = {10, 10};
     _world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
     _world.add_component<AnimationComponent>(player);
+    _world.add_component<FacingComponent>(player); // default (0,1) = facing +Y
 
     EntityID enemy = _world.defer_create();
     _world.add_component<PositionComponent>(enemy)            = {200, 300, 0};

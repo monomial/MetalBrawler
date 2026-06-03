@@ -16,6 +16,7 @@ static EntityID spawn_player(World& w) {
     w.add_component<PositionComponent>(e) = {0, 0, 0};
     w.add_component<FactionComponent>(e).type = FactionComponent::Player;
     w.add_component<HealthComponent>(e) = {10, 10};
+    w.add_component<FacingComponent>(e) = {1.f, 0.f}; // facing +X to match enemy placements
     return e;
 }
 
@@ -84,12 +85,12 @@ static EntityID spawn_enemy_full(World& w, float x) {
 }
 
 - (void)test_combat_twoEnemiesDieInSameFrame {
-    // Two enemies with 1 HP both in range — both should be destroyed in one attack.
+    // Two enemies with 1 HP both in the forward arc — both destroyed in one attack.
     World world;
-    EntityID player = spawn_player(world);
+    EntityID player = spawn_player(world); // facing +X
     set_attacking(world, player);
-    EntityID e1 = spawn_enemy_full(world,  40);
-    EntityID e2 = spawn_enemy_full(world, -40);
+    EntityID e1 = spawn_enemy_full(world, 40);   // in arc (+X)
+    EntityID e2 = spawn_enemy_full(world, 50);   // in arc (+X, further)
 
     world.update(kFixedDt, kFixedDt);
 

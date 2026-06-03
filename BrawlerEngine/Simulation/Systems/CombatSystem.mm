@@ -5,8 +5,11 @@
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
-static constexpr float kAttackRange  = 80.0f;
-static constexpr int   kHitStopTicks = 4;     // ~33ms freeze on hit
+static constexpr float kAttackRange      = 80.0f;
+static constexpr int   kHitStopTicks     = 4;      // ~33ms freeze on hit
+// Punch arc: enemy must be within ±70° of the player's facing direction.
+// cos(70°) ≈ 0.342. Enemies behind the player (dot < threshold) are not hit.
+static constexpr float kPunchArcCosine   = 0.342f;
 
 // Active-frame window for each clip: the fraction of clip duration where the
 // hitbox is live, and the damage dealt on contact. Zero damage = not an attack.
@@ -59,6 +62,13 @@ void CombatSystem_update(World& world, float gameDt) {
 
     const PositionComponent playerPos = world.get_component<PositionComponent>(playerID);
 
+    // Facing direction for arc check — fall back to +Y if component absent.
+    float facingDx = 0.f, facingDy = 1.f;
+    if (world.has_component<FacingComponent>(playerID)) {
+        const FacingComponent& f = world.get_component<FacingComponent>(playerID);
+        facingDx = f.dx; facingDy = f.dy;
+    }
+
     bool hitAnything = false;
 
     for (EntityID id = 0; id < count; ++id) {
@@ -75,6 +85,13 @@ void CombatSystem_update(World& world, float gameDt) {
         float dy   = ePos.y - playerPos.y;
         float dist = sqrtf(dx * dx + dy * dy);
         if (dist > kAttackRange) continue;
+
+        // Arc check: enemy must be within ±70° of the player's facing direction.
+        // dot(facing, normalize(enemy - player)) > cos(70°)
+        if (dist > 0.001f) {
+            float dot = (dx / dist) * facingDx + (dy / dist) * facingDy;
+            if (dot < kPunchArcCosine) continue;
+        }
 
         HealthComponent& hp = world.get_component<HealthComponent>(id);
         hp.current -= win.damage;

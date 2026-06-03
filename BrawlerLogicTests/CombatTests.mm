@@ -10,12 +10,14 @@ static constexpr float kActiveStart  = kAttackDur * 0.35f;
 static constexpr float kActiveMid    = kAttackDur * 0.475f; // middle of active window
 static constexpr float kActiveEnd    = kAttackDur * 0.60f;
 
-static EntityID spawnPlayer(World& world, float x = 0, float y = 0) {
+static EntityID spawnPlayer(World& world, float x = 0, float y = 0,
+                            float facingDx = 1.f, float facingDy = 0.f) {
     EntityID e = world.defer_create();
     world.add_component<PlayerTagComponent>(e).active = true;
     world.add_component<PositionComponent>(e)         = {x, y, 0};
     world.add_component<FactionComponent>(e).type     = FactionComponent::Player;
     world.add_component<HealthComponent>(e)           = {10, 10};
+    world.add_component<FacingComponent>(e)           = {facingDx, facingDy};
     return e;
 }
 
@@ -124,17 +126,32 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
 }
 
-- (void)test_multipleEnemiesInRange_allTakeDamage {
+// Directional punch: both enemies in the forward arc take damage.
+- (void)test_multipleEnemiesInArc_allTakeDamage {
     World world;
-    EntityID player = spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0, 1.f, 0.f); // facing +X
     setPlayerAttacking(world, player);
-    EntityID e1 = spawnEnemy(world,  50, 0, 3);
-    EntityID e2 = spawnEnemy(world, -50, 0, 3);
+    EntityID e1 = spawnEnemy(world, 50,  20, 3); // in arc
+    EntityID e2 = spawnEnemy(world, 50, -20, 3); // in arc
 
     world.update(kFixedDt, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(e1).current, 2);
     XCTAssertEqual(world.get_component<HealthComponent>(e2).current, 2);
+}
+
+// Directional punch: enemy directly behind the player is not hit.
+- (void)test_enemyBehindPlayer_noDamage {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0, 1.f, 0.f); // facing +X
+    setPlayerAttacking(world, player);
+    EntityID front = spawnEnemy(world,  50, 0, 3); // in front — hit
+    EntityID back  = spawnEnemy(world, -50, 0, 3); // behind  — not hit
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(front).current, 2);
+    XCTAssertEqual(world.get_component<HealthComponent>(back).current,  3);
 }
 
 // --- Hit-stop ---

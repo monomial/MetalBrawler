@@ -33,6 +33,14 @@ struct PlayerTagComponent {
     bool active; // padding; presence in storage is the real signal
 };
 
+// Last non-zero movement direction, kept as a normalized 2D vector.
+// Updated by InputSystem whenever the player moves; used by CombatSystem
+// to restrict the punch hitbox to a forward arc.
+// Default (0, 1) matches the renderer's default facing (+Y = up the screen).
+struct FacingComponent {
+    float dx = 0.f, dy = 1.f;
+};
+
 // ---------------------------------------------------------------------------
 // Animation
 // ---------------------------------------------------------------------------

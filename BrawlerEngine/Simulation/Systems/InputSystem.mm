@@ -41,6 +41,14 @@ void InputSystem_update(World& world) {
     vel.vy = my * kPlayerSpeed;
     vel.vz = 0.0f;
 
+    // Update facing whenever the player is actually moving.
+    // Stays at last value when standing still so punching while idle faces correctly.
+    if ((mx * mx + my * my) > 0.01f && world.has_component<FacingComponent>(playerID)) {
+        FacingComponent& facing = world.get_component<FacingComponent>(playerID);
+        facing.dx = mx; // already normalized above
+        facing.dy = my;
+    }
+
     if (world.has_component<AnimationComponent>(playerID)) {
         bool moving = (mx * mx + my * my) > 0.01f;
         AnimClipID want = input.attack ? AnimClipID::Attack

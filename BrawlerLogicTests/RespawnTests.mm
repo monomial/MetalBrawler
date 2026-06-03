@@ -15,6 +15,7 @@ static EntityID spawn_player(World& w) {
     w.add_component<PositionComponent>(e) = {0, -100, 0};
     w.add_component<FactionComponent>(e).type = FactionComponent::Player;
     w.add_component<HealthComponent>(e) = {10, 10};
+    w.add_component<FacingComponent>(e) = {1.f, 0.f}; // enemy spawns at +50 on X axis
     return e;
 }
 
