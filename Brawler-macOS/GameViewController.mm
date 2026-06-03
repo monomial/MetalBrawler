@@ -102,17 +102,17 @@
     float physicalDt = fminf((float)(now - _lastTime), 0.1f);
     _lastTime = now;
 
+    // Always update the world — even during game-over — so the player death
+    // animation plays through before the restart timer fires.
+    _world.update(physicalDt, physicalDt);
+
+    _world.events().for_each(EventType::HitContact, [self](const Event&) {
+        [_audio  playHitSound];
+        [_haptics playHitHaptic];
+    });
+
     if (!_gameOver) {
-        _world.update(physicalDt, physicalDt);
-
-        _world.events().for_each(EventType::HitContact, [self](const Event&) {
-            [_audio  playHitSound];
-            [_haptics playHitHaptic];
-        });
-
         // Detect player death via dying flag (persists across ticks).
-        // The EntityDied event is single-tick and can be missed when the accumulator
-        // runs multiple physics ticks per render frame.
         for (EntityID id = 0; id < _world.entity_count(); ++id) {
             if (!_world.player_tags().present(id)) continue;
             if (_world.has_component<AnimationComponent>(id) &&

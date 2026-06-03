@@ -110,14 +110,20 @@
     float physicalDt = fminf((float)(now - _lastTime), 0.1f);
     _lastTime = now;
 
+    // Always update the world so the player death animation plays through.
+    _world.update(physicalDt, physicalDt);
+
+    _world.events().for_each(EventType::HitContact, [self](const Event&) {
+        [_audio  playHitSound];
+        [_haptics playHitHaptic];
+    });
+
+    // Clear single-frame attack pulse.
+    InputState s = _world.current_input();
+    s.attack = false;
+    _world.set_input(s);
+
     if (!_gameOver) {
-        _world.update(physicalDt, physicalDt);
-
-        _world.events().for_each(EventType::HitContact, [self](const Event&) {
-            [_audio  playHitSound];
-            [_haptics playHitHaptic];
-        });
-
         // Detect player death via dying flag (persists across ticks).
         for (EntityID id = 0; id < _world.entity_count(); ++id) {
             if (!_world.player_tags().present(id)) continue;
@@ -128,11 +134,6 @@
             }
             break;
         }
-
-        // Clear single-frame attack pulse.
-        InputState s = _world.current_input();
-        s.attack = false;
-        _world.set_input(s);
     } else {
         _gameOverTimer -= physicalDt;
         if (_gameOverTimer <= 0.f) [self _restart];
