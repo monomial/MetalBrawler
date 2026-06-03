@@ -2,9 +2,13 @@
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
 
-static constexpr float kFixedDt     = 1.0f / 120.0f;
-static constexpr float kEps         = 1e-3f;
-static constexpr float kAttackRange = 80.0f;
+static constexpr float kFixedDt      = 1.0f / 120.0f;
+static constexpr float kAttackRange  = 80.0f;
+static constexpr float kAttackDur    = 1.03f;  // matches kClipDurationFallback[Attack]
+// Active window: 35%–60% of clip duration (matches kAttackWindows[Attack])
+static constexpr float kActiveStart  = kAttackDur * 0.35f;
+static constexpr float kActiveMid    = kAttackDur * 0.475f; // middle of active window
+static constexpr float kActiveEnd    = kAttackDur * 0.60f;
 
 static EntityID spawnPlayer(World& world, float x = 0, float y = 0) {
     EntityID e = world.defer_create();
@@ -13,6 +17,18 @@ static EntityID spawnPlayer(World& world, float x = 0, float y = 0) {
     world.add_component<FactionComponent>(e).type     = FactionComponent::Player;
     world.add_component<HealthComponent>(e)           = {10, 10};
     return e;
+}
+
+// Puts the player in the Attack clip at the middle of its active window.
+static void setPlayerAttacking(World& world, EntityID player) {
+    if (!world.has_component<AnimationComponent>(player))
+        world.add_component<AnimationComponent>(player);
+    auto& anim = world.get_component<AnimationComponent>(player);
+    anim.currentClip   = AnimClipID::Attack;
+    anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime      = kActiveMid;
+    anim.looping       = false;
+    anim.hitApplied    = false;
 }
 
 static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
@@ -34,13 +50,13 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 
 - (void)test_ECSGate_attackKillsEnemy {
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
     EntityID enemy = spawnEnemy(world, 50, 0, /*hp=*/1); // 1 HP, within range
 
-    world.set_input({0, 0, /*attack=*/true, false, false});
     world.update(kFixedDt, kFixedDt);
 
-    // flush() ran inside tick — all components removed from dead entity.
+    // flush() ran — enemy had no AnimationComponent so was defer_destroyed immediately.
     XCTAssertFalse(world.has_component<HealthComponent>(enemy));
     XCTAssertFalse(world.has_component<PositionComponent>(enemy));
     XCTAssertFalse(world.has_component<FactionComponent>(enemy));
@@ -50,10 +66,10 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 
 - (void)test_attackInRange_dealsDamage {
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
     EntityID enemy = spawnEnemy(world, 50, 0, /*hp=*/3);
 
-    world.set_input({0, 0, true, false, false});
     world.update(kFixedDt, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 2);
@@ -61,21 +77,48 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 
 - (void)test_attackOutOfRange_noDamage {
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
     EntityID enemy = spawnEnemy(world, kAttackRange + 10, 0, 3);
 
-    world.set_input({0, 0, true, false, false});
     world.update(kFixedDt, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
 }
 
-- (void)test_noAttackInput_noDamage {
+- (void)test_notInActiveWindow_noDamage {
+    // Player is in the Attack clip but before the active window — no damage yet.
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
+    world.get_component<AnimationComponent>(player).clipTime = kActiveStart * 0.5f; // before window
     EntityID enemy = spawnEnemy(world, 50, 0, 3);
 
-    world.set_input({0, 0, /*attack=*/false, false, false});
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
+}
+
+- (void)test_hitApplied_onlyOncePerSwing {
+    // Even if the player stays in the active window for multiple ticks, damage fires once.
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
+    EntityID enemy = spawnEnemy(world, 50, 0, 5);
+
+    // Run several ticks while clipTime stays inside the active window.
+    for (int i = 0; i < 5; ++i) world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 4); // only 1 damage total
+}
+
+- (void)test_noAttackClip_noDamage {
+    // Player in Idle — no damage regardless of proximity.
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    world.add_component<AnimationComponent>(player); // starts in Idle
+    EntityID enemy = spawnEnemy(world, 50, 0, 3);
+
     world.update(kFixedDt, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
@@ -83,11 +126,11 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 
 - (void)test_multipleEnemiesInRange_allTakeDamage {
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
     EntityID e1 = spawnEnemy(world,  50, 0, 3);
     EntityID e2 = spawnEnemy(world, -50, 0, 3);
 
-    world.set_input({0, 0, true, false, false});
     world.update(kFixedDt, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(e1).current, 2);
@@ -97,35 +140,28 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 // --- Hit-stop ---
 
 - (void)test_hitConnects_triggersHitStop {
-    // Verify that a successful attack lands and triggers HitStop (second attack within
-    // the frozen window must not deal damage).
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
     EntityID enemy = spawnEnemy(world, 50, 0, 3);
 
-    // First attack — should hit (distance 50 < kAttackRange 80) and trigger HitStop.
-    world.set_input({0, 0, /*attack=*/true, false, false});
     world.update(kFixedDt, kFixedDt);
-    int hpAfterFirstHit = world.get_component<HealthComponent>(enemy).current;
-    XCTAssertEqual(hpAfterFirstHit, 2); // took 1 damage
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 2);
 
-    // Second attack attempt while still inside the HitStop window — blocked.
-    world.set_input({0, 0, /*attack=*/true, false, false});
-    world.update(kFixedDt, kFixedDt); // gameDt=0 (frozen tick)
+    // During HitStop the next tick is frozen (gameDt=0) — CombatSystem skips it.
+    world.update(kFixedDt, kFixedDt); // gameDt=0
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 2); // no extra damage
 }
 
 - (void)test_hitStopActive_attackBlocked {
     World world;
-    spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, player);
     EntityID enemy = spawnEnemy(world, 50, 0, 3);
 
-    // Pre-freeze the world before the attack tick.
     world.trigger_hit_stop(1);
-    world.set_input({0, 0, true, false, false});
-    world.update(kFixedDt, kFixedDt); // this tick has gameDt=0
+    world.update(kFixedDt, kFixedDt); // gameDt=0 — CombatSystem returns early
 
-    // CombatSystem returned early — no damage.
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
 }
 
@@ -137,12 +173,13 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 // Bug: CombatSystem didn't check player dying flag, only InputSystem did.
 // A dying player pressing attack should deal no damage.
 - (void)test_dyingPlayer_cannotAttack {
+    // Player is in the attack active window but dying — no damage.
     World world;
     EntityID player = spawnPlayer(world, 0, 0);
-    world.add_component<AnimationComponent>(player).dying = true;
+    setPlayerAttacking(world, player);
+    world.get_component<AnimationComponent>(player).dying = true;
     EntityID enemy = spawnEnemy(world, 50, 0, 3);
 
-    world.set_input({0, 0, /*attack=*/true, false, false});
     world.update(kFixedDt, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);

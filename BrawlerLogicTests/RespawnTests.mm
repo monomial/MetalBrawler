@@ -6,6 +6,9 @@
 static constexpr float kFixedDt     = 1.0f / 120.0f;
 static constexpr float kRespawnDelay = 1.5f;
 
+static constexpr float kAttackDur = 1.03f;
+static constexpr float kActiveMid = kAttackDur * 0.475f;
+
 static EntityID spawn_player(World& w) {
     EntityID e = w.defer_create();
     w.add_component<PlayerTagComponent>(e).active = true;
@@ -13,6 +16,16 @@ static EntityID spawn_player(World& w) {
     w.add_component<FactionComponent>(e).type = FactionComponent::Player;
     w.add_component<HealthComponent>(e) = {10, 10};
     return e;
+}
+
+static void set_attacking(World& w, EntityID player) {
+    if (!w.has_component<AnimationComponent>(player))
+        w.add_component<AnimationComponent>(player);
+    auto& anim = w.get_component<AnimationComponent>(player);
+    anim.currentClip = anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime    = kActiveMid;
+    anim.looping     = false;
+    anim.hitApplied  = false;
 }
 
 static EntityID spawn_enemy(World& w) {
@@ -44,11 +57,11 @@ static bool has_living_enemy(World& w) {
 
 - (void)test_enemyKilled_respawnsAfterDelay {
     World world;
-    spawn_player(world);
+    EntityID player = spawn_player(world);
+    set_attacking(world, player);
     spawn_enemy(world);
 
-    // Kill the enemy with an attack.
-    world.set_input({0, 0, /*attack=*/true, false, false});
+    // Player is in attack active window — enemy takes damage and dies.
     world.update(kFixedDt, kFixedDt);
     XCTAssertFalse(has_living_enemy(world));
 

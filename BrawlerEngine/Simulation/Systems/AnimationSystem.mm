@@ -55,9 +55,10 @@ void AnimationSystem_update(World& world, float gameDt) {
         if (clip_loops(anim.currentClip)) {
             // Looping clips transition immediately when any different clip is requested.
             if (anim.requestedClip != anim.currentClip) {
-                anim.currentClip = anim.requestedClip;
-                anim.clipTime    = 0.f;
-                anim.looping     = clip_loops(anim.currentClip);
+                anim.currentClip  = anim.requestedClip;
+                anim.clipTime     = 0.f;
+                anim.hitApplied   = false;
+                anim.looping      = clip_loops(anim.currentClip);
             } else if (anim.clipTime >= duration) {
                 anim.clipTime = fmodf(anim.clipTime, duration);
             }
@@ -70,8 +71,9 @@ void AnimationSystem_update(World& world, float gameDt) {
                 // Non-dying entities may transition to any requested clip.
                 bool canTransition = !anim.dying || anim.requestedClip == AnimClipID::Death;
                 if (canTransition && anim.requestedClip != anim.currentClip) {
-                    anim.currentClip = anim.requestedClip;
-                    anim.clipTime    = 0.f;
+                    anim.currentClip  = anim.requestedClip;
+                    anim.clipTime     = 0.f;
+                    anim.hitApplied   = false;
                     anim.clipDone    = false;
                     anim.looping     = clip_loops(anim.currentClip);
                 }
@@ -95,4 +97,13 @@ void AnimationSystem_update(World& world, float gameDt) {
 void AnimationSystem_request_clip(World& world, EntityID entity, AnimClipID clip) {
     if (!world.has_component<AnimationComponent>(entity)) return;
     world.get_component<AnimationComponent>(entity).requestedClip = clip;
+}
+
+float AnimationSystem_clip_duration(World& world, EntityID entity, AnimClipID clip) {
+    const LoadedCharacter* charData = nullptr;
+    if (world.has_component<FactionComponent>(entity)) {
+        auto t = world.get_component<FactionComponent>(entity).type;
+        charData = (t == FactionComponent::Player) ? s_playerChar : s_enemyChar;
+    }
+    return clip_duration(charData, clip);
 }

@@ -58,7 +58,8 @@ struct AnimationComponent {
     float      clipTime  = 0.f;  // seconds since clip start
     bool       looping   = true;
     bool       clipDone  = false; // true on last frame of a non-looping clip
-    bool       dying     = false; // entity is playing death animation; pending destruction
+    bool       dying      = false; // entity is playing death animation; pending destruction
+    bool       hitApplied = false; // damage already dealt this swing; cleared on new attack
     float      boneMatrices[kMaxBones][16]; // column-major float4x4 per bone
 };
 

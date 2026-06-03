@@ -5,15 +5,29 @@
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
-static constexpr float kAttackRange  = 80.0f; // units — larger than EnemyAI stop radius
-static constexpr int   kAttackDamage = 1;
+static constexpr float kAttackRange  = 80.0f;
 static constexpr int   kHitStopTicks = 4;     // ~33ms freeze on hit
 
-void CombatSystem_update(World& world, float gameDt) {
-    if (gameDt == 0.0f) return; // already frozen — no new hits this tick
+// Active-frame window for each clip: the fraction of clip duration where the
+// hitbox is live, and the damage dealt on contact. Zero damage = not an attack.
+// Fractions are tunable — set them by watching the animation and noting when
+// the fist is at peak extension.
+struct AttackWindow {
+    float startFrac; // fraction of clip where hitbox opens
+    float endFrac;   // fraction of clip where hitbox closes
+    int   damage;
+};
 
-    const InputState input = world.current_input();
-    if (!input.attack) return;
+static const AttackWindow kAttackWindows[(int)AnimClipID::Count] = {
+    {0.f,   0.f,   0},  // Idle   — no hitbox
+    {0.f,   0.f,   0},  // Walk   — no hitbox
+    {0.35f, 0.60f, 1},  // Attack — jab: fist extends around 35–60% of clip
+    {0.f,   0.f,   0},  // Hurt   — no hitbox
+    {0.f,   0.f,   0},  // Death  — no hitbox
+};
+
+void CombatSystem_update(World& world, float gameDt) {
+    if (gameDt == 0.0f) return; // frozen during HitStop
 
     // Find the player.
     EntityID playerID = kInvalidEntity;
@@ -23,9 +37,25 @@ void CombatSystem_update(World& world, float gameDt) {
     }
     if (playerID == kInvalidEntity) return;
     if (!world.has_component<PositionComponent>(playerID)) return;
+    if (!world.has_component<AnimationComponent>(playerID)) return;
+
+    AnimationComponent& playerAnim = world.get_component<AnimationComponent>(playerID);
+
     // Dead players cannot attack.
-    if (world.has_component<AnimationComponent>(playerID) &&
-        world.get_component<AnimationComponent>(playerID).dying) return;
+    if (playerAnim.dying) return;
+
+    // Only deal damage when the player is inside an attack clip's active window.
+    const AttackWindow& win = kAttackWindows[(int)playerAnim.currentClip];
+    if (win.damage == 0) return; // not an attack clip
+
+    // Already hit something this swing — don't hit again.
+    if (playerAnim.hitApplied) return;
+
+    // Check whether clipTime is inside the active window.
+    float clipDur   = AnimationSystem_clip_duration(world, playerID, playerAnim.currentClip);
+    float winStart  = clipDur * win.startFrac;
+    float winEnd    = clipDur * win.endFrac;
+    if (playerAnim.clipTime < winStart || playerAnim.clipTime > winEnd) return;
 
     const PositionComponent playerPos = world.get_component<PositionComponent>(playerID);
 
@@ -47,24 +77,27 @@ void CombatSystem_update(World& world, float gameDt) {
         if (dist > kAttackRange) continue;
 
         HealthComponent& hp = world.get_component<HealthComponent>(id);
-        hp.current -= kAttackDamage;
+        hp.current -= win.damage;
         hitAnything = true;
 
         world.events().emit_hit_contact(playerID, id);
-        world.events().emit_damage(id, kAttackDamage);
+        world.events().emit_damage(id, win.damage);
 
         if (hp.current <= 0) {
             world.events().emit_died(id);
             if (world.has_component<AnimationComponent>(id)) {
-                // AnimationSystem destroys the entity after the death clip finishes.
                 world.get_component<AnimationComponent>(id).dying = true;
                 AnimationSystem_request_clip(world, id, AnimClipID::Death);
             } else {
-                world.defer_destroy(id); // no animation — destroy immediately
+                world.defer_destroy(id);
             }
         } else if (world.has_component<AnimationComponent>(id)) {
             AnimationSystem_request_clip(world, id, AnimClipID::Hurt);
         }
+    }
+
+    if (hitAnything) {
+        playerAnim.hitApplied = true; // one hit per swing
     }
 
     if (hitAnything) {
