@@ -88,6 +88,18 @@ static EntityID make_enemy(World& w, float x, float y) {
     XCTAssertEqual(world.get_component<HealthComponent>(player).current, 10);
 }
 
+- (void)test_dyingEnemy_dealsNoContactDamage {
+    // A dying enemy (playing death animation) must not hurt the player.
+    World world;
+    EntityID player = make_player(world);
+    EntityID enemy  = make_enemy(world, 10.f, 0); // well within contact range
+    world.add_component<AnimationComponent>(enemy).dying = true;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 10);
+}
+
 - (void)test_noPlayer_doesNotCrash {
     World world;
     make_enemy(world, 0, 0);
