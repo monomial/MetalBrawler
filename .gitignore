@@ -1,6 +1,7 @@
 # Xcode
 *.xcworkspace
 *.xcuserdata
+xcuserdata/
 DerivedData/
 .build/
 *.ipa
