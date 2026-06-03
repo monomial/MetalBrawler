@@ -81,6 +81,7 @@
 		7C5930E3F0038BB5D235C1C6 /* ContactDamageSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */; };
 		7CD8A2DD107618B08AB49ED0 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 2A7FD8B528E4D7B75E7C364B /* assets */; };
 		7DAF6E13CFC057CF63E27625 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */; };
+		81733D88A551215128A9F349 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B5AD103103E8A725B32172A /* SceneDelegate.mm */; };
 		8494D6D39EB821E4339CDCAE /* Brawler.metal in Sources */ = {isa = PBXBuildFile; fileRef = 91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */; };
 		84FA8A58B0870FE8AAACBB9B /* BrawlerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9E760FCE7B77214BDA856B4F /* BrawlerRenderer.mm */; };
 		86B0D6EC90AC0670A1185EE2 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
@@ -132,6 +133,7 @@
 		FBA16BF0F243CF42183ED12F /* AudioEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = BB91D10DBF1FF0749C332ACF /* AudioEngine.mm */; };
 		FC9AA200EEB2F5308A7E7B13 /* HapticsEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = F597F0F0761E7D3A6F230D61 /* HapticsEngine.mm */; };
 		FCDB3D320DE8C5B0E26C0A42 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */; };
+		FFBFE8BEAB965AB93B0F4BCF /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B75FDC263948D8185E30793 /* SceneDelegate.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -151,6 +153,7 @@
 		263059B22BA872FC5E39D9DC /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		286747CEB9E34C0D5FBA2499 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
 		2A7FD8B528E4D7B75E7C364B /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		2B5AD103103E8A725B32172A /* SceneDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SceneDelegate.mm; sourceTree = "<group>"; };
 		3288EB8DE9747307AEFD95B3 /* AnimationSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationSystem.h; sourceTree = "<group>"; };
 		38D9FE09D0A8707F1172F4F4 /* CombatSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CombatSystem.h; sourceTree = "<group>"; };
 		3B5CE91A2D9A83DDCAB5E3A4 /* AudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioEngine.h; sourceTree = "<group>"; };
@@ -168,6 +171,7 @@
 		7A8452E098211B9F752E4A4C /* ContactDamageSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ContactDamageSystem.h; sourceTree = "<group>"; };
 		7B4C71C96BADA923A9B9BDB9 /* RespawnTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RespawnTests.mm; sourceTree = "<group>"; };
 		7B578A52EC9FECB06192D70B /* EdgeCaseTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EdgeCaseTests.mm; sourceTree = "<group>"; };
+		7B75FDC263948D8185E30793 /* SceneDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SceneDelegate.mm; sourceTree = "<group>"; };
 		7C1CF591F48BAC2512642C39 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		80CCA7F1EB204F0A878A068A /* World.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = World.h; sourceTree = "<group>"; };
@@ -175,6 +179,7 @@
 		856406A32C732664791F661B /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 		8A46A664260E52C99AFEA3AE /* WallCollisionSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WallCollisionSystem.h; sourceTree = "<group>"; };
 		8BDF5371A1FA10DE17872A35 /* InputSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InputSystem.mm; sourceTree = "<group>"; };
+		902FD5C1BFF4E6D41C19E864 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
 		91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Brawler.metal; sourceTree = "<group>"; };
 		944C66793805FF7C35F893F2 /* Brawler-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9872E2A72357EB6205023978 /* EnemyAITests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EnemyAITests.mm; sourceTree = "<group>"; };
@@ -207,6 +212,7 @@
 		DCDB3F619B92B9629E4A3149 /* WorldTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WorldTests.mm; sourceTree = "<group>"; };
 		E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ContactDamageSystem.mm; sourceTree = "<group>"; };
 		E95542E1A66D947C412352F1 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
+		EAA717FE7B2D2BFDC637ED65 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
 		EBD7464D60D21D33CB1F8405 /* PhysicsSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PhysicsSystem.mm; sourceTree = "<group>"; };
 		EDC56629B2591E36265F1929 /* CharacterLoader.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CharacterLoader.mm; sourceTree = "<group>"; };
 		F44352FD41BDCADB1E9D6EE1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -393,6 +399,8 @@
 				B36194D2D04F225F413E6837 /* GameViewController.mm */,
 				2377186BA6E74F7009AFB214 /* Info.plist */,
 				F589CAA671997CF2E639FC51 /* main.mm */,
+				902FD5C1BFF4E6D41C19E864 /* SceneDelegate.h */,
+				2B5AD103103E8A725B32172A /* SceneDelegate.mm */,
 			);
 			path = "Brawler-tvOS";
 			sourceTree = "<group>";
@@ -434,6 +442,8 @@
 				286747CEB9E34C0D5FBA2499 /* GameViewController.mm */,
 				B3DE47D446C1E666E427C5D0 /* Info.plist */,
 				784575DC4C4D5FF355458A61 /* main.mm */,
+				EAA717FE7B2D2BFDC637ED65 /* SceneDelegate.h */,
+				7B75FDC263948D8185E30793 /* SceneDelegate.mm */,
 			);
 			path = "Brawler-iOS";
 			sourceTree = "<group>";
@@ -650,6 +660,7 @@
 				F326708B5F0FB965A5BE1833 /* InputSystem.mm in Sources */,
 				A5FC581C4BA47CA5B4A97FFF /* PhysicsSystem.mm in Sources */,
 				1905E315953A8F28A8897B66 /* RespawnSystem.mm in Sources */,
+				81733D88A551215128A9F349 /* SceneDelegate.mm in Sources */,
 				6232FD0FD00A65A3D2EB1B4E /* ScreenShakeSystem.mm in Sources */,
 				138B3B5451017779258A87DD /* SiriRemoteInput.mm in Sources */,
 				8CC75A52AA0F02D030983BB3 /* SkinnedMesh.metal in Sources */,
@@ -677,6 +688,7 @@
 				66E1768FFC17BC8B2EB01C0C /* InputSystem.mm in Sources */,
 				9C7DE264984098BE17962BC6 /* PhysicsSystem.mm in Sources */,
 				0DE35C50D8A55182F4F762BF /* RespawnSystem.mm in Sources */,
+				FFBFE8BEAB965AB93B0F4BCF /* SceneDelegate.mm in Sources */,
 				AE487591C26654757F0B0AD8 /* ScreenShakeSystem.mm in Sources */,
 				432C7520B76377BB6B415F5E /* SiriRemoteInput.mm in Sources */,
 				D321E71099975FC994A8D4A2 /* SkinnedMesh.metal in Sources */,
