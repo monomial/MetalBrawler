@@ -26,9 +26,14 @@ static MDLVertexDescriptor* makeSkinnedMDLVD() {
 }
 
 static void walkAsset(MDLAsset *asset, void(^block)(MDLObject*)) {
-    __block void(^rec)(MDLObject*) = nil;
-    rec = ^(MDLObject *o) { block(o); for (MDLObject *c in o.children.objects) rec(c); };
-    for (MDLObject *top in asset) rec(top);
+    NSMutableArray<MDLObject*> *stack = [NSMutableArray array];
+    for (MDLObject *top in asset) [stack addObject:top];
+    while (stack.count) {
+        MDLObject *o = stack.lastObject;
+        [stack removeLastObject];
+        block(o);
+        for (MDLObject *c in o.children.objects) [stack addObject:c];
+    }
 }
 
 static MDLSkeleton* findSkeleton(MDLAsset *asset) {

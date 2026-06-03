@@ -64,11 +64,14 @@
         micro.reportsAbsoluteDpadValues = NO; // want delta, not absolute
         __weak BrawlerDelegate_tvOS *weakSelf = self;
         micro.dpad.valueChangedHandler = ^(GCControllerDirectionPad *dpad, float x, float y) {
-            InputState state = SiriRemote_processSwipeDelta(x, y);
-            weakSelf->_currentInput = state;
+            BrawlerDelegate_tvOS *s = weakSelf;
+            if (!s) return;
+            s->_currentInput = SiriRemote_processSwipeDelta(x, y);
         };
         micro.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
-            weakSelf->_currentInput.attack = pressed;
+            BrawlerDelegate_tvOS *s = weakSelf;
+            if (!s) return;
+            s->_currentInput.attack = pressed;
         };
         return;
     }
@@ -78,11 +81,15 @@
     if (ext) {
         __weak BrawlerDelegate_tvOS *weakSelf = self;
         ext.leftThumbstick.valueChangedHandler = ^(GCControllerDirectionPad *pad, float x, float y) {
-            weakSelf->_currentInput.moveX = x;
-            weakSelf->_currentInput.moveY = y;
+            BrawlerDelegate_tvOS *s = weakSelf;
+            if (!s) return;
+            s->_currentInput.moveX = x;
+            s->_currentInput.moveY = y;
         };
         ext.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
-            weakSelf->_currentInput.attack = pressed;
+            BrawlerDelegate_tvOS *s = weakSelf;
+            if (!s) return;
+            s->_currentInput.attack = pressed;
         };
     }
 }
@@ -108,7 +115,7 @@
 
     // T6: Siri Remote swipe delta → dead-zone + acceleration curve → InputState.
     [[NSNotificationCenter defaultCenter]
-        addObserver:self
+        addObserver:_delegate
            selector:@selector(_controllerConnected:)
                name:GCControllerDidConnectNotification
              object:nil];
