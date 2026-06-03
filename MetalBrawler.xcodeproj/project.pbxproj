@@ -80,6 +80,7 @@
 		7AA9478EA4A6C7629F536851 /* AudioEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = BB91D10DBF1FF0749C332ACF /* AudioEngine.mm */; };
 		7C5930E3F0038BB5D235C1C6 /* ContactDamageSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */; };
 		7CD8A2DD107618B08AB49ED0 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 2A7FD8B528E4D7B75E7C364B /* assets */; };
+		7D900BF65C75FFFFCD85ECE6 /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
 		7DAF6E13CFC057CF63E27625 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */; };
 		81733D88A551215128A9F349 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B5AD103103E8A725B32172A /* SceneDelegate.mm */; };
 		8494D6D39EB821E4339CDCAE /* Brawler.metal in Sources */ = {isa = PBXBuildFile; fileRef = 91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */; };
@@ -88,6 +89,7 @@
 		8CC75A52AA0F02D030983BB3 /* SkinnedMesh.metal in Sources */ = {isa = PBXBuildFile; fileRef = AEA11E8F308C6EE6CEC1DF0A /* SkinnedMesh.metal */; };
 		8E0991FE8CD3247491E9E6D8 /* EdgeCaseTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B578A52EC9FECB06192D70B /* EdgeCaseTests.mm */; };
 		8E09F46F0CFC82836FA62B61 /* AudioEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = BB91D10DBF1FF0749C332ACF /* AudioEngine.mm */; };
+		8EC948CF7AD38B2A37F95C9C /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
 		90BC4A4DC3C5371134D28DF3 /* EnemyAISystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A6357873050DA593E566E786 /* EnemyAISystem.mm */; };
 		911EEA89EDB8892F9329ECFC /* ContactDamageSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */; };
 		929D4BACEF301869C19C76B7 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
@@ -100,6 +102,7 @@
 		9E51F37359FADBB24271E89D /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */; };
 		9F133B3D66138D96729D3528 /* GameViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F63305F8EE199B9C7E16C758 /* GameViewController.mm */; };
 		A10BF2DC7EA9E737BCCE27AE /* HapticsEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = F597F0F0761E7D3A6F230D61 /* HapticsEngine.mm */; };
+		A4D2AC5F911EBD8509D4B64A /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
 		A54CE6F9D19C06B1B6D0C014 /* ScreenShakeTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = B4827BD85A10277A5FA470B0 /* ScreenShakeTests.mm */; };
 		A5FC581C4BA47CA5B4A97FFF /* PhysicsSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = EBD7464D60D21D33CB1F8405 /* PhysicsSystem.mm */; };
 		A75A3140989E25325213F92C /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = E95542E1A66D947C412352F1 /* AppDelegate.mm */; };
@@ -126,6 +129,7 @@
 		E5E6B577365BA74F2E6FA25B /* WallCollisionSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B76A9E58C446E2F8B6C06DD /* WallCollisionSystem.mm */; };
 		E66F4BC5D009C5595D0C80B6 /* AnimationSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C375040E396E4D9619804D9B /* AnimationSystem.mm */; };
 		E8B124E0D81B7D76326033C2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E13413F89AC01BF3699C455 /* Cocoa.framework */; };
+		E96A56355052DB3DAD8A2B2D /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
 		EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */; };
 		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
 		F326708B5F0FB965A5BE1833 /* InputSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF5371A1FA10DE17872A35 /* InputSystem.mm */; };
@@ -154,6 +158,7 @@
 		286747CEB9E34C0D5FBA2499 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
 		2A7FD8B528E4D7B75E7C364B /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		2B5AD103103E8A725B32172A /* SceneDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SceneDelegate.mm; sourceTree = "<group>"; };
+		30796A6CE2160427FFD83AE4 /* BrawlerGameDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrawlerGameDelegate.h; sourceTree = "<group>"; };
 		3288EB8DE9747307AEFD95B3 /* AnimationSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationSystem.h; sourceTree = "<group>"; };
 		38D9FE09D0A8707F1172F4F4 /* CombatSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CombatSystem.h; sourceTree = "<group>"; };
 		3B5CE91A2D9A83DDCAB5E3A4 /* AudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioEngine.h; sourceTree = "<group>"; };
@@ -202,6 +207,7 @@
 		B4C88275BB431FFCDEDDF60E /* RoomBounds.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RoomBounds.h; sourceTree = "<group>"; };
 		B8A5DCEC930B03043555DCAE /* World.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = World.mm; sourceTree = "<group>"; };
 		BB91D10DBF1FF0749C332ACF /* AudioEngine.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AudioEngine.mm; sourceTree = "<group>"; };
+		BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BrawlerGameDelegate.mm; sourceTree = "<group>"; };
 		C198EE6AC4B8C900025F2E54 /* ContactDamageTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ContactDamageTests.mm; sourceTree = "<group>"; };
 		C35BBBB175DED3F3EEEA8394 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		C375040E396E4D9619804D9B /* AnimationSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AnimationSystem.mm; sourceTree = "<group>"; };
@@ -338,6 +344,8 @@
 		2CAC442BB0397260635883AC /* BrawlerEngine */ = {
 			isa = PBXGroup;
 			children = (
+				30796A6CE2160427FFD83AE4 /* BrawlerGameDelegate.h */,
+				BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */,
 				104E94F8B0AFC006C647134E /* Assets */,
 				2E5867DEC13F7830CE80441C /* Audio */,
 				4D99D8643140A7D932EE8385 /* Haptics */,
@@ -650,6 +658,7 @@
 				A75A3140989E25325213F92C /* AppDelegate.mm in Sources */,
 				7AA9478EA4A6C7629F536851 /* AudioEngine.mm in Sources */,
 				8494D6D39EB821E4339CDCAE /* Brawler.metal in Sources */,
+				E96A56355052DB3DAD8A2B2D /* BrawlerGameDelegate.mm in Sources */,
 				128445F5D5A941B279C38711 /* BrawlerRenderer.mm in Sources */,
 				945F8809287421DC965F4EE0 /* CharacterLoader.mm in Sources */,
 				0D11AFF7BD915151C407CC1D /* CombatSystem.mm in Sources */,
@@ -678,6 +687,7 @@
 				5DCE9194F444C661CA7CA1DC /* AppDelegate.mm in Sources */,
 				8E09F46F0CFC82836FA62B61 /* AudioEngine.mm in Sources */,
 				39177CE3BAEF02B56A393F9B /* Brawler.metal in Sources */,
+				8EC948CF7AD38B2A37F95C9C /* BrawlerGameDelegate.mm in Sources */,
 				84FA8A58B0870FE8AAACBB9B /* BrawlerRenderer.mm in Sources */,
 				0FB81F947168A9957F4BA982 /* CharacterLoader.mm in Sources */,
 				2C54B97123739B470868C3F6 /* CombatSystem.mm in Sources */,
@@ -706,6 +716,7 @@
 				487789359F8A0F79A9C6ACFB /* AppDelegate.mm in Sources */,
 				FBA16BF0F243CF42183ED12F /* AudioEngine.mm in Sources */,
 				B79D22A89C73DD7F51A27241 /* Brawler.metal in Sources */,
+				A4D2AC5F911EBD8509D4B64A /* BrawlerGameDelegate.mm in Sources */,
 				422EA068454728D5F207F7DD /* BrawlerRenderer.mm in Sources */,
 				BCE0400E90F2AFCA75821048 /* CharacterLoader.mm in Sources */,
 				4BF8BAD89CABEAD53BD10A44 /* CombatSystem.mm in Sources */,
@@ -732,6 +743,7 @@
 				586FD3DC80D11E23BFD046F3 /* AnimationSystem.mm in Sources */,
 				946A61D111C585A14BDB66E2 /* AnimationTests.mm in Sources */,
 				764A71E62086891434D31F1D /* AudioEngine.mm in Sources */,
+				7D900BF65C75FFFFCD85ECE6 /* BrawlerGameDelegate.mm in Sources */,
 				9DB25D80FE73F1B040B4A20D /* BrawlerRenderer.mm in Sources */,
 				59CE7AD96D1F598CD531EF41 /* CharacterLoader.mm in Sources */,
 				DCC751F29351E8B4E42819AB /* CombatSystem.mm in Sources */,
