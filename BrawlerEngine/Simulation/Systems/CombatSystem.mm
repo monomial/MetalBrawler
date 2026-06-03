@@ -1,6 +1,7 @@
 #include "CombatSystem.h"
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
+#include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
@@ -22,6 +23,9 @@ void CombatSystem_update(World& world, float gameDt) {
     }
     if (playerID == kInvalidEntity) return;
     if (!world.has_component<PositionComponent>(playerID)) return;
+    // Dead players cannot attack.
+    if (world.has_component<AnimationComponent>(playerID) &&
+        world.get_component<AnimationComponent>(playerID).dying) return;
 
     const PositionComponent playerPos = world.get_component<PositionComponent>(playerID);
 
@@ -32,6 +36,9 @@ void CombatSystem_update(World& world, float gameDt) {
         if (world.factions().get(id).type != FactionComponent::Enemy) continue;
         if (!world.has_component<PositionComponent>(id)) continue;
         if (!world.has_component<HealthComponent>(id)) continue;
+        // Skip entities already in their death animation.
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) continue;
 
         const PositionComponent& ePos = world.get_component<PositionComponent>(id);
         float dx   = ePos.x - playerPos.x;
@@ -48,7 +55,15 @@ void CombatSystem_update(World& world, float gameDt) {
 
         if (hp.current <= 0) {
             world.events().emit_died(id);
-            world.defer_destroy(id);
+            if (world.has_component<AnimationComponent>(id)) {
+                // AnimationSystem destroys the entity after the death clip finishes.
+                world.get_component<AnimationComponent>(id).dying = true;
+                AnimationSystem_request_clip(world, id, AnimClipID::Death);
+            } else {
+                world.defer_destroy(id); // no animation — destroy immediately
+            }
+        } else if (world.has_component<AnimationComponent>(id)) {
+            AnimationSystem_request_clip(world, id, AnimClipID::Hurt);
         }
     }
 

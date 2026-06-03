@@ -2,7 +2,7 @@
 #include "Simulation/World.h"
 
 static constexpr float kFixedDt       = 1.0f / 120.0f;
-static constexpr float kContactRange  = 35.f;
+static constexpr float kContactRange  = 65.f; // must match ContactDamageSystem.mm
 static constexpr float kCooldown      = 0.75f;
 
 static EntityID make_player(World& w) {

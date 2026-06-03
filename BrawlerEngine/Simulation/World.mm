@@ -5,6 +5,7 @@
 #include "Systems/CombatSystem.h"
 #include "Systems/ContactDamageSystem.h"
 #include "Systems/WallCollisionSystem.h"
+#include "Systems/AnimationSystem.h"
 #include "Systems/RespawnSystem.h"
 #include "Systems/ScreenShakeSystem.h"
 #include <cassert>
@@ -19,6 +20,7 @@ template<> ComponentStorage<HealthComponent>&    World::_pool() { return _health
 template<> ComponentStorage<FactionComponent>&   World::_pool() { return _factions; }
 template<> ComponentStorage<PlayerTagComponent>&      World::_pool() { return _playerTags; }
 template<> ComponentStorage<DamageCooldownComponent>& World::_pool() { return _damageCooldowns; }
+template<> ComponentStorage<AnimationComponent>&      World::_pool() { return _animations; }
 
 // ----
 
@@ -54,6 +56,7 @@ void World::flush() {
         _factions.remove(id);
         _playerTags.remove(id);
         _damageCooldowns.remove(id);
+        _animations.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -76,7 +79,8 @@ void World::tick(float gameDt) {
     CombatSystem_update(*this, gameDt);
     ContactDamageSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
-    // 5. AnimationSystem — TODO
+    // 5. AnimationSystem — advances clip time, samples bone matrices when assets loaded
+    AnimationSystem_update(*this, gameDt);
     // 6. AudioSystem / RespawnSystem (physicalDt — run even during HitStop)
     RespawnSystem_update(*this, gameDt);
     // 7. HapticsSystem   — TODO

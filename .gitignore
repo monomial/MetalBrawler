@@ -14,3 +14,7 @@ DerivedData/
 
 # Build artifacts
 build/
+
+# Source assets — not needed at runtime; regenerate with tools/convert_to_usdz.py
+assets/characters/player/*.fbx
+assets/characters/player/unused/

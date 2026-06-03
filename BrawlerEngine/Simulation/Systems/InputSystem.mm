@@ -1,6 +1,7 @@
 #include "InputSystem.h"
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
+#include "Simulation/Systems/AnimationSystem.h"
 #include <math.h>
 
 static constexpr float kPlayerSpeed = 300.0f; // units per second
@@ -13,6 +14,9 @@ void InputSystem_update(World& world) {
         if (tags.present(id)) { playerID = id; break; }
     }
     if (playerID == kInvalidEntity) return;
+    // Ignore input while player is dying.
+    if (world.has_component<AnimationComponent>(playerID) &&
+        world.get_component<AnimationComponent>(playerID).dying) return;
 
     const InputState input = world.current_input();
 
@@ -30,4 +34,12 @@ void InputSystem_update(World& world) {
     vel.vx = mx * kPlayerSpeed;
     vel.vy = my * kPlayerSpeed;
     vel.vz = 0.0f;
+
+    if (world.has_component<AnimationComponent>(playerID)) {
+        bool moving = (mx * mx + my * my) > 0.01f;
+        AnimClipID want = input.attack ? AnimClipID::Attack
+                        : moving       ? AnimClipID::Walk
+                                       : AnimClipID::Idle;
+        AnimationSystem_request_clip(world, playerID, want);
+    }
 }

@@ -2,6 +2,7 @@
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/EventBus.h"
+#include "Simulation/Components.h"
 #include <stdlib.h>
 
 static constexpr float kRespawnDelay = 1.5f; // seconds after all enemies die
@@ -36,8 +37,10 @@ void RespawnSystem_update(World& world, float physicalDt) {
         s_respawnTimer = kRespawnDelay;
         s_deathPending = false;
     }
-    world.events().for_each(EventType::EntityDied, [](const Event&) {
-        s_deathPending = true;
+    // Only trigger respawn when a non-player (enemy) dies.
+    world.events().for_each(EventType::EntityDied, [&world](const Event& e) {
+        if (!world.player_tags().present(e.entityDied.entityID))
+            s_deathPending = true;
     });
 
     if (s_respawnTimer > 0.f) {
@@ -55,6 +58,7 @@ void RespawnSystem_update(World& world, float physicalDt) {
             world.add_component<VelocityComponent>(enemy) = {0, 0, 0};
             world.add_component<FactionComponent>(enemy).type = FactionComponent::Enemy;
             world.add_component<HealthComponent>(enemy) = {kEnemyHP, kEnemyHP};
+            world.add_component<AnimationComponent>(enemy);
         }
     }
 }

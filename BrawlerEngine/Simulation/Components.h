@@ -33,6 +33,39 @@ struct PlayerTagComponent {
     bool active; // padding; presence in storage is the real signal
 };
 
+// ---------------------------------------------------------------------------
+// Animation
+// ---------------------------------------------------------------------------
+
+static constexpr int kMaxBones = 64;
+
+// Which animation clip is playing. Matches the clip names exported from Mixamo.
+enum class AnimClipID : uint8_t {
+    Idle    = 0,
+    Walk    = 1,
+    Attack  = 2,
+    Hurt    = 3,
+    Death   = 4,
+    Count
+};
+
+// Drives AnimationSystem. Holds per-entity clip state + GPU bone matrices.
+// float4x4 bone matrices are written by AnimationSystem and uploaded to the
+// GPU skinning uniform buffer each frame.
+struct AnimationComponent {
+    AnimClipID currentClip   = AnimClipID::Idle;
+    AnimClipID requestedClip = AnimClipID::Idle; // set by other systems to request a transition
+    float      clipTime  = 0.f;  // seconds since clip start
+    bool       looping   = true;
+    bool       clipDone  = false; // true on last frame of a non-looping clip
+    bool       dying     = false; // entity is playing death animation; pending destruction
+    float      boneMatrices[kMaxBones][16]; // column-major float4x4 per bone
+};
+
+// ---------------------------------------------------------------------------
+// Damage cooldown (contact/hazard sources)
+// ---------------------------------------------------------------------------
+
 // Prevents rapid-fire damage from area/contact sources.
 // HazardSystem and ContactDamageSystem skip the entity while remaining > 0.
 struct DamageCooldownComponent {

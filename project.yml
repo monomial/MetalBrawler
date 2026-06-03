@@ -17,9 +17,13 @@ targets:
       - path: Brawler-macOS
       - path: BrawlerEngine
       - path: Shaders
+      - path: assets
+        buildPhase: resources
+        type: folder
     dependencies:
       - sdk: Metal.framework
       - sdk: MetalKit.framework
+      - sdk: ModelIO.framework
       - sdk: Cocoa.framework
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
@@ -45,9 +49,13 @@ targets:
       - path: Brawler-iOS
       - path: BrawlerEngine
       - path: Shaders
+      - path: assets
+        buildPhase: resources
+        type: folder
     dependencies:
       - sdk: Metal.framework
       - sdk: MetalKit.framework
+      - sdk: ModelIO.framework
       - sdk: UIKit.framework
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
@@ -74,9 +82,13 @@ targets:
       - path: Brawler-tvOS
       - path: BrawlerEngine
       - path: Shaders
+      - path: assets
+        buildPhase: resources
+        type: folder
     dependencies:
       - sdk: Metal.framework
       - sdk: MetalKit.framework
+      - sdk: ModelIO.framework
       - sdk: UIKit.framework
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
@@ -105,6 +117,7 @@ targets:
     dependencies:
       - sdk: Metal.framework
       - sdk: MetalKit.framework
+      - sdk: ModelIO.framework
       - sdk: Cocoa.framework
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework

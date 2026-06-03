@@ -7,6 +7,8 @@
 #import "Haptics/HapticsEngine.h"
 #import "Audio/AudioEngine.h"
 #include "Simulation/Systems/RespawnSystem.h"
+#include "Simulation/Systems/AnimationSystem.h"
+#include "Assets/CharacterLoader.h"
 
 // ---------------------------------------------------------------------------
 // BrawlerDelegate — owns World, drives update + render via BrawlerRenderer
@@ -41,9 +43,25 @@
     _audio    = [[AudioEngine alloc] init];
     [_audio startupInit];
 
+    [self _loadCharacters:device];
     [self _spawnEntities];
 
     return self;
+}
+
+- (void)_loadCharacters:(id<MTLDevice>)device {
+    NSString *res = [NSBundle mainBundle].resourcePath;
+    NSString *playerDir = [res stringByAppendingPathComponent:@"assets/characters/player"];
+    NSString *mesh = [playerDir stringByAppendingPathComponent:@"Ch24_nonPBR.usdz"];
+
+    NSMutableArray<NSString*> *clips = [NSMutableArray array];
+    for (NSString *n in @[@"idle.usdz", @"walk.usdz", @"attack.usdz",
+                           @"hurt.usdz", @"death.usdz"])
+        [clips addObject:[playerDir stringByAppendingPathComponent:n]];
+
+    LoadedCharacter *player = CharacterLoader_load(mesh, clips, device);
+    AnimationSystem_set_characters(player, player);
+    [_renderer setPlayerCharacter:player enemyCharacter:player];
 }
 
 - (void)_spawnEntities {
@@ -54,12 +72,14 @@
     _world.add_component<FactionComponent>(player).type       = FactionComponent::Player;
     _world.add_component<HealthComponent>(player)             = {10, 10};
     _world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+    _world.add_component<AnimationComponent>(player);
 
     EntityID enemy = _world.defer_create();
     _world.add_component<PositionComponent>(enemy)            = {200, 300, 0};
     _world.add_component<VelocityComponent>(enemy)            = {0, 0, 0};
     _world.add_component<FactionComponent>(enemy).type        = FactionComponent::Enemy;
     _world.add_component<HealthComponent>(enemy)              = {3, 3};
+    _world.add_component<AnimationComponent>(enemy);
 }
 
 - (void)setInputState:(InputState)state { _world.set_input(state); }
@@ -90,14 +110,17 @@
             [_haptics playHitHaptic];
         });
 
-        // Detect player death → game over.
-        bool playerDied = false;
-        _world.events().for_each(EventType::EntityDied, [&](const Event& e) {
-            if (_world.player_tags().present(e.entityDied.entityID)) playerDied = true;
-        });
-        if (playerDied) {
-            _gameOver      = YES;
-            _gameOverTimer = 3.0f; // restart after 3 seconds
+        // Detect player death via dying flag (persists across ticks).
+        // The EntityDied event is single-tick and can be missed when the accumulator
+        // runs multiple physics ticks per render frame.
+        for (EntityID id = 0; id < _world.entity_count(); ++id) {
+            if (!_world.player_tags().present(id)) continue;
+            if (_world.has_component<AnimationComponent>(id) &&
+                _world.get_component<AnimationComponent>(id).dying) {
+                _gameOver      = YES;
+                _gameOverTimer = 3.0f;
+            }
+            break;
         }
     } else {
         _gameOverTimer -= physicalDt;

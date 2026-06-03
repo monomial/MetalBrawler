@@ -1,15 +1,20 @@
 #import <MetalKit/MetalKit.h>
 class World;
+struct LoadedCharacter;
 
 // Shared Metal renderer — used by macOS, iOS, and tvOS GameViewControllers.
-// Reads PositionComponent + FactionComponent from World each frame;
-// draws colored ground-plane quads with a perspective camera that follows the player.
+// Draws colored ground-plane quads for entities without loaded characters;
+// draws lit skinned meshes for entities whose faction has a LoadedCharacter.
 @interface BrawlerRenderer : NSObject
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device
                    pixelFormat:(MTLPixelFormat)pixelFormat;
 
 - (void)updateDrawableSize:(CGSize)size;
+
+// Supply loaded character meshes for skinned rendering. Either may be nil (falls back to quads).
+- (void)setPlayerCharacter:(LoadedCharacter*)player
+               enemyCharacter:(LoadedCharacter*)enemy;
 
 // Call once per frame after World::update(). Encodes draw calls into cmd.
 - (void)drawWorld:(World*)world

@@ -1,9 +1,10 @@
 #include "EnemyAISystem.h"
 #include "Simulation/World.h"
+#include "Simulation/Systems/AnimationSystem.h"
 #include <math.h>
 
 static constexpr float kEnemySpeed     = 150.0f; // units per second
-static constexpr float kStopRadius     = 30.0f;  // stop steering within this distance
+static constexpr float kStopRadius     = 80.0f;  // stop steering within this distance
 
 void EnemyAISystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // HitStop — enemies freeze
@@ -26,6 +27,8 @@ void EnemyAISystem_update(World& world, float gameDt) {
         if (!factions.present(id)) continue;
         if (factions.get(id).type != FactionComponent::Enemy) continue;
         if (!world.has_component<PositionComponent>(id)) continue;
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) continue;
 
         const PositionComponent& ePos = world.get_component<PositionComponent>(id);
 
@@ -38,13 +41,18 @@ void EnemyAISystem_update(World& world, float gameDt) {
 
         VelocityComponent& vel = world.get_component<VelocityComponent>(id);
 
+        bool moving;
         if (dist <= kStopRadius) {
-            // Close enough — stop moving so CombatSystem can handle contact.
             vel = {0.f, 0.f, 0.f};
+            moving = false;
         } else {
             vel.vx = (dx / dist) * kEnemySpeed;
             vel.vy = (dy / dist) * kEnemySpeed;
             vel.vz = 0.f;
+            moving = true;
         }
+
+        if (world.has_component<AnimationComponent>(id))
+            AnimationSystem_request_clip(world, id, moving ? AnimClipID::Walk : AnimClipID::Idle);
     }
 }

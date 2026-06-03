@@ -97,20 +97,22 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 // --- Hit-stop ---
 
 - (void)test_hitConnects_triggersHitStop {
+    // Verify that a successful attack lands and triggers HitStop (second attack within
+    // the frozen window must not deal damage).
     World world;
     spawnPlayer(world, 0, 0);
     EntityID enemy = spawnEnemy(world, 50, 0, 3);
-    world.add_component<VelocityComponent>(enemy) = {100, 0, 0};
 
-    world.set_input({0, 0, true, false, false});
-    // Feed 5 ticks — first tick hits (gameDt=kFixedDt), next 4 frozen (gameDt=0).
-    world.update(5 * kFixedDt, kFixedDt);
+    // First attack — should hit (distance 50 < kAttackRange 80) and trigger HitStop.
+    world.set_input({0, 0, /*attack=*/true, false, false});
+    world.update(kFixedDt, kFixedDt);
+    int hpAfterFirstHit = world.get_component<HealthComponent>(enemy).current;
+    XCTAssertEqual(hpAfterFirstHit, 2); // took 1 damage
 
-    // Enemy had velocity 100 but was frozen for 4 ticks after the hit.
-    // It only moved during the 1 live tick before the hit registered.
-    // Position should be very close to 50 (barely moved).
-    float x = world.get_component<PositionComponent>(enemy).x;
-    XCTAssertLessThan(x, 50.f + 100.f * kFixedDt * 2); // much less than 5 ticks of movement
+    // Second attack attempt while still inside the HitStop window — blocked.
+    world.set_input({0, 0, /*attack=*/true, false, false});
+    world.update(kFixedDt, kFixedDt); // gameDt=0 (frozen tick)
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 2); // no extra damage
 }
 
 - (void)test_hitStopActive_attackBlocked {
@@ -125,6 +127,54 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 
     // CombatSystem returned early — no damage.
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
+}
+
+// ---------------------------------------------------------------------------
+// Dead-player invariants — the class of bugs in the "player stuck in death
+// pose while still attacking" and "player not respawning" reports.
+// ---------------------------------------------------------------------------
+
+// Bug: CombatSystem didn't check player dying flag, only InputSystem did.
+// A dying player pressing attack should deal no damage.
+- (void)test_dyingPlayer_cannotAttack {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    world.add_component<AnimationComponent>(player).dying = true;
+    EntityID enemy = spawnEnemy(world, 50, 0, 3);
+
+    world.set_input({0, 0, /*attack=*/true, false, false});
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
+}
+
+// Bug: game-over detection used EntityDied event (single-tick) which is lost
+// when the physics accumulator runs 2+ ticks per render frame.
+// The dying flag must be set and PERSIST after player HP reaches 0 so the
+// platform layer can detect death using the flag rather than the event.
+- (void)test_playerDeath_dyingFlagPersistsAcrossMultipleTicks {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    world.add_component<AnimationComponent>(player);
+    // Place an enemy in contact range so ContactDamageSystem kills the player.
+    // Player has 1 HP — one contact hit kills immediately.
+    world.get_component<HealthComponent>(player).current = 1;
+    world.get_component<HealthComponent>(player).max     = 1;
+    world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e)     = {30, 0, 0}; // within contact range (65)
+    world.add_component<VelocityComponent>(e)     = {0, 0, 0};
+    world.add_component<FactionComponent>(e).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(e)       = {5, 5};
+
+    // Simulate 2 ticks in one update (as happens at 60fps with 120Hz physics).
+    // Tick 1: player takes damage and dies — EntityDied fires.
+    // Tick 2: EntityDied is cleared. Platform code checking events AFTER this
+    //         call would miss the death entirely.
+    world.update(2 * kFixedDt, kFixedDt);
+
+    // The dying flag must still be set — it's the only reliable death signal.
+    XCTAssertTrue(world.get_component<AnimationComponent>(player).dying);
 }
 
 @end

@@ -1,8 +1,9 @@
 #include "ContactDamageSystem.h"
 #include "Simulation/World.h"
+#include "Simulation/Systems/AnimationSystem.h"
 #include <math.h>
 
-static constexpr float kContactRange   = 35.f; // world units — ~= enemy stop radius
+static constexpr float kContactRange   = 65.f; // world units — must exceed kSeparationRadius (60)
 static constexpr float kContactCooldown = 0.75f; // seconds between hits
 static constexpr int   kContactDamage  = 1;
 
@@ -17,6 +18,9 @@ void ContactDamageSystem_update(World& world, float gameDt) {
     if (playerID == kInvalidEntity) return;
     if (!world.has_component<PositionComponent>(playerID)) return;
     if (!world.has_component<HealthComponent>(playerID)) return;
+    // Don't damage an already-dying player.
+    if (world.has_component<AnimationComponent>(playerID) &&
+        world.get_component<AnimationComponent>(playerID).dying) return;
 
     // Tick down player's damage cooldown.
     if (world.has_component<DamageCooldownComponent>(playerID)) {
@@ -58,7 +62,12 @@ void ContactDamageSystem_update(World& world, float gameDt) {
 
     if (hp.current <= 0) {
         world.events().emit_died(playerID);
-        // Player death is handled by the game loop (BrawlerDelegate), not by defer_destroy.
-        // The game loop reads the EntityDied event and transitions to game-over state.
+        // Mark dying and play death animation; game loop transitions to game-over on EntityDied.
+        if (world.has_component<AnimationComponent>(playerID)) {
+            world.get_component<AnimationComponent>(playerID).dying = true;
+            AnimationSystem_request_clip(world, playerID, AnimClipID::Death);
+        }
+    } else {
+        AnimationSystem_request_clip(world, playerID, AnimClipID::Hurt);
     }
 }
