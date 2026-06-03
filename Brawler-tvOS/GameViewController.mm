@@ -139,25 +139,9 @@
     GCController *ctrl = note.object;
     if (!ctrl) return;
 
-    // Siri Remote (micro-gamepad) — swipe delta input.
-    GCMicroGamepad *micro = ctrl.microGamepad;
-    if (micro) {
-        micro.reportsAbsoluteDpadValues = NO; // want delta, not absolute
-        __weak BrawlerDelegate_tvOS *weakSelf = self;
-        micro.dpad.valueChangedHandler = ^(GCControllerDirectionPad *dpad, float x, float y) {
-            BrawlerDelegate_tvOS *s = weakSelf;
-            if (!s) return;
-            s->_currentInput = SiriRemote_processSwipeDelta(x, y);
-        };
-        micro.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
-            BrawlerDelegate_tvOS *s = weakSelf;
-            if (!s) return;
-            s->_currentInput.attack = pressed;
-        };
-        return;
-    }
-
-    // MFi extended gamepad — left thumbstick.
+    // Extended gamepad FIRST — PS4/Xbox/Switch Pro all report non-nil microGamepad
+    // too (it's a subset profile), so checking micro first incorrectly routes them
+    // through SiriRemote_processSwipeDelta. Prefer extendedGamepad for full analog.
     GCExtendedGamepad *ext = ctrl.extendedGamepad;
     if (ext) {
         __weak BrawlerDelegate_tvOS *weakSelf = self;
@@ -168,6 +152,24 @@
             s->_currentInput.moveY = y;
         };
         ext.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            BrawlerDelegate_tvOS *s = weakSelf;
+            if (!s) return;
+            s->_currentInput.attack = pressed;
+        };
+        return;
+    }
+
+    // Siri Remote only (micro-gamepad, no extended profile) — swipe delta input.
+    GCMicroGamepad *micro = ctrl.microGamepad;
+    if (micro) {
+        micro.reportsAbsoluteDpadValues = NO; // want delta, not absolute
+        __weak BrawlerDelegate_tvOS *weakSelf = self;
+        micro.dpad.valueChangedHandler = ^(GCControllerDirectionPad *dpad, float x, float y) {
+            BrawlerDelegate_tvOS *s = weakSelf;
+            if (!s) return;
+            s->_currentInput = SiriRemote_processSwipeDelta(x, y);
+        };
+        micro.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
             BrawlerDelegate_tvOS *s = weakSelf;
             if (!s) return;
             s->_currentInput.attack = pressed;
