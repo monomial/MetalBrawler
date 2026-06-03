@@ -80,3 +80,9 @@ struct AnimationComponent {
 struct DamageCooldownComponent {
     float remaining; // seconds until next hit is allowed
 };
+
+// Per-enemy cooldown between attack initiations. Decremented by EnemyAISystem
+// each tick; when it reaches 0 the enemy may begin a new Attack clip.
+struct EnemyAttackCooldownComponent {
+    float remaining = 0.f; // seconds until next attack is allowed (0 = ready)
+};

@@ -72,6 +72,8 @@
     _world.add_component<FactionComponent>(enemy).type        = FactionComponent::Enemy;
     _world.add_component<HealthComponent>(enemy)              = {3, 3};
     _world.add_component<AnimationComponent>(enemy);
+    _world.add_component<FacingComponent>(enemy);              // updated each tick toward player
+    _world.add_component<EnemyAttackCooldownComponent>(enemy); // starts at 0 = ready to attack
 }
 
 - (void)setInputState:(InputState)state { _world.set_input(state); }

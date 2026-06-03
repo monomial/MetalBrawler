@@ -3,7 +3,6 @@
 #include "Systems/EnemyAISystem.h"
 #include "Systems/PhysicsSystem.h"
 #include "Systems/CombatSystem.h"
-#include "Systems/ContactDamageSystem.h"
 #include "Systems/WallCollisionSystem.h"
 #include "Systems/AnimationSystem.h"
 #include "Systems/RespawnSystem.h"
@@ -21,7 +20,8 @@ template<> ComponentStorage<FactionComponent>&   World::_pool() { return _factio
 template<> ComponentStorage<PlayerTagComponent>&      World::_pool() { return _playerTags; }
 template<> ComponentStorage<DamageCooldownComponent>& World::_pool() { return _damageCooldowns; }
 template<> ComponentStorage<AnimationComponent>&      World::_pool() { return _animations; }
-template<> ComponentStorage<FacingComponent>&         World::_pool() { return _facings; }
+template<> ComponentStorage<FacingComponent>&              World::_pool() { return _facings; }
+template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool() { return _attackCooldowns; }
 
 // ----
 
@@ -59,6 +59,7 @@ void World::flush() {
         _damageCooldowns.remove(id);
         _animations.remove(id);
         _facings.remove(id);
+        _attackCooldowns.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -77,9 +78,10 @@ void World::tick(float gameDt) {
     PhysicsSystem_update(*this, gameDt);
     // 2.5. WallCollisionSystem — clamp entities to room bounds
     WallCollisionSystem_update(*this, gameDt);
-    // 3. CombatSystem + ContactDamageSystem
+    // 3. CombatSystem — handles both player→enemy and enemy→player attack hitboxes.
+    //    ContactDamageSystem removed: enemies now deal damage through Attack animations,
+    //    not passive proximity. Code kept in ContactDamageSystem.mm for hazard reuse later.
     CombatSystem_update(*this, gameDt);
-    ContactDamageSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
     // 5. AnimationSystem — advances clip time, samples bone matrices when assets loaded
     AnimationSystem_update(*this, gameDt);

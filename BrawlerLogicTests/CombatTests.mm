@@ -140,6 +140,68 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
     XCTAssertEqual(world.get_component<HealthComponent>(e2).current, 2);
 }
 
+// ---------------------------------------------------------------------------
+// Enemy attack path
+// ---------------------------------------------------------------------------
+
+static EntityID spawnAttackingEnemy(World& world, float x, float y,
+                                    float facingDx = 1.f, float facingDy = 0.f) {
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e)     = {x, y, 0};
+    world.add_component<FactionComponent>(e).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(e)       = {5, 5};
+    world.add_component<FacingComponent>(e)       = {facingDx, facingDy};
+    // Put the enemy in the middle of its attack active window.
+    auto& anim = world.add_component<AnimationComponent>(e);
+    anim.currentClip   = AnimClipID::Attack;
+    anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime      = kActiveMid;
+    anim.looping       = false;
+    anim.hitApplied    = false;
+    return e;
+}
+
+- (void)test_enemyAttack_inActiveWindow_damagesPlayer {
+    World world;
+    // Player facing +X, enemy also facing +X and attacking from player's left (same Y).
+    // Enemy is within attack range of player.
+    EntityID player = spawnPlayer(world, 0, 0, 1.f, 0.f);
+    world.add_component<AnimationComponent>(player);
+    world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+    // Enemy at (-50, 0) facing +X (toward the player to their right).
+    EntityID enemy = spawnAttackingEnemy(world, -50, 0, 1.f, 0.f);
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9); // 1 damage
+}
+
+- (void)test_enemyAttack_outOfRange_noDamage {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    world.add_component<AnimationComponent>(player);
+    world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+    // Enemy well out of range.
+    EntityID enemy = spawnAttackingEnemy(world, -(kAttackRange + 20), 0, 1.f, 0.f);
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 10);
+}
+
+- (void)test_enemyAttack_hitApplied_onlyOncePerSwing {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    world.add_component<AnimationComponent>(player);
+    world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+    EntityID enemy = spawnAttackingEnemy(world, -50, 0, 1.f, 0.f);
+
+    // Run several ticks while the enemy stays in its active window.
+    for (int i = 0; i < 5; ++i) world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9); // only 1 damage
+}
+
 // Directional punch: enemy directly behind the player is not hit.
 - (void)test_enemyBehindPlayer_noDamage {
     World world;
@@ -207,24 +269,30 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
 // The dying flag must be set and PERSIST after player HP reaches 0 so the
 // platform layer can detect death using the flag rather than the event.
 - (void)test_playerDeath_dyingFlagPersistsAcrossMultipleTicks {
+    // Validate that the dying flag survives multiple physics ticks in one render frame.
+    // Previously relied on ContactDamageSystem; now uses an enemy Attack hitbox.
     World world;
-    EntityID player = spawnPlayer(world, 0, 0);
+    EntityID player = spawnPlayer(world, 0, 0, 1.f, 0.f); // facing +X
     world.add_component<AnimationComponent>(player);
-    // Place an enemy in contact range so ContactDamageSystem kills the player.
-    // Player has 1 HP — one contact hit kills immediately.
-    world.get_component<HealthComponent>(player).current = 1;
+    world.get_component<HealthComponent>(player).current = 1; // dies in one hit
     world.get_component<HealthComponent>(player).max     = 1;
-    world.add_component<DamageCooldownComponent>(player).remaining = 0.f;
+
+    // Enemy at (-50,0) facing +X — player is directly in its forward arc.
     EntityID e = world.defer_create();
-    world.add_component<PositionComponent>(e)     = {30, 0, 0}; // within contact range (65)
-    world.add_component<VelocityComponent>(e)     = {0, 0, 0};
+    world.add_component<PositionComponent>(e)     = {-50, 0, 0};
     world.add_component<FactionComponent>(e).type = FactionComponent::Enemy;
     world.add_component<HealthComponent>(e)       = {5, 5};
+    world.add_component<FacingComponent>(e)       = {1.f, 0.f};
+    auto& anim = world.add_component<AnimationComponent>(e);
+    anim.currentClip = anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime    = kActiveMid;
+    anim.looping     = false;
+    anim.hitApplied  = false;
 
     // Simulate 2 ticks in one update (as happens at 60fps with 120Hz physics).
-    // Tick 1: player takes damage and dies — EntityDied fires.
-    // Tick 2: EntityDied is cleared. Platform code checking events AFTER this
-    //         call would miss the death entirely.
+    // Tick 1: enemy attack hits player (1 HP) → player dies → EntityDied fires.
+    // Tick 2: EntityDied is cleared from the event bus. Platform code that checks
+    //         events after world.update() returns would miss the death entirely.
     world.update(2 * kFixedDt, kFixedDt);
 
     // The dying flag must still be set — it's the only reliable death signal.

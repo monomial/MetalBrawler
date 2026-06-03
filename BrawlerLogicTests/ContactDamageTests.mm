@@ -1,5 +1,10 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
+#include "Simulation/Systems/ContactDamageSystem.h"
+
+// ContactDamageSystem is no longer called from World::tick() — enemies now deal
+// damage through Attack animations (CombatSystem). These tests invoke the system
+// directly so the logic is still covered and the code stays ready for hazard reuse.
 
 static constexpr float kFixedDt       = 1.0f / 120.0f;
 static constexpr float kContactRange  = 65.f; // must match ContactDamageSystem.mm
@@ -34,7 +39,7 @@ static EntityID make_enemy(World& w, float x, float y) {
     EntityID player = make_player(world);
     make_enemy(world, kContactRange - 5.f, 0); // just inside range
 
-    world.update(kFixedDt, kFixedDt);
+    ContactDamageSystem_update(world, kFixedDt);
     XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9);
 }
 
@@ -53,12 +58,12 @@ static EntityID make_enemy(World& w, float x, float y) {
     make_enemy(world, 10.f, 0); // well within range
 
     // First tick — takes damage.
-    world.update(kFixedDt, kFixedDt);
+    ContactDamageSystem_update(world, kFixedDt);
     int hpAfterFirst = world.get_component<HealthComponent>(player).current;
     XCTAssertEqual(hpAfterFirst, 9);
 
     // Several more ticks while still in contact — cooldown should block.
-    for (int i = 0; i < 10; ++i) world.update(kFixedDt, kFixedDt);
+    for (int i = 0; i < 10; ++i) ContactDamageSystem_update(world, kFixedDt);
     XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9);
 }
 
@@ -67,12 +72,12 @@ static EntityID make_enemy(World& w, float x, float y) {
     EntityID player = make_player(world);
     make_enemy(world, 10.f, 0);
 
-    world.update(kFixedDt, kFixedDt); // first hit
+    ContactDamageSystem_update(world, kFixedDt); // first hit
     XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9);
 
     // Advance past full cooldown duration.
     int ticksToClear = (int)((kCooldown + 0.1f) / kFixedDt) + 1;
-    for (int i = 0; i < ticksToClear; ++i) world.update(kFixedDt, kFixedDt);
+    for (int i = 0; i < ticksToClear; ++i) ContactDamageSystem_update(world, kFixedDt);
 
     XCTAssertEqual(world.get_component<HealthComponent>(player).current, 8);
 }
