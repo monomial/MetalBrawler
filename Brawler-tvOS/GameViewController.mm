@@ -209,4 +209,7 @@
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 }
 
+- (void)pauseRendering  { _mtkView.paused = YES; }
+- (void)resumeRendering { _mtkView.paused = NO;  }
+
 @end

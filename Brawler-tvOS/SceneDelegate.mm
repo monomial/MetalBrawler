@@ -12,4 +12,12 @@
     [self.window makeKeyAndVisible];
 }
 
+- (void)sceneDidBecomeActive:(UIScene *)scene {
+    [(GameViewController *)self.window.rootViewController resumeRendering];
+}
+
+- (void)sceneWillResignActive:(UIScene *)scene {
+    [(GameViewController *)self.window.rootViewController pauseRendering];
+}
+
 @end
