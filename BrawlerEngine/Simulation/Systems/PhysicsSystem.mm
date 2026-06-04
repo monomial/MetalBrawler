@@ -22,12 +22,19 @@ void PhysicsSystem_update(World& world, float gameDt) {
         pos.z += vel.vz * gameDt;
     }
 
-    // Push overlapping mobile entities apart so characters never visually stack.
-    // Only applies to entities with VelocityComponent — static/test entities are exempt.
+    // Push overlapping enemies apart so they don't stack on each other.
+    // Player-player and player-enemy pairs are skipped: players walk through
+    // each other and through enemies (TMNT-style). Only enemy-enemy collisions
+    // get the separation push.
+    auto& factions = world.factions();
     for (EntityID a = 0; a < count; ++a) {
         if (!positions.present(a) || !velocities.present(a)) continue;
+        if (!factions.present(a)) continue;
+        if (factions.get(a).type != FactionComponent::Enemy) continue;
         for (EntityID b = a + 1; b < count; ++b) {
             if (!positions.present(b) || !velocities.present(b)) continue;
+            if (!factions.present(b)) continue;
+            if (factions.get(b).type != FactionComponent::Enemy) continue;
             PositionComponent& pa = positions.get(a);
             PositionComponent& pb = positions.get(b);
             float dx = pb.x - pa.x;
