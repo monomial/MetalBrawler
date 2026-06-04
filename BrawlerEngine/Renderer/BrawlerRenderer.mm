@@ -427,6 +427,22 @@ static float clampf(float v, float lo, float hi) {
                 [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
             }
         }
+
+        // Lives dots — row of small red squares, top-left corner.
+        {
+            static const float kDotSize   = 22.f;
+            static const float kDotGap    = 8.f;
+            static const float kDotMargin = 20.f;
+            float dotY = kDotMargin + kDotSize * 0.5f;
+            for (int i = 0; i < _livesRemaining; ++i) {
+                float dotX = kDotMargin + kDotSize * 0.5f + i * (kDotSize + kDotGap);
+                DrawUniforms u;
+                u.color = (simd_float4){0.90f, 0.20f, 0.20f, 1.f};
+                u.mvp   = simd_mul(ortho, make_model_rect(dotX, dotY, 0.f, kDotSize, kDotSize));
+                [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            }
+        }
     }
 
     [enc endEncoding];

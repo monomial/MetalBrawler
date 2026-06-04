@@ -7,7 +7,7 @@
 @implementation GameViewController {
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
-    // P1: keyboard
+    NSTextField         *_overlayField;
     BOOL _left, _right, _up, _down, _attack, _dodge;
 }
 
@@ -25,6 +25,40 @@
                                                 pixelFormat:_mtkView.colorPixelFormat];
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.drawableSize];
     _mtkView.delegate = _delegate;
+
+    // Phase overlay — centered NSTextField with transparent background.
+    _overlayField = [[NSTextField alloc] initWithFrame:NSMakeRect(180, 260, 600, 200)];
+    _overlayField.editable          = NO;
+    _overlayField.selectable        = NO;
+    _overlayField.bordered          = NO;
+    _overlayField.bezeled           = NO;
+    _overlayField.drawsBackground   = YES;
+    _overlayField.backgroundColor   = [NSColor colorWithWhite:0 alpha:0.72];
+    _overlayField.textColor         = [NSColor whiteColor];
+    _overlayField.alignment         = NSTextAlignmentCenter;
+    _overlayField.font              = [NSFont boldSystemFontOfSize:48];
+    _overlayField.maximumNumberOfLines = 3;
+    _overlayField.hidden            = YES;
+    [self.view addSubview:_overlayField];
+
+    __weak GameViewController *weakSelf = self;
+    _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        switch (phase) {
+            case BrawlerGamePhasePlaying:
+                vc->_overlayField.hidden = YES; break;
+            case BrawlerGamePhaseRoomClear:
+                vc->_overlayField.stringValue = [NSString stringWithFormat:@"Room %d Clear!", room];
+                vc->_overlayField.hidden = NO; break;
+            case BrawlerGamePhaseWin:
+                vc->_overlayField.stringValue = @"YOU WIN!\nAll rooms cleared!";
+                vc->_overlayField.hidden = NO; break;
+            case BrawlerGamePhaseLose:
+                vc->_overlayField.stringValue = @"GAME OVER";
+                vc->_overlayField.hidden = NO; break;
+        }
+    };
 
     // P1: keyboard at 120Hz
     [NSTimer scheduledTimerWithTimeInterval:1.0/120.0 target:self

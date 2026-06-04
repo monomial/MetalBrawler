@@ -9,6 +9,7 @@
     BrawlerGameDelegate *_delegate;
     UITouch             *_moveTouchRef;
     CGPoint              _moveOrigin;
+    UILabel             *_overlayLabel;
 }
 
 - (void)viewDidLoad {
@@ -25,6 +26,35 @@
                                                 pixelFormat:_mtkView.colorPixelFormat];
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.bounds.size];
     _mtkView.delegate = _delegate;
+
+    _overlayLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
+    _overlayLabel.numberOfLines    = 0;
+    _overlayLabel.textAlignment    = NSTextAlignmentCenter;
+    _overlayLabel.textColor        = [UIColor whiteColor];
+    _overlayLabel.font             = [UIFont boldSystemFontOfSize:48];
+    _overlayLabel.backgroundColor  = [UIColor colorWithWhite:0 alpha:0.72];
+    _overlayLabel.hidden           = YES;
+    _overlayLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:_overlayLabel];
+
+    __weak GameViewController *weakSelf = self;
+    _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        switch (phase) {
+            case BrawlerGamePhasePlaying:
+                vc->_overlayLabel.hidden = YES; break;
+            case BrawlerGamePhaseRoomClear:
+                vc->_overlayLabel.text   = [NSString stringWithFormat:@"Room %d Clear!", room];
+                vc->_overlayLabel.hidden = NO; break;
+            case BrawlerGamePhaseWin:
+                vc->_overlayLabel.text   = @"YOU WIN!\nAll rooms cleared!";
+                vc->_overlayLabel.hidden = NO; break;
+            case BrawlerGamePhaseLose:
+                vc->_overlayLabel.text   = @"GAME OVER";
+                vc->_overlayLabel.hidden = NO; break;
+        }
+    };
 }
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }

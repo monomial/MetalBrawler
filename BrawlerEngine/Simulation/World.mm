@@ -5,7 +5,6 @@
 #include "Systems/CombatSystem.h"
 #include "Systems/WallCollisionSystem.h"
 #include "Systems/AnimationSystem.h"
-#include "Systems/RespawnSystem.h"
 #include "Systems/ScreenShakeSystem.h"
 #include <cassert>
 
@@ -85,8 +84,8 @@ void World::tick(float gameDt) {
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
     // 5. AnimationSystem — advances clip time, samples bone matrices when assets loaded
     AnimationSystem_update(*this, gameDt);
-    // 6. AudioSystem / RespawnSystem (physicalDt — run even during HitStop)
-    RespawnSystem_update(*this, gameDt);
+    // 6. AudioSystem (physicalDt — run even during HitStop)
+    // RespawnSystem removed: room progression in BrawlerGameDelegate owns enemy spawning.
     // 7. HapticsSystem   — TODO
     // 8. ScreenShakeSystem (physicalDt — runs even during HitStop)
     ScreenShakeSystem_update(*this, gameDt);

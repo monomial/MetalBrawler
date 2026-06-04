@@ -2,6 +2,13 @@
 #import <MetalKit/MetalKit.h>
 #include "Platform/InputState.h"
 
+typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
+    BrawlerGamePhasePlaying    = 0, // active combat
+    BrawlerGamePhaseRoomClear  = 1, // brief pause between rooms
+    BrawlerGamePhaseWin        = 2, // all rooms beaten
+    BrawlerGamePhaseLose       = 3, // all lives exhausted
+};
+
 // Shared game delegate used by all three platform targets (macOS, iOS, tvOS).
 // Owns the World, renderer, audio, haptics, character loading, and game loop.
 // Platform GameViewControllers are thin wrappers that translate input and
@@ -28,5 +35,14 @@
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.
 - (void)resetInput;
+
+// Read-only game state for platform UIs (overlay labels, HUD).
+@property (readonly, nonatomic) BrawlerGamePhase gamePhase;
+@property (readonly, nonatomic) int currentRoom;    // 1-indexed (1–4)
+@property (readonly, nonatomic) int livesRemaining; // 0–3
+
+// Called on the main thread each time the phase transitions.
+// room and lives reflect the NEW state after the transition.
+@property (copy, nonatomic) void (^onPhaseChanged)(BrawlerGamePhase phase, int room, int lives);
 
 @end

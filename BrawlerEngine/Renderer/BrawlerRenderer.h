@@ -16,6 +16,9 @@ struct LoadedCharacter;
 - (void)setPlayerCharacter:(LoadedCharacter*)player
                enemyCharacter:(LoadedCharacter*)enemy;
 
+// Lives shown in HUD. Set each frame before drawWorld:.
+@property (nonatomic) int livesRemaining;
+
 // Call once per frame after World::update(). Encodes draw calls into cmd.
 - (void)drawWorld:(World*)world
             inView:(MTKView*)view

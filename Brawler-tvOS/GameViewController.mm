@@ -11,7 +11,8 @@ static const int kMaxPlayers = 4;
 @implementation GameViewController {
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
-    GCController        *_assignedControllers[kMaxPlayers]; // slot → controller
+    GCController        *_assignedControllers[kMaxPlayers];
+    UILabel             *_overlayLabel;
 }
 
 - (void)viewDidLoad {
@@ -30,6 +31,24 @@ static const int kMaxPlayers = 4;
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.drawableSize];
     _mtkView.delegate = _delegate;
 
+    // Phase overlay label — centered, hidden during normal play.
+    _overlayLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
+    _overlayLabel.numberOfLines       = 0;
+    _overlayLabel.textAlignment       = NSTextAlignmentCenter;
+    _overlayLabel.textColor           = [UIColor whiteColor];
+    _overlayLabel.font                = [UIFont boldSystemFontOfSize:72];
+    _overlayLabel.backgroundColor     = [UIColor colorWithWhite:0 alpha:0.72];
+    _overlayLabel.hidden              = YES;
+    _overlayLabel.autoresizingMask    = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:_overlayLabel];
+
+    __weak GameViewController *weakSelf = self;
+    _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        [vc _updateOverlayForPhase:phase room:room lives:lives];
+    };
+
     [[NSNotificationCenter defaultCenter]
         addObserver:self
            selector:@selector(_controllerConnected:)
@@ -45,6 +64,26 @@ static const int kMaxPlayers = 4;
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
 - (void)resumeRendering { _mtkView.paused = NO; }
+
+- (void)_updateOverlayForPhase:(BrawlerGamePhase)phase room:(int)room lives:(int)lives {
+    switch (phase) {
+        case BrawlerGamePhasePlaying:
+            _overlayLabel.hidden = YES;
+            break;
+        case BrawlerGamePhaseRoomClear:
+            _overlayLabel.text   = [NSString stringWithFormat:@"Room %d Clear!", room];
+            _overlayLabel.hidden = NO;
+            break;
+        case BrawlerGamePhaseWin:
+            _overlayLabel.text   = @"YOU WIN!\nAll rooms cleared!";
+            _overlayLabel.hidden = NO;
+            break;
+        case BrawlerGamePhaseLose:
+            _overlayLabel.text   = @"GAME OVER";
+            _overlayLabel.hidden = NO;
+            break;
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Assigns incoming controller to the next free player slot.

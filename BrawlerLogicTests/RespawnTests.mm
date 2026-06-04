@@ -3,6 +3,9 @@
 #include "Simulation/Systems/RespawnSystem.h"
 #include "Platform/InputState.h"
 
+// RespawnSystem is no longer called from World::tick() — room progression in
+// BrawlerGameDelegate owns enemy spawning. Tests invoke the system directly.
+
 static constexpr float kFixedDt     = 1.0f / 120.0f;
 static constexpr float kRespawnDelay = 1.5f;
 
@@ -66,11 +69,10 @@ static bool has_living_enemy(World& w) {
     world.update(kFixedDt, kFixedDt);
     XCTAssertFalse(has_living_enemy(world));
 
-    // Advance time past respawn delay (1.5s).
+    // Advance time past respawn delay (1.5s) calling the system directly.
     int ticks = (int)((kRespawnDelay + 0.1f) / kFixedDt) + 1;
-    world.set_input({0, 0, false, false, false});
     for (int i = 0; i < ticks; ++i)
-        world.update(kFixedDt, kFixedDt);
+        RespawnSystem_update(world, kFixedDt);
 
     XCTAssertTrue(has_living_enemy(world));
 }
@@ -81,9 +83,8 @@ static bool has_living_enemy(World& w) {
     spawn_player(world);
     spawn_enemy(world);
 
-    world.set_input({0, 0, false, false, false});
     for (int i = 0; i < 300; ++i) // 2.5 seconds
-        world.update(kFixedDt, kFixedDt);
+        RespawnSystem_update(world, kFixedDt);
 
     // Still exactly one enemy.
     int enemyCount = 0;
@@ -104,9 +105,8 @@ static bool has_living_enemy(World& w) {
     world.update(kFixedDt, kFixedDt);
 
     int ticks = (int)((kRespawnDelay + 0.2f) / kFixedDt) + 1;
-    world.set_input({0, 0, false, false, false});
     for (int i = 0; i < ticks; ++i)
-        world.update(kFixedDt, kFixedDt);
+        RespawnSystem_update(world, kFixedDt);
 
     for (EntityID id = 0; id < world.entity_count(); ++id) {
         if (!world.has_component<FactionComponent>(id)) continue;
