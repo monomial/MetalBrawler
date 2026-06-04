@@ -133,6 +133,7 @@ static const float kLoseDuration      = 3.5f;
 - (void)_startNewRun {
     _currentRoom = 0;
     _lives       = kStartingLives;
+    _phase       = (BrawlerGamePhase)-1; // sentinel: force the first transition to fire
     [self _loadRoom];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
 }
