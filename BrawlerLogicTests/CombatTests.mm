@@ -3,7 +3,7 @@
 #include "Platform/InputState.h"
 
 static constexpr float kFixedDt      = 1.0f / 120.0f;
-static constexpr float kAttackRange  = 80.0f;
+static constexpr float kAttackRange  = 130.0f; // must match CombatSystem.mm
 static constexpr float kAttackDur    = 1.03f;  // matches kClipDurationFallback[Attack]
 // Active window: 35%–60% of clip duration (matches kAttackWindows[Attack])
 static constexpr float kActiveStart  = kAttackDur * 0.35f;

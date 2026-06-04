@@ -4,7 +4,7 @@
 #include <math.h>
 
 static constexpr float kEnemySpeed          = 150.0f; // units per second
-static constexpr float kStopRadius          = 80.0f;  // stop chasing within this distance
+static constexpr float kStopRadius          = 110.0f; // stop chasing within this distance
 static constexpr float kEnemyAttackCooldown = 2.0f;   // seconds between attack initiations
 
 void EnemyAISystem_update(World& world, float gameDt) {

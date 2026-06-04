@@ -5,7 +5,7 @@
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
-static constexpr float kAttackRange    = 80.0f;
+static constexpr float kAttackRange    = 130.0f;
 static constexpr int   kHitStopTicks   = 4;      // ~33ms freeze on hit
 // Punch arc: target must be within ±70° of the attacker's facing direction.
 static constexpr float kPunchArcCosine = 0.342f; // cos(70°)
