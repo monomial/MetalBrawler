@@ -49,7 +49,12 @@ void AnimationSystem_update(World& world, float gameDt) {
         }
 
         float duration = clip_duration(charData, anim.currentClip);
-        anim.clipTime += gameDt;
+        // Attack and Hurt play at 1.5× so punches feel snappy and hit reactions
+        // are brief. Idle/Walk/Death keep normal speed.
+        static constexpr float kCombatSpeed = 1.5f;
+        bool isCombatClip = (anim.currentClip == AnimClipID::Attack ||
+                             anim.currentClip == AnimClipID::Hurt);
+        anim.clipTime += gameDt * (isCombatClip ? kCombatSpeed : 1.0f);
         anim.clipDone  = false;
 
         if (clip_loops(anim.currentClip)) {
