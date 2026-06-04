@@ -110,10 +110,21 @@ static const float kLoseDuration      = 3.5f;
     if (_phase == newPhase) return;
     _phase = newPhase;
     switch (newPhase) {
-        case BrawlerGamePhaseRoomClear: _phaseTimer = kRoomClearDuration; break;
-        case BrawlerGamePhaseWin:       _phaseTimer = kWinDuration;       break;
-        case BrawlerGamePhaseLose:      _phaseTimer = kLoseDuration;      break;
-        default: break;
+        case BrawlerGamePhasePlaying:
+            [_audio startBattleMusic];
+            _phaseTimer = 0;
+            break;
+        case BrawlerGamePhaseRoomClear:
+            _phaseTimer = kRoomClearDuration;
+            break;
+        case BrawlerGamePhaseWin:
+            [_audio stopMusic];
+            _phaseTimer = kWinDuration;
+            break;
+        case BrawlerGamePhaseLose:
+            [_audio stopMusic];
+            _phaseTimer = kLoseDuration;
+            break;
     }
     if (self.onPhaseChanged)
         self.onPhaseChanged(newPhase, _currentRoom + 1, _lives);
@@ -235,6 +246,23 @@ static const float kLoseDuration      = 3.5f;
     _world.events().for_each(EventType::HitContact, [self](const Event&) {
         [_audio  playHitSound];
         [_haptics playHitHaptic];
+    });
+
+    _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
+        // Different sound for player death vs enemy death.
+        if (_world.player_tags().present(ev.entityDied.entityID))
+            [_audio playHurtSound];  // player death uses hurt tone; death anim provides the drama
+        else
+            [_audio playDeathSound];
+    });
+
+    _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {
+        // Player takes a hit but survives → hurt sound.
+        uint32_t tid = ev.damageDealt.targetID;
+        if (_world.player_tags().present(tid) &&
+            _world.has_component<HealthComponent>(tid) &&
+            _world.get_component<HealthComponent>(tid).current > 0)
+            [_audio playHurtSound];
     });
 
     // -----------------------------------------------------------------------
