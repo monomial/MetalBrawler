@@ -177,14 +177,16 @@ static const float kLoseDuration      = 3.5f;
     }
 }
 
-// Returns YES when no living (non-dying) enemies remain.
+// Returns YES when no enemy entities remain in the world — i.e. all death
+// animations have finished and AnimationSystem has removed the entities.
+// Checking the dying flag would trigger too early (entities still visible
+// mid-animation); waiting for removal means the room-clear message only
+// appears after the last enemy has fully collapsed.
 - (BOOL)_allEnemiesDefeated {
     for (EntityID id = 0; id < _world.entity_count(); ++id) {
         if (!_world.has_component<FactionComponent>(id)) continue;
-        if (_world.get_component<FactionComponent>(id).type != FactionComponent::Enemy) continue;
-        bool dying = _world.has_component<AnimationComponent>(id) &&
-                     _world.get_component<AnimationComponent>(id).dying;
-        if (!dying) return NO;
+        if (_world.get_component<FactionComponent>(id).type == FactionComponent::Enemy)
+            return NO; // at least one enemy (alive or mid-death-anim) still exists
     }
     return YES;
 }
