@@ -77,9 +77,17 @@ static AVAudioPCMBuffer* make_death_buffer(AVAudioFormat *fmt) {
 // ---------------------------------------------------------------------------
 
 static NSURL* bundleAudioURL(NSString *name) {
-    for (NSString *ext in @[@"wav", @"caf", @"mp3", @"m4a", @"aiff"]) {
-        NSURL *url = [[NSBundle mainBundle] URLForResource:name withExtension:ext];
-        if (url) return url;
+    NSArray *exts = @[@"wav", @"caf", @"mp3", @"m4a", @"aiff"];
+    // Search top-level resources, then the assets/audio subfolder (folder reference).
+    NSArray *subdirs = @[@"", @"assets/audio", @"audio"];
+    for (NSString *sub in subdirs) {
+        NSString *subArg = sub.length ? sub : nil;
+        for (NSString *ext in exts) {
+            NSURL *url = [[NSBundle mainBundle] URLForResource:name
+                                                withExtension:ext
+                                                 subdirectory:subArg];
+            if (url) return url;
+        }
     }
     return nil;
 }
