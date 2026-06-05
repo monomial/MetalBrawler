@@ -9,7 +9,7 @@
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
     NSTextField         *_overlayField;
-    BOOL _left, _right, _up, _down, _attack, _dodge;
+    BOOL _left, _right, _up, _down, _attack;
 }
 
 - (void)loadView {
@@ -106,10 +106,9 @@
 - (void)_feedKeyboardInput {
     float mx = (_right ? 1.f : 0.f) - (_left ? 1.f : 0.f);
     float my = (_up    ? 1.f : 0.f) - (_down ? 1.f : 0.f);
-    InputState s = { mx, my, (bool)_attack, (bool)_dodge, false };
+    InputState s = { mx, my, (bool)_attack, false, false };
     [_delegate setInputState:s forPlayer:0];
     _attack = NO;
-    _dodge  = NO;
 }
 
 - (void)keyDown:(NSEvent *)event {
@@ -123,9 +122,10 @@
         case 124: _right  = YES; break; // →
         case 126: _up     = YES; break; // ↑
         case 125: _down   = YES; break; // ↓
-        case 49:  _attack = YES; break; // Space
-        case 56:  _dodge  = YES; break; // Shift
-        case 53:  [_delegate triggerPause]; break; // Escape
+        case 49:  _attack = YES; break;              // Space
+        case 56:  [_delegate triggerDodge]; break;  // Left Shift
+        case 60:  [_delegate triggerDodge]; break;  // Right Shift
+        case 53:  [_delegate triggerPause];  break;  // Escape
         default: [super keyDown:event];
     }
 }

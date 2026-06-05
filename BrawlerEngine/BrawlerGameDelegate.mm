@@ -131,7 +131,7 @@ static const float kLoseDuration      = 3.5f;
             _phaseTimer = kLoseDuration;
             break;
         case BrawlerGamePhasePaused:
-            [_audio stopMusic];
+            // Leave music playing — startBattleMusic has a guard so resuming won't restart it.
             break;
     }
     if (self.onPhaseChanged)
