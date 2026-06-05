@@ -122,10 +122,9 @@
         case 124: _right  = YES; break; // →
         case 126: _up     = YES; break; // ↑
         case 125: _down   = YES; break; // ↓
-        case 49:  _attack = YES; break;              // Space
-        case 56:  [_delegate triggerDodge]; break;  // Left Shift
-        case 60:  [_delegate triggerDodge]; break;  // Right Shift
-        case 53:  [_delegate triggerPause];  break;  // Escape
+        case 49:  _attack = YES; break;             // Space  — attack
+        case 12:  [_delegate triggerDodge]; break; // Q      — dodge
+        case 53:  [_delegate triggerPause];  break; // Escape — pause
         default: [super keyDown:event];
     }
 }
