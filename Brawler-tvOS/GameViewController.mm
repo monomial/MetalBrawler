@@ -2,6 +2,7 @@
 #import <MetalKit/MetalKit.h>
 #import <GameController/GameController.h>
 #import "BrawlerGameDelegate.h"
+#import "BrawlerStrings.h"
 #include "Platform/InputState.h"
 #include "Platform/SiriRemoteInput.h"
 
@@ -77,15 +78,15 @@ static const int kMaxPlayers = 4;
             _overlayLabel.hidden = YES;
             break;
         case BrawlerGamePhaseRoomClear:
-            _overlayLabel.text   = [NSString stringWithFormat:@"Room %d Clear!", room];
+            _overlayLabel.text   = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
             _overlayLabel.hidden = NO;
             break;
         case BrawlerGamePhaseWin:
-            _overlayLabel.text   = @"YOU WIN!\nAll rooms cleared!";
+            _overlayLabel.text   = kBrawlerStringWin;
             _overlayLabel.hidden = NO;
             break;
         case BrawlerGamePhaseLose:
-            _overlayLabel.text   = @"GAME OVER";
+            _overlayLabel.text   = kBrawlerStringGameOver;
             _overlayLabel.hidden = NO;
             break;
     }

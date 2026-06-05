@@ -2,6 +2,7 @@
 #import <MetalKit/MetalKit.h>
 #import <GameController/GameController.h>
 #import "BrawlerGameDelegate.h"
+#import "BrawlerStrings.h"
 #include "Platform/InputState.h"
 
 @implementation GameViewController {
@@ -49,13 +50,13 @@
             case BrawlerGamePhasePlaying:
                 vc->_overlayField.hidden = YES; break;
             case BrawlerGamePhaseRoomClear:
-                vc->_overlayField.stringValue = [NSString stringWithFormat:@"Room %d Clear!", room];
+                vc->_overlayField.stringValue = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
                 vc->_overlayField.hidden = NO; break;
             case BrawlerGamePhaseWin:
-                vc->_overlayField.stringValue = @"YOU WIN!\nAll rooms cleared!";
+                vc->_overlayField.stringValue = kBrawlerStringWin;
                 vc->_overlayField.hidden = NO; break;
             case BrawlerGamePhaseLose:
-                vc->_overlayField.stringValue = @"GAME OVER";
+                vc->_overlayField.stringValue = kBrawlerStringGameOver;
                 vc->_overlayField.hidden = NO; break;
         }
     };
