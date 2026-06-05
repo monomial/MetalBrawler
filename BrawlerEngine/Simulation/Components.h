@@ -94,5 +94,7 @@ struct EnemyAttackCooldownComponent {
 // Presence = invincible: CombatSystem skips damage to any entity that has this.
 // Added and removed entirely by DodgeSystem — do not add manually.
 struct DodgeComponent {
-    bool impulseApplied = false; // velocity burst has been applied
+    bool  active = false; // velocity has been initialised
+    float velX   = 0.f;  // initial velocity at dodge start (direction * kDodgeSpeed)
+    float velY   = 0.f;  // stored so deceleration curve uses a consistent direction
 };
