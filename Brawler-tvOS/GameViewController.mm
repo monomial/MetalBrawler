@@ -141,6 +141,13 @@ static const int kMaxPlayers = 4;
             s.attack = pressed;
             [vc->_delegate setInputState:s forPlayer:slot];
         };
+        ext.buttonB.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            GameViewController *vc = weakSelf;
+            if (!vc) return;
+            InputState s = [vc->_delegate currentInputStateForPlayer:slot];
+            s.dodge = pressed;
+            [vc->_delegate setInputState:s forPlayer:slot];
+        };
         return;
     }
 
@@ -159,6 +166,14 @@ static const int kMaxPlayers = 4;
             if (!vc) return;
             InputState s = [vc->_delegate currentInputStateForPlayer:slot];
             s.attack = pressed;
+            [vc->_delegate setInputState:s forPlayer:slot];
+        };
+        // buttonX is only present on Siri Remote 2nd gen — nil on older remotes.
+        micro.buttonX.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            GameViewController *vc = weakSelf;
+            if (!vc) return;
+            InputState s = [vc->_delegate currentInputStateForPlayer:slot];
+            s.dodge = pressed;
             [vc->_delegate setInputState:s forPlayer:slot];
         };
     }

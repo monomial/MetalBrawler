@@ -51,6 +51,7 @@ static const float kLoseDuration      = 3.5f;
     AudioEngine         *_audio;
     dispatch_semaphore_t _frameSemaphore;
     BOOL                 _attackPulse;
+    BOOL                 _dodgePulse;
 
     BrawlerGamePhase     _phase;
     float                _phaseTimer;
@@ -213,11 +214,13 @@ static const float kLoseDuration      = 3.5f;
 - (void)setInputState:(InputState)state                  { _world.set_input(state, 0); }
 - (InputState)currentInputState                          { return _world.current_input(0); }
 - (void)triggerAttack                                    { _attackPulse = YES; }
+- (void)triggerDodge                                     { _dodgePulse  = YES; }
 
 - (void)resetInput {
     InputState zero = {};
     for (int i = 0; i < 4; ++i) _world.set_input(zero, i);
     _attackPulse = NO;
+    _dodgePulse  = NO;
 }
 
 // ---------------------------------------------------------------------------
@@ -235,12 +238,14 @@ static const float kLoseDuration      = 3.5f;
     float dt = fminf((float)(now - _lastTime), 0.1f);
     _lastTime = now;
 
-    // Single-frame attack pulse (touch tap).
-    if (_attackPulse) {
+    // Single-frame pulses (touch tap / flick).
+    if (_attackPulse || _dodgePulse) {
         InputState s = _world.current_input(0);
-        s.attack = true;
+        if (_attackPulse) s.attack = true;
+        if (_dodgePulse)  s.dodge  = true;
         _world.set_input(s, 0);
         _attackPulse = NO;
+        _dodgePulse  = NO;
     }
 
     // World always updates so death animations finish before transitions.

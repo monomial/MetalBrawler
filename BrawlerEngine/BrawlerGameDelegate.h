@@ -32,6 +32,9 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 // held-button platforms — those set attack via setInputState: directly.
 - (void)triggerAttack;
 
+// Fire a one-frame dodge pulse (touch flick, single press). Same pattern as triggerAttack.
+- (void)triggerDodge;
+
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.
 - (void)resetInput;

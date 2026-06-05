@@ -10,6 +10,8 @@
     BrawlerGameDelegate *_delegate;
     UITouch             *_moveTouchRef;
     CGPoint              _moveOrigin;
+    CGPoint              _moveTouchStartPos;
+    NSTimeInterval       _moveTouchStartTime;
     UILabel             *_overlayLabel;
 }
 
@@ -65,8 +67,10 @@
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     for (UITouch *t in touches) {
         if (!_moveTouchRef) {
-            _moveTouchRef = t;
-            _moveOrigin   = [t locationInView:_mtkView];
+            _moveTouchRef        = t;
+            _moveOrigin          = [t locationInView:_mtkView];
+            _moveTouchStartPos   = _moveOrigin;
+            _moveTouchStartTime  = event.timestamp;
         } else {
             [_delegate triggerAttack];
         }
@@ -93,6 +97,15 @@
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     for (UITouch *t in touches) {
         if (t == _moveTouchRef) {
+            // Flick gesture: quick lift after a short fast swipe = dodge.
+            CGPoint endPos = [t locationInView:_mtkView];
+            float dx = endPos.x - _moveTouchStartPos.x;
+            float dy = endPos.y - _moveTouchStartPos.y;
+            float dist = sqrtf(dx * dx + dy * dy);
+            NSTimeInterval duration = event.timestamp - _moveTouchStartTime;
+            if (duration < 0.20 && dist > 40.f) {
+                [_delegate triggerDodge];
+            }
             _moveTouchRef = nil;
             [_delegate setInputState:{0, 0, false, false, false}];
         }
