@@ -3,10 +3,12 @@
 #include "Platform/InputState.h"
 
 typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
-    BrawlerGamePhasePlaying    = 0, // active combat
-    BrawlerGamePhaseRoomClear  = 1, // brief pause between rooms
-    BrawlerGamePhaseWin        = 2, // all rooms beaten
-    BrawlerGamePhaseLose       = 3, // all lives exhausted
+    BrawlerGamePhaseTitle      = 0, // title screen — waiting for any button
+    BrawlerGamePhasePlaying    = 1, // active combat
+    BrawlerGamePhaseRoomClear  = 2, // brief pause between rooms
+    BrawlerGamePhaseWin        = 3, // all rooms beaten
+    BrawlerGamePhaseLose       = 4, // all lives exhausted
+    BrawlerGamePhasePaused     = 5, // mid-game pause
 };
 
 // Shared game delegate used by all three platform targets (macOS, iOS, tvOS).
@@ -34,6 +36,9 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 
 // Fire a one-frame dodge pulse (touch flick, single press). Same pattern as triggerAttack.
 - (void)triggerDodge;
+
+// Fire a one-frame pause/resume pulse.
+- (void)triggerPause;
 
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.

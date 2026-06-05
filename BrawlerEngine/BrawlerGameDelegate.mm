@@ -52,6 +52,7 @@ static const float kLoseDuration      = 3.5f;
     dispatch_semaphore_t _frameSemaphore;
     BOOL                 _attackPulse;
     BOOL                 _dodgePulse;
+    BOOL                 _pausePulse;
 
     BrawlerGamePhase     _phase;
     float                _phaseTimer;
@@ -83,7 +84,7 @@ static const float kLoseDuration      = 3.5f;
     [_audio startupInit];
 
     [self _loadCharacters:device];
-    [self _startNewRun];
+    _phase = BrawlerGamePhaseTitle; // show title screen; _startNewRun called on first button press
 
     return self;
 }
@@ -111,6 +112,9 @@ static const float kLoseDuration      = 3.5f;
     if (_phase == newPhase) return;
     _phase = newPhase;
     switch (newPhase) {
+        case BrawlerGamePhaseTitle:
+            [_audio stopMusic];
+            break;
         case BrawlerGamePhasePlaying:
             [_audio startBattleMusic];
             _phaseTimer = 0;
@@ -125,6 +129,9 @@ static const float kLoseDuration      = 3.5f;
         case BrawlerGamePhaseLose:
             [_audio stopMusic];
             _phaseTimer = kLoseDuration;
+            break;
+        case BrawlerGamePhasePaused:
+            [_audio stopMusic];
             break;
     }
     if (self.onPhaseChanged)
@@ -215,12 +222,14 @@ static const float kLoseDuration      = 3.5f;
 - (InputState)currentInputState                          { return _world.current_input(0); }
 - (void)triggerAttack                                    { _attackPulse = YES; }
 - (void)triggerDodge                                     { _dodgePulse  = YES; }
+- (void)triggerPause                                     { _pausePulse  = YES; }
 
 - (void)resetInput {
     InputState zero = {};
     for (int i = 0; i < 4; ++i) _world.set_input(zero, i);
     _attackPulse = NO;
     _dodgePulse  = NO;
+    _pausePulse  = NO;
 }
 
 // ---------------------------------------------------------------------------
@@ -238,47 +247,64 @@ static const float kLoseDuration      = 3.5f;
     float dt = fminf((float)(now - _lastTime), 0.1f);
     _lastTime = now;
 
-    // Single-frame pulses (touch tap / flick).
+    // Single-frame pulses (touch tap / flick / pause).
+    BOOL anyActionPulse = _attackPulse || _dodgePulse || _pausePulse;
     if (_attackPulse || _dodgePulse) {
         InputState s = _world.current_input(0);
         if (_attackPulse) s.attack = true;
         if (_dodgePulse)  s.dodge  = true;
         _world.set_input(s, 0);
-        _attackPulse = NO;
-        _dodgePulse  = NO;
     }
 
-    // World always updates so death animations finish before transitions.
-    _world.update(dt, dt);
+    // Title and Paused phases freeze the simulation.
+    BOOL simActive = (_phase != BrawlerGamePhaseTitle && _phase != BrawlerGamePhasePaused);
 
-    _world.events().for_each(EventType::HitContact, [self](const Event&) {
-        [_audio  playHitSound];
-        [_haptics playHitHaptic];
-    });
+    if (simActive) {
+        _world.update(dt, dt);
 
-    _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
-        // Different sound for player death vs enemy death.
-        if (_world.player_tags().present(ev.entityDied.entityID))
-            [_audio playHurtSound];  // player death uses hurt tone; death anim provides the drama
-        else
-            [_audio playDeathSound];
-    });
+        _world.events().for_each(EventType::HitContact, [self](const Event&) {
+            [_audio  playHitSound];
+            [_haptics playHitHaptic];
+        });
 
-    _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {
-        // Player takes a hit but survives → hurt sound.
-        uint32_t tid = ev.damageDealt.targetID;
-        if (_world.player_tags().present(tid) &&
-            _world.has_component<HealthComponent>(tid) &&
-            _world.get_component<HealthComponent>(tid).current > 0)
-            [_audio playHurtSound];
-    });
+        _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
+            if (_world.player_tags().present(ev.entityDied.entityID))
+                [_audio playHurtSound];
+            else
+                [_audio playDeathSound];
+        });
+
+        _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {
+            uint32_t tid = ev.damageDealt.targetID;
+            if (_world.player_tags().present(tid) &&
+                _world.has_component<HealthComponent>(tid) &&
+                _world.get_component<HealthComponent>(tid).current > 0)
+                [_audio playHurtSound];
+        });
+    }
 
     // -----------------------------------------------------------------------
     // Phase state machine
     // -----------------------------------------------------------------------
     switch (_phase) {
 
+        case BrawlerGamePhaseTitle: {
+            if (anyActionPulse)
+                [self _startNewRun];
+            break;
+        }
+
+        case BrawlerGamePhasePaused: {
+            if (_pausePulse)
+                [self _transitionToPhase:BrawlerGamePhasePlaying];
+            break;
+        }
+
         case BrawlerGamePhasePlaying: {
+            if (_pausePulse) {
+                [self _transitionToPhase:BrawlerGamePhasePaused];
+                break;
+            }
             // All enemies defeated → room clear.
             if ([self _allEnemiesDefeated]) {
                 [self _transitionToPhase:BrawlerGamePhaseRoomClear];
@@ -291,7 +317,6 @@ static const float kLoseDuration      = 3.5f;
                 if (self.onPhaseChanged)
                     self.onPhaseChanged(_phase, _currentRoom + 1, _lives);
                 if (_lives > 0) {
-                    // Retry the current room.
                     [self _loadRoom];
                     [self _transitionToPhase:BrawlerGamePhasePlaying];
                 } else {
@@ -320,10 +345,14 @@ static const float kLoseDuration      = 3.5f;
         case BrawlerGamePhaseLose: {
             _phaseTimer -= dt;
             if (_phaseTimer <= 0.f)
-                [self _startNewRun];
+                [self _transitionToPhase:BrawlerGamePhaseTitle]; // back to title, don't auto-restart
             break;
         }
     }
+
+    _attackPulse = NO;
+    _dodgePulse  = NO;
+    _pausePulse  = NO;
 
     id<MTLCommandBuffer> cmd = [_commandQueue commandBuffer];
     __block dispatch_semaphore_t sem = _frameSemaphore;

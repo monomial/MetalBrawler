@@ -47,6 +47,10 @@
         GameViewController *vc = weakSelf;
         if (!vc) return;
         switch (phase) {
+            case BrawlerGamePhaseTitle:
+                vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\n%@",
+                    kBrawlerStringTitle, kBrawlerStringPressToStart];
+                vc->_overlayField.hidden = NO; break;
             case BrawlerGamePhasePlaying:
                 vc->_overlayField.hidden = YES; break;
             case BrawlerGamePhaseRoomClear:
@@ -58,8 +62,15 @@
             case BrawlerGamePhaseLose:
                 vc->_overlayField.stringValue = kBrawlerStringGameOver;
                 vc->_overlayField.hidden = NO; break;
+            case BrawlerGamePhasePaused:
+                vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\n%@",
+                    kBrawlerStringPaused, kBrawlerStringPausedResume];
+                vc->_overlayField.hidden = NO; break;
         }
     };
+
+    // Show title screen immediately (delegate starts in Title phase).
+    _delegate.onPhaseChanged(BrawlerGamePhaseTitle, 1, 3);
 
     // P1: keyboard at 120Hz
     [NSTimer scheduledTimerWithTimeInterval:1.0/120.0 target:self
@@ -107,6 +118,7 @@
         case 125: _down   = YES; break; // ↓
         case 49:  _attack = YES; break; // Space
         case 56:  _dodge  = YES; break; // Shift
+        case 53:  [_delegate triggerPause]; break; // Escape
         default: [super keyDown:event];
     }
 }

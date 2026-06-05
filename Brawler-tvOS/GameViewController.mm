@@ -13,6 +13,7 @@ static const int kMaxPlayers = 4;
     BrawlerGameDelegate *_delegate;
     GCController        *_assignedControllers[kMaxPlayers];
     UILabel             *_overlayLabel;
+    UILabel             *_subtitleLabel;  // "Connect a gamepad" or pause hint
 }
 
 - (void)viewDidLoad {
@@ -31,7 +32,7 @@ static const int kMaxPlayers = 4;
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.drawableSize];
     _mtkView.delegate = _delegate;
 
-    // Phase overlay label — centered, hidden during normal play.
+    // Primary overlay — title / phase messages, centered.
     _overlayLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
     _overlayLabel.numberOfLines       = 0;
     _overlayLabel.textAlignment       = NSTextAlignmentCenter;
@@ -41,6 +42,19 @@ static const int kMaxPlayers = 4;
     _overlayLabel.hidden              = YES;
     _overlayLabel.autoresizingMask    = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:_overlayLabel];
+
+    // Subtitle label — controller prompt / pause hint, bottom-center.
+    CGRect bounds = self.view.bounds;
+    _subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, bounds.size.height - 120,
+                                                               bounds.size.width, 80)];
+    _subtitleLabel.numberOfLines   = 1;
+    _subtitleLabel.textAlignment   = NSTextAlignmentCenter;
+    _subtitleLabel.textColor       = [UIColor colorWithWhite:1 alpha:0.75];
+    _subtitleLabel.font            = [UIFont systemFontOfSize:36];
+    _subtitleLabel.backgroundColor = [UIColor clearColor];
+    _subtitleLabel.hidden          = YES;
+    _subtitleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
+    [self.view addSubview:_subtitleLabel];
 
     __weak GameViewController *weakSelf = self;
     _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
@@ -60,6 +74,9 @@ static const int kMaxPlayers = 4;
                name:GCControllerDidDisconnectNotification
              object:nil];
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
+
+    // Show title screen immediately.
+    [self _updateOverlayForPhase:BrawlerGamePhaseTitle room:1 lives:3];
 }
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
@@ -68,42 +85,71 @@ static const int kMaxPlayers = 4;
 - (void)releaseGPUResources {
     _mtkView.paused = YES;
     _mtkView.delegate = nil;
-    _delegate = nil; // releases command queue, renderer buffers, textures, audio/haptics
+    _delegate = nil;
+}
+
+// Returns YES if at least one extended gamepad is connected.
+- (BOOL)_hasGamepad {
+    for (GCController *ctrl in [GCController controllers])
+        if (ctrl.extendedGamepad) return YES;
+    return NO;
 }
 
 - (void)_updateOverlayForPhase:(BrawlerGamePhase)phase room:(int)room lives:(int)lives {
     switch (phase) {
+        case BrawlerGamePhaseTitle:
+            _overlayLabel.text   = kBrawlerStringTitle;
+            _overlayLabel.hidden = NO;
+            _subtitleLabel.text  = [self _hasGamepad]
+                                   ? kBrawlerStringPressToStart
+                                   : kBrawlerStringNoController;
+            _subtitleLabel.hidden = NO;
+            break;
         case BrawlerGamePhasePlaying:
-            _overlayLabel.hidden = YES;
+            _overlayLabel.hidden  = YES;
+            _subtitleLabel.hidden = YES;
             break;
         case BrawlerGamePhaseRoomClear:
             _overlayLabel.text   = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
             _overlayLabel.hidden = NO;
+            _subtitleLabel.hidden = YES;
             break;
         case BrawlerGamePhaseWin:
             _overlayLabel.text   = kBrawlerStringWin;
             _overlayLabel.hidden = NO;
+            _subtitleLabel.hidden = YES;
             break;
         case BrawlerGamePhaseLose:
             _overlayLabel.text   = kBrawlerStringGameOver;
             _overlayLabel.hidden = NO;
+            _subtitleLabel.hidden = YES;
+            break;
+        case BrawlerGamePhasePaused:
+            _overlayLabel.text   = kBrawlerStringPaused;
+            _overlayLabel.hidden = NO;
+            _subtitleLabel.text  = kBrawlerStringPausedResume;
+            _subtitleLabel.hidden = NO;
             break;
     }
 }
 
 // ---------------------------------------------------------------------------
-// Assigns incoming controller to the next free player slot.
+// Controller management
 // ---------------------------------------------------------------------------
+
 - (void)_controllerConnected:(NSNotification *)note {
     GCController *ctrl = note.object;
     if (!ctrl) return;
 
-    // Find first free slot.
+    // Refresh title subtitle now that a gamepad may be available.
+    if (_delegate.gamePhase == BrawlerGamePhaseTitle)
+        [self _updateOverlayForPhase:BrawlerGamePhaseTitle room:1 lives:3];
+
     int slot = -1;
     for (int i = 0; i < kMaxPlayers; ++i) {
         if (!_assignedControllers[i]) { slot = i; break; }
     }
-    if (slot < 0) return; // all slots full
+    if (slot < 0) return;
 
     _assignedControllers[slot] = ctrl;
     [self _wireController:ctrl toSlot:slot];
@@ -114,15 +160,16 @@ static const int kMaxPlayers = 4;
     for (int i = 0; i < kMaxPlayers; ++i) {
         if (_assignedControllers[i] == ctrl) {
             _assignedControllers[i] = nil;
-            // Zero that player's input so they don't keep moving.
             [_delegate setInputState:{} forPlayer:i];
             break;
         }
     }
+    // If we're on the title screen and lost the last gamepad, update the message.
+    if (_delegate.gamePhase == BrawlerGamePhaseTitle)
+        [self _updateOverlayForPhase:BrawlerGamePhaseTitle room:1 lives:3];
 }
 
 - (void)_wireController:(GCController *)ctrl toSlot:(int)slot {
-    // Extended gamepad first (PS4/Xbox/Switch Pro — all report non-nil microGamepad too).
     GCExtendedGamepad *ext = ctrl.extendedGamepad;
     if (ext) {
         __weak GameViewController *weakSelf = self;
@@ -146,6 +193,13 @@ static const int kMaxPlayers = 4;
             InputState s = [vc->_delegate currentInputStateForPlayer:slot];
             s.dodge = pressed;
             [vc->_delegate setInputState:s forPlayer:slot];
+        };
+        // Options button (☰) = pause/resume. Safe to intercept; no system behavior on tvOS.
+        ext.buttonOptions.pressedChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            if (!pressed) return; // fire on press only
+            GameViewController *vc = weakSelf;
+            if (!vc) return;
+            [vc->_delegate triggerPause];
         };
         return;
     }

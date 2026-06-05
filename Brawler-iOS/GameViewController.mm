@@ -13,6 +13,7 @@
     CGPoint              _moveTouchStartPos;
     NSTimeInterval       _moveTouchStartTime;
     UILabel             *_overlayLabel;
+    UIButton            *_pauseButton;
 }
 
 - (void)viewDidLoad {
@@ -40,24 +41,54 @@
     _overlayLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:_overlayLabel];
 
+    // Pause button — top-right corner, hidden until game starts.
+    _pauseButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [_pauseButton setTitle:@"⏸" forState:UIControlStateNormal];
+    _pauseButton.titleLabel.font = [UIFont systemFontOfSize:28];
+    _pauseButton.frame = CGRectMake(self.view.bounds.size.width - 60, 20, 44, 44);
+    _pauseButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
+    _pauseButton.hidden = YES;
+    [_pauseButton addTarget:self action:@selector(_pauseTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_pauseButton];
+
     __weak GameViewController *weakSelf = self;
     _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
         GameViewController *vc = weakSelf;
         if (!vc) return;
         switch (phase) {
+            case BrawlerGamePhaseTitle:
+                vc->_overlayLabel.text   = [NSString stringWithFormat:@"%@\n%@",
+                    kBrawlerStringTitle, kBrawlerStringPressToStart];
+                vc->_overlayLabel.hidden = NO;
+                vc->_pauseButton.hidden  = YES; break;
             case BrawlerGamePhasePlaying:
-                vc->_overlayLabel.hidden = YES; break;
+                vc->_overlayLabel.hidden = YES;
+                vc->_pauseButton.hidden  = NO; break;
             case BrawlerGamePhaseRoomClear:
                 vc->_overlayLabel.text   = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
                 vc->_overlayLabel.hidden = NO; break;
             case BrawlerGamePhaseWin:
                 vc->_overlayLabel.text   = kBrawlerStringWin;
-                vc->_overlayLabel.hidden = NO; break;
+                vc->_overlayLabel.hidden = NO;
+                vc->_pauseButton.hidden  = YES; break;
             case BrawlerGamePhaseLose:
                 vc->_overlayLabel.text   = kBrawlerStringGameOver;
-                vc->_overlayLabel.hidden = NO; break;
+                vc->_overlayLabel.hidden = NO;
+                vc->_pauseButton.hidden  = YES; break;
+            case BrawlerGamePhasePaused:
+                vc->_overlayLabel.text   = [NSString stringWithFormat:@"%@\n%@",
+                    kBrawlerStringPaused, kBrawlerStringPausedResume];
+                vc->_overlayLabel.hidden = NO;
+                vc->_pauseButton.hidden  = NO; break;
         }
     };
+
+    // Show title screen immediately.
+    _delegate.onPhaseChanged(BrawlerGamePhaseTitle, 1, 3);
+}
+
+- (void)_pauseTapped {
+    [_delegate triggerPause];
 }
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
