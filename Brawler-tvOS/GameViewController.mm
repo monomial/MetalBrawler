@@ -4,7 +4,6 @@
 #import "BrawlerGameDelegate.h"
 #import "BrawlerStrings.h"
 #include "Platform/InputState.h"
-#include "Platform/SiriRemoteInput.h"
 
 // Maps up to 4 GCControllers to player slots (index = player 0–3, value = controller or nil).
 static const int kMaxPlayers = 4;
@@ -150,33 +149,8 @@ static const int kMaxPlayers = 4;
         };
         return;
     }
-
-    // Siri Remote only (micro-gamepad, no extended profile).
-    GCMicroGamepad *micro = ctrl.microGamepad;
-    if (micro) {
-        micro.reportsAbsoluteDpadValues = NO;
-        __weak GameViewController *weakSelf = self;
-        micro.dpad.valueChangedHandler = ^(GCControllerDirectionPad *dpad, float x, float y) {
-            GameViewController *vc = weakSelf;
-            if (!vc) return;
-            [vc->_delegate setInputState:SiriRemote_processSwipeDelta(x, y) forPlayer:slot];
-        };
-        micro.buttonA.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
-            GameViewController *vc = weakSelf;
-            if (!vc) return;
-            InputState s = [vc->_delegate currentInputStateForPlayer:slot];
-            s.attack = pressed;
-            [vc->_delegate setInputState:s forPlayer:slot];
-        };
-        // buttonX is only present on Siri Remote 2nd gen — nil on older remotes.
-        micro.buttonX.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
-            GameViewController *vc = weakSelf;
-            if (!vc) return;
-            InputState s = [vc->_delegate currentInputStateForPlayer:slot];
-            s.dodge = pressed;
-            [vc->_delegate setInputState:s forPlayer:slot];
-        };
-    }
+    // Siri Remote (micro-gamepad only, no extended profile) — not supported.
+    // Too few buttons to play comfortably; require a proper gamepad.
 }
 
 @end
