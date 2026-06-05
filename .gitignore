@@ -16,6 +16,9 @@ DerivedData/
 # Build artifacts
 build/
 
+# Intermediate icon staging — PNGs are copied into xcassets; regenerate with tools/generate_icons.py
+icon_output/
+
 # Source assets — not needed at runtime; regenerate with tools/convert_to_usdz.py
 assets/characters/player/*.fbx
 assets/characters/player/unused/

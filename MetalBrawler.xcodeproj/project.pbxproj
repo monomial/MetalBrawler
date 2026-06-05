@@ -133,7 +133,10 @@
 		EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */; };
 		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
 		F326708B5F0FB965A5BE1833 /* InputSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF5371A1FA10DE17872A35 /* InputSystem.mm */; };
+		F3E0EE9347EEC351ABC4EFA1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 26DB87F1C0CAC044E04284AE /* Assets.xcassets */; };
 		F5CF922E3DFE3B3F5F8E1DC6 /* World.mm in Sources */ = {isa = PBXBuildFile; fileRef = B8A5DCEC930B03043555DCAE /* World.mm */; };
+		F6B1ACF143F4824C5763F267 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A6810614C2204A8150AF7081 /* Assets.xcassets */; };
+		FB9D5AA7DD438FBA91784CF3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00C8BDF61BE29981A3BF1799 /* Assets.xcassets */; };
 		FBA16BF0F243CF42183ED12F /* AudioEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = BB91D10DBF1FF0749C332ACF /* AudioEngine.mm */; };
 		FC9AA200EEB2F5308A7E7B13 /* HapticsEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = F597F0F0761E7D3A6F230D61 /* HapticsEngine.mm */; };
 		FCDB3D320DE8C5B0E26C0A42 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EB1A1356C5B2F4EE92C7964 /* UIKit.framework */; };
@@ -141,6 +144,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		00C8BDF61BE29981A3BF1799 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		027DE2E18E8F3FB22C010E6F /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		0716EB35B0F07AB5DD810FDB /* BrawlerLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BrawlerLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		082F14CDBDD078DD1EFF688D /* PhysicsTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PhysicsTests.mm; sourceTree = "<group>"; };
@@ -155,6 +159,7 @@
 		2377186BA6E74F7009AFB214 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		25D5EF275206644E9DE55572 /* AnimationTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AnimationTests.mm; sourceTree = "<group>"; };
 		263059B22BA872FC5E39D9DC /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		26DB87F1C0CAC044E04284AE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		286747CEB9E34C0D5FBA2499 /* GameViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = GameViewController.mm; sourceTree = "<group>"; };
 		2A7FD8B528E4D7B75E7C364B /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		2B5AD103103E8A725B32172A /* SceneDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SceneDelegate.mm; sourceTree = "<group>"; };
@@ -195,6 +200,7 @@
 		9E760FCE7B77214BDA856B4F /* BrawlerRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BrawlerRenderer.mm; sourceTree = "<group>"; };
 		9ED505A1AED5166F0C2EE2B3 /* Brawler-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6357873050DA593E566E786 /* EnemyAISystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EnemyAISystem.mm; sourceTree = "<group>"; };
+		A6810614C2204A8150AF7081 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A8227C8B70B2C5AA3BAB6E75 /* ScreenShakeSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScreenShakeSystem.h; sourceTree = "<group>"; };
 		AAA90A15DE8F91B4CEB91641 /* SiriRemoteInput.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SiriRemoteInput.mm; sourceTree = "<group>"; };
 		AE4993722C4B0E722982AE16 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
@@ -403,6 +409,7 @@
 			children = (
 				FEBA70EAAA83493ED7BCE052 /* AppDelegate.h */,
 				E95542E1A66D947C412352F1 /* AppDelegate.mm */,
+				26DB87F1C0CAC044E04284AE /* Assets.xcassets */,
 				F801FF1900BB8BE0890D8F46 /* GameViewController.h */,
 				B36194D2D04F225F413E6837 /* GameViewController.mm */,
 				2377186BA6E74F7009AFB214 /* Info.plist */,
@@ -446,6 +453,7 @@
 			children = (
 				027DE2E18E8F3FB22C010E6F /* AppDelegate.h */,
 				D31A0F222CD904A069458F57 /* AppDelegate.mm */,
+				00C8BDF61BE29981A3BF1799 /* Assets.xcassets */,
 				464D6EAD162F5B5D40F83D07 /* GameViewController.h */,
 				286747CEB9E34C0D5FBA2499 /* GameViewController.mm */,
 				B3DE47D446C1E666E427C5D0 /* Info.plist */,
@@ -461,6 +469,7 @@
 			children = (
 				9C58B0820BED229EE2C5D6D9 /* AppDelegate.h */,
 				82F1526BBF752AED74E1FC4E /* AppDelegate.mm */,
+				A6810614C2204A8150AF7081 /* Assets.xcassets */,
 				73B997F413EE7874F18915C7 /* GameViewController.h */,
 				F63305F8EE199B9C7E16C758 /* GameViewController.mm */,
 				F44352FD41BDCADB1E9D6EE1 /* Info.plist */,
@@ -627,6 +636,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FB9D5AA7DD438FBA91784CF3 /* Assets.xcassets in Resources */,
 				2FC81E73AC51FE738E8B8964 /* assets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -635,6 +645,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F3E0EE9347EEC351ABC4EFA1 /* Assets.xcassets in Resources */,
 				7CD8A2DD107618B08AB49ED0 /* assets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -643,6 +654,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F6B1ACF143F4824C5763F267 /* Assets.xcassets in Resources */,
 				CEE85AEA31D2E86615E360BA /* assets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

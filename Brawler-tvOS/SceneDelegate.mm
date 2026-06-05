@@ -20,4 +20,9 @@
     [(GameViewController *)self.window.rootViewController pauseRendering];
 }
 
+- (void)sceneDidEnterBackground:(UIScene *)scene {
+    // Release GPU resources so suspended app doesn't starve other apps of GPU memory.
+    [(GameViewController *)self.window.rootViewController releaseGPUResources];
+}
+
 @end

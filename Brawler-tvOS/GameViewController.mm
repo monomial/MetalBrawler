@@ -65,6 +65,12 @@ static const int kMaxPlayers = 4;
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
 - (void)resumeRendering { _mtkView.paused = NO; }
 
+- (void)releaseGPUResources {
+    _mtkView.paused = YES;
+    _mtkView.delegate = nil;
+    _delegate = nil; // releases command queue, renderer buffers, textures, audio/haptics
+}
+
 - (void)_updateOverlayForPhase:(BrawlerGamePhase)phase room:(int)room lives:(int)lives {
     switch (phase) {
         case BrawlerGamePhasePlaying:
