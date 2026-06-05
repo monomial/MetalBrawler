@@ -72,7 +72,21 @@
     // Show title screen immediately (delegate starts in Title phase).
     _delegate.onPhaseChanged(BrawlerGamePhaseTitle, 1, 3);
 
-    // P1: keyboard at 120Hz
+    // P1: keyboard — use a local event monitor so key events are captured regardless
+    // of which view is first responder (avoids NSTextField stealing focus).
+    __weak GameViewController *weakSelfKbd = self;
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent*(NSEvent *event) {
+        GameViewController *vc = weakSelfKbd;
+        if (!vc || event.isARepeat) return event;
+        [vc keyDown:event];
+        return nil; // consume — prevents system beep for unhandled keys
+    }];
+    [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyUp handler:^NSEvent*(NSEvent *event) {
+        GameViewController *vc = weakSelfKbd;
+        if (!vc) return event;
+        [vc keyUp:event];
+        return nil;
+    }];
     [NSTimer scheduledTimerWithTimeInterval:1.0/120.0 target:self
                                    selector:@selector(_feedKeyboardInput) userInfo:nil repeats:YES];
 
@@ -84,13 +98,6 @@
              object:nil];
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 }
-
-- (void)viewDidAppear {
-    [super viewDidAppear];
-    [self.view.window makeFirstResponder:self];
-}
-
-- (BOOL)acceptsFirstResponder { return YES; }
 
 // ---------------------------------------------------------------------------
 // P1 — keyboard

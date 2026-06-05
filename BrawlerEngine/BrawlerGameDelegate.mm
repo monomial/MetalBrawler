@@ -289,7 +289,11 @@ static const float kLoseDuration      = 3.5f;
     switch (_phase) {
 
         case BrawlerGamePhaseTitle: {
-            if (anyActionPulse)
+            // anyActionPulse covers touch/gamepad pulses and Escape.
+            // Also check world input directly for platforms (macOS keyboard) that feed
+            // attack/dodge through setInputState: rather than triggerAttack:/triggerDodge:.
+            InputState s0 = _world.current_input(0);
+            if (anyActionPulse || s0.attack || s0.dodge)
                 [self _startNewRun];
             break;
         }
