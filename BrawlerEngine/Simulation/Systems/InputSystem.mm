@@ -26,6 +26,9 @@ void InputSystem_update(World& world) {
             continue;
         }
 
+        // Lock input while dodge is active — DodgeSystem owns velocity for this duration.
+        if (world.has_component<DodgeComponent>(id)) continue;
+
         const InputState input = world.current_input(tag.playerIndex);
 
         float mx = input.moveX;
@@ -50,9 +53,15 @@ void InputSystem_update(World& world) {
 
         if (world.has_component<AnimationComponent>(id)) {
             bool moving = (mx * mx + my * my) > 0.01f;
-            AnimClipID want = input.attack ? AnimClipID::Attack
-                            : moving       ? AnimClipID::Walk
-                                           : AnimClipID::Idle;
+            const AnimationComponent& anim = world.get_component<AnimationComponent>(id);
+            // Dodge: allowed from Idle or Walk (not mid-attack, hurt, death, or another dodge).
+            bool canDodge = input.dodge &&
+                            (anim.currentClip == AnimClipID::Idle ||
+                             anim.currentClip == AnimClipID::Walk);
+            AnimClipID want = canDodge      ? AnimClipID::Dodge
+                            : input.attack  ? AnimClipID::Attack
+                            : moving        ? AnimClipID::Walk
+                                            : AnimClipID::Idle;
             AnimationSystem_request_clip(world, id, want);
         }
     }

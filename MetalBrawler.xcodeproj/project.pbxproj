@@ -32,6 +32,8 @@
 		2205005CB9BC88415861AE2B /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
 		2274562D8FEA71A9AF12F15D /* AnimationSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C375040E396E4D9619804D9B /* AnimationSystem.mm */; };
 		2471F779BC0C4BA0956ED4B3 /* PhysicsSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = EBD7464D60D21D33CB1F8405 /* PhysicsSystem.mm */; };
+		25C177F946AF705D22026377 /* DodgeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */; };
+		26A3FC287C92888FE249793A /* DodgeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */; };
 		2748F493B68B3B6D5A588B52 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 263059B22BA872FC5E39D9DC /* QuartzCore.framework */; };
 		2A09C4314A31A4F77B4E9CDF /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = F589CAA671997CF2E639FC51 /* main.mm */; };
 		2C54B97123739B470868C3F6 /* CombatSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 538BD37CD7D75E3768953CB5 /* CombatSystem.mm */; };
@@ -40,6 +42,7 @@
 		30A752048F21D44D1EB86E61 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
 		31CC37ACBD9CDF76BB3857EB /* ContactDamageTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = C198EE6AC4B8C900025F2E54 /* ContactDamageTests.mm */; };
 		3300FEC8A9D023386E3AE000 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7C1CF591F48BAC2512642C39 /* Metal.framework */; };
+		3649286F02112A180528BCA9 /* DodgeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */; };
 		37172235127E8C412A05EB6F /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
 		39177CE3BAEF02B56A393F9B /* Brawler.metal in Sources */ = {isa = PBXBuildFile; fileRef = 91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */; };
 		397A81DB0028A6847DEABEFE /* ModelIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A002302E6D7EE53F38E2D27 /* ModelIO.framework */; };
@@ -130,6 +133,7 @@
 		E66F4BC5D009C5595D0C80B6 /* AnimationSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C375040E396E4D9619804D9B /* AnimationSystem.mm */; };
 		E8B124E0D81B7D76326033C2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E13413F89AC01BF3699C455 /* Cocoa.framework */; };
 		E96A56355052DB3DAD8A2B2D /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
+		EAC5D3D3EE60C3C72B17B627 /* DodgeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */; };
 		EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */; };
 		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
 		F326708B5F0FB965A5BE1833 /* InputSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF5371A1FA10DE17872A35 /* InputSystem.mm */; };
@@ -169,6 +173,7 @@
 		3B5CE91A2D9A83DDCAB5E3A4 /* AudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioEngine.h; sourceTree = "<group>"; };
 		464D6EAD162F5B5D40F83D07 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
 		538BD37CD7D75E3768953CB5 /* CombatSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CombatSystem.mm; sourceTree = "<group>"; };
+		5DB2F1160FF12E3A9C84876C /* BrawlerStrings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrawlerStrings.h; sourceTree = "<group>"; };
 		6416857200AC9D7E1C1E5811 /* SiriRemoteInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SiriRemoteInput.h; sourceTree = "<group>"; };
 		68EFA4044C94C89BE86E76FE /* Components.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Components.h; sourceTree = "<group>"; };
 		6E13413F89AC01BF3699C455 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -199,6 +204,8 @@
 		9C58B0820BED229EE2C5D6D9 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		9E760FCE7B77214BDA856B4F /* BrawlerRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BrawlerRenderer.mm; sourceTree = "<group>"; };
 		9ED505A1AED5166F0C2EE2B3 /* Brawler-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9FAABDB5DC509B0AD8454C89 /* DodgeSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DodgeSystem.h; sourceTree = "<group>"; };
+		A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DodgeSystem.mm; sourceTree = "<group>"; };
 		A6357873050DA593E566E786 /* EnemyAISystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EnemyAISystem.mm; sourceTree = "<group>"; };
 		A6810614C2204A8150AF7081 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A8227C8B70B2C5AA3BAB6E75 /* ScreenShakeSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScreenShakeSystem.h; sourceTree = "<group>"; };
@@ -312,6 +319,8 @@
 				538BD37CD7D75E3768953CB5 /* CombatSystem.mm */,
 				7A8452E098211B9F752E4A4C /* ContactDamageSystem.h */,
 				E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */,
+				9FAABDB5DC509B0AD8454C89 /* DodgeSystem.h */,
+				A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */,
 				B0D54DB906E82C2AC7FF1B34 /* EnemyAISystem.h */,
 				A6357873050DA593E566E786 /* EnemyAISystem.mm */,
 				715BB2286A0CABACE2D77E86 /* InputSystem.h */,
@@ -352,6 +361,7 @@
 			children = (
 				30796A6CE2160427FFD83AE4 /* BrawlerGameDelegate.h */,
 				BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */,
+				5DB2F1160FF12E3A9C84876C /* BrawlerStrings.h */,
 				104E94F8B0AFC006C647134E /* Assets */,
 				2E5867DEC13F7830CE80441C /* Audio */,
 				4D99D8643140A7D932EE8385 /* Haptics */,
@@ -675,6 +685,7 @@
 				945F8809287421DC965F4EE0 /* CharacterLoader.mm in Sources */,
 				0D11AFF7BD915151C407CC1D /* CombatSystem.mm in Sources */,
 				1C6DCB5DD71DC9929B3D0D29 /* ContactDamageSystem.mm in Sources */,
+				25C177F946AF705D22026377 /* DodgeSystem.mm in Sources */,
 				90BC4A4DC3C5371134D28DF3 /* EnemyAISystem.mm in Sources */,
 				B73A3427D19F336795156CB5 /* GameViewController.mm in Sources */,
 				FC9AA200EEB2F5308A7E7B13 /* HapticsEngine.mm in Sources */,
@@ -704,6 +715,7 @@
 				0FB81F947168A9957F4BA982 /* CharacterLoader.mm in Sources */,
 				2C54B97123739B470868C3F6 /* CombatSystem.mm in Sources */,
 				911EEA89EDB8892F9329ECFC /* ContactDamageSystem.mm in Sources */,
+				26A3FC287C92888FE249793A /* DodgeSystem.mm in Sources */,
 				496D78135C2F218EB0F885F9 /* EnemyAISystem.mm in Sources */,
 				488478FA728D5051036692D7 /* GameViewController.mm in Sources */,
 				CB272DE21B7DD6662CE39429 /* HapticsEngine.mm in Sources */,
@@ -733,6 +745,7 @@
 				BCE0400E90F2AFCA75821048 /* CharacterLoader.mm in Sources */,
 				4BF8BAD89CABEAD53BD10A44 /* CombatSystem.mm in Sources */,
 				0BB6C26147D98D34984ABD39 /* ContactDamageSystem.mm in Sources */,
+				EAC5D3D3EE60C3C72B17B627 /* DodgeSystem.mm in Sources */,
 				0879459DF82EF42821F7EDBA /* EnemyAISystem.mm in Sources */,
 				9F133B3D66138D96729D3528 /* GameViewController.mm in Sources */,
 				5314FBF7F5D152FB080B72F8 /* HapticsEngine.mm in Sources */,
@@ -762,6 +775,7 @@
 				1A24493F2CEA9F3111464437 /* CombatTests.mm in Sources */,
 				7C5930E3F0038BB5D235C1C6 /* ContactDamageSystem.mm in Sources */,
 				31CC37ACBD9CDF76BB3857EB /* ContactDamageTests.mm in Sources */,
+				3649286F02112A180528BCA9 /* DodgeSystem.mm in Sources */,
 				8E0991FE8CD3247491E9E6D8 /* EdgeCaseTests.mm in Sources */,
 				1D86F9EC26F02B9310D9F094 /* EnemyAISystem.mm in Sources */,
 				AC53FC267E4DAEF5AA7CBDEE /* EnemyAITests.mm in Sources */,

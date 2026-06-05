@@ -24,6 +24,7 @@ static const AttackWindow kAttackWindows[(int)AnimClipID::Count] = {
     {0.35f, 0.60f, 1},  // Attack — fist extends around 35–60% of clip
     {0.f,   0.f,   0},  // Hurt   — no hitbox
     {0.f,   0.f,   0},  // Death  — no hitbox
+    {0.f,   0.f,   0},  // Dodge  — no hitbox
 };
 
 void CombatSystem_update(World& world, float gameDt) {
@@ -73,6 +74,7 @@ void CombatSystem_update(World& world, float gameDt) {
             if (!world.has_component<HealthComponent>(targetID)) continue;
             if (world.has_component<AnimationComponent>(targetID) &&
                 world.get_component<AnimationComponent>(targetID).dying) continue;
+            if (world.has_component<DodgeComponent>(targetID)) continue; // invincible during dodge
 
             const PositionComponent& tPos = world.get_component<PositionComponent>(targetID);
             float dx   = tPos.x - atkPos.x;

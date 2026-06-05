@@ -19,6 +19,7 @@ static const float kClipDurationFallback[(int)AnimClipID::Count] = {
     1.03f, // Attack  — one-shot
     1.50f, // Hurt    — one-shot
     4.50f, // Death   — one-shot
+    2.40f, // Dodge   — one-shot (72 frames @ 30fps)
 };
 
 static float clip_duration(const LoadedCharacter* charData, AnimClipID id) {
@@ -31,6 +32,10 @@ static float clip_duration(const LoadedCharacter* charData, AnimClipID id) {
 
 static bool clip_loops(AnimClipID id) {
     return id == AnimClipID::Idle || id == AnimClipID::Walk;
+}
+
+static bool is_combat_speed_clip(AnimClipID id) {
+    return id == AnimClipID::Attack || id == AnimClipID::Hurt || id == AnimClipID::Dodge;
 }
 
 void AnimationSystem_update(World& world, float gameDt) {
@@ -52,9 +57,7 @@ void AnimationSystem_update(World& world, float gameDt) {
         // Attack and Hurt play at 1.5× so punches feel snappy and hit reactions
         // are brief. Idle/Walk/Death keep normal speed.
         static constexpr float kCombatSpeed = 2.0f;
-        bool isCombatClip = (anim.currentClip == AnimClipID::Attack ||
-                             anim.currentClip == AnimClipID::Hurt);
-        anim.clipTime += gameDt * (isCombatClip ? kCombatSpeed : 1.0f);
+        anim.clipTime += gameDt * (is_combat_speed_clip(anim.currentClip) ? kCombatSpeed : 1.0f);
         anim.clipDone  = false;
 
         if (clip_loops(anim.currentClip)) {

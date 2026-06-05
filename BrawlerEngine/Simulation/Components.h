@@ -56,6 +56,7 @@ enum class AnimClipID : uint8_t {
     Attack  = 2,
     Hurt    = 3,
     Death   = 4,
+    Dodge   = 5,
     Count
 };
 
@@ -87,4 +88,11 @@ struct DamageCooldownComponent {
 // each tick; when it reaches 0 the enemy may begin a new Attack clip.
 struct EnemyAttackCooldownComponent {
     float remaining = 0.f; // seconds until next attack is allowed (0 = ready)
+};
+
+// Present on a player entity for the duration of a dodge roll.
+// Presence = invincible: CombatSystem skips damage to any entity that has this.
+// Added and removed entirely by DodgeSystem — do not add manually.
+struct DodgeComponent {
+    bool impulseApplied = false; // velocity burst has been applied
 };

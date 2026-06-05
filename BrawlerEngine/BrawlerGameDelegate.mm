@@ -94,7 +94,7 @@ static const float kLoseDuration      = 3.5f;
 
     NSMutableArray<NSString*> *clips = [NSMutableArray array];
     for (NSString *n in @[@"idle.usdz", @"walk.usdz", @"attack.usdz",
-                           @"hurt.usdz", @"death.usdz"])
+                           @"hurt.usdz", @"death.usdz", @"dodge.usdz"])
         [clips addObject:[playerDir stringByAppendingPathComponent:n]];
 
     LoadedCharacter *player = CharacterLoader_load(mesh, clips, device);

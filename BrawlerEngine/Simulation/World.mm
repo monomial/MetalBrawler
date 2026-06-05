@@ -6,6 +6,7 @@
 #include "Systems/WallCollisionSystem.h"
 #include "Systems/AnimationSystem.h"
 #include "Systems/ScreenShakeSystem.h"
+#include "Systems/DodgeSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -21,6 +22,7 @@ template<> ComponentStorage<DamageCooldownComponent>& World::_pool() { return _d
 template<> ComponentStorage<AnimationComponent>&      World::_pool() { return _animations; }
 template<> ComponentStorage<FacingComponent>&              World::_pool() { return _facings; }
 template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool() { return _attackCooldowns; }
+template<> ComponentStorage<DodgeComponent>&              World::_pool() { return _dodges; }
 
 // ----
 
@@ -59,6 +61,7 @@ void World::flush() {
         _animations.remove(id);
         _facings.remove(id);
         _attackCooldowns.remove(id);
+        _dodges.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -84,10 +87,14 @@ void World::tick(float gameDt) {
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
     // 5. AnimationSystem — advances clip time, samples bone matrices when assets loaded
     AnimationSystem_update(*this, gameDt);
-    // 6. AudioSystem (physicalDt — run even during HitStop)
+    // 6. DodgeSystem — arms invincibility + applies impulse when Dodge clip starts;
+    //    removes DodgeComponent when clip finishes. Runs after AnimationSystem so
+    //    clipDone is up-to-date.
+    DodgeSystem_update(*this, gameDt);
+    // 7. AudioSystem (physicalDt — run even during HitStop)
     // RespawnSystem removed: room progression in BrawlerGameDelegate owns enemy spawning.
-    // 7. HapticsSystem   — TODO
-    // 8. ScreenShakeSystem (physicalDt — runs even during HitStop)
+    // 8. HapticsSystem   — TODO
+    // 9. ScreenShakeSystem (physicalDt — runs even during HitStop)
     ScreenShakeSystem_update(*this, gameDt);
     // 9. flush
     flush();
