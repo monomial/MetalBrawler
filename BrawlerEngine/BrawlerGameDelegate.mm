@@ -182,6 +182,8 @@ static const float kLoseDuration      = 3.5f;
         _world.add_component<AnimationComponent>(e);
         _world.add_component<FacingComponent>(e);
         _world.add_component<EnemyAttackCooldownComponent>(e);
+        if (room.isBoss)
+            _world.add_component<BossTagComponent>(e);
     }
 }
 
@@ -278,8 +280,11 @@ static const float kLoseDuration      = 3.5f;
             uint32_t tid = ev.damageDealt.targetID;
             if (_world.player_tags().present(tid) &&
                 _world.has_component<HealthComponent>(tid) &&
-                _world.get_component<HealthComponent>(tid).current > 0)
+                _world.get_component<HealthComponent>(tid).current > 0) {
                 [_audio playHurtSound];
+                if (self.onPlayerDamaged)
+                    dispatch_async(dispatch_get_main_queue(), self.onPlayerDamaged);
+            }
         });
     }
 

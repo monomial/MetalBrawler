@@ -90,6 +90,11 @@ struct EnemyAttackCooldownComponent {
     float remaining = 0.f; // seconds until next attack is allowed (0 = ready)
 };
 
+// Marks a boss enemy. CombatSystem uses this to suppress most hurt reactions.
+struct BossTagComponent {
+    bool active = true; // presence in storage is the real signal
+};
+
 // Present on a player entity for the duration of a dodge roll.
 // Presence = invincible: CombatSystem skips damage to any entity that has this.
 // Added and removed entirely by DodgeSystem — do not add manually.

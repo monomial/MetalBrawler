@@ -4,6 +4,7 @@
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
+#include <stdlib.h>
 
 static constexpr float kAttackRange    = 130.0f;
 static constexpr int   kHitStopTicks   = 4;      // ~33ms freeze on hit
@@ -104,7 +105,12 @@ void CombatSystem_update(World& world, float gameDt) {
                     world.defer_destroy(targetID);
                 }
             } else if (world.has_component<AnimationComponent>(targetID)) {
-                AnimationSystem_request_clip(world, targetID, AnimClipID::Hurt);
+                // Players stay mobile when hit (no stun) — TMNT-style.
+                // Enemies react unless they're a boss; bosses react ~10% of the time.
+                bool isPlayer = world.has_component<PlayerTagComponent>(targetID);
+                bool isBoss   = world.has_component<BossTagComponent>(targetID);
+                if (!isPlayer && (!isBoss || arc4random_uniform(10) == 0))
+                    AnimationSystem_request_clip(world, targetID, AnimClipID::Hurt);
             }
         }
 

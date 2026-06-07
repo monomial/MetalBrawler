@@ -1,6 +1,7 @@
 #import "GameViewController.h"
 #import <MetalKit/MetalKit.h>
 #import <GameController/GameController.h>
+#import <QuartzCore/QuartzCore.h>
 #import "BrawlerGameDelegate.h"
 #import "BrawlerStrings.h"
 #include "Platform/InputState.h"
@@ -9,6 +10,7 @@
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
     NSTextField         *_overlayField;
+    NSView              *_damageFlashView;
     BOOL _left, _right, _up, _down, _attack;
 }
 
@@ -42,7 +44,34 @@
     _overlayField.hidden            = YES;
     [self.view addSubview:_overlayField];
 
+    // Red flash when the player takes a hit.
+    _damageFlashView = [[NSView alloc] initWithFrame:self.view.bounds];
+    _damageFlashView.wantsLayer = YES;
+    _damageFlashView.layer.backgroundColor = [NSColor colorWithRed:1 green:0 blue:0 alpha:0.42].CGColor;
+    _damageFlashView.layer.opacity = 0;
+    _damageFlashView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    [self.view addSubview:_damageFlashView positioned:NSWindowAbove relativeTo:nil];
+
     __weak GameViewController *weakSelf = self;
+
+    _delegate.onPlayerDamaged = ^{
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        vc->_damageFlashView.layer.opacity = 1.f;
+        [CATransaction commit];
+        CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        fade.fromValue = @1.f;
+        fade.toValue   = @0.f;
+        fade.duration  = 0.35;
+        fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+        fade.fillMode  = kCAFillModeForwards;
+        fade.removedOnCompletion = NO;
+        [vc->_damageFlashView.layer addAnimation:fade forKey:@"damageFlash"];
+        vc->_damageFlashView.layer.opacity = 0.f;
+    };
+
     _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
         GameViewController *vc = weakSelf;
         if (!vc) return;

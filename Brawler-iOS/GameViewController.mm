@@ -14,6 +14,7 @@
     NSTimeInterval       _moveTouchStartTime;
     UILabel             *_overlayLabel;
     UIButton            *_pauseButton;
+    UIView              *_damageFlashView;
 }
 
 - (void)viewDidLoad {
@@ -51,7 +52,26 @@
     [_pauseButton addTarget:self action:@selector(_pauseTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_pauseButton];
 
+    // Red edge flash when the player takes a hit.
+    _damageFlashView = [[UIView alloc] initWithFrame:self.view.bounds];
+    _damageFlashView.backgroundColor = [UIColor colorWithRed:1 green:0 blue:0 alpha:0.42];
+    _damageFlashView.userInteractionEnabled = NO;
+    _damageFlashView.alpha = 0;
+    _damageFlashView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:_damageFlashView];
+
     __weak GameViewController *weakSelf = self;
+
+    _delegate.onPlayerDamaged = ^{
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        vc->_damageFlashView.alpha = 1.f;
+        [UIView animateWithDuration:0.35 delay:0
+                            options:UIViewAnimationOptionCurveEaseOut
+                         animations:^{ vc->_damageFlashView.alpha = 0; }
+                         completion:nil];
+    };
+
     _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
         GameViewController *vc = weakSelf;
         if (!vc) return;

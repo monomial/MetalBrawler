@@ -23,6 +23,7 @@ template<> ComponentStorage<AnimationComponent>&      World::_pool() { return _a
 template<> ComponentStorage<FacingComponent>&              World::_pool() { return _facings; }
 template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool() { return _attackCooldowns; }
 template<> ComponentStorage<DodgeComponent>&              World::_pool() { return _dodges; }
+template<> ComponentStorage<BossTagComponent>&            World::_pool() { return _bossTags; }
 
 // ----
 
@@ -62,6 +63,7 @@ void World::flush() {
         _facings.remove(id);
         _attackCooldowns.remove(id);
         _dodges.remove(id);
+        _bossTags.remove(id);
     }
     _deferredDestroyCount = 0;
 }

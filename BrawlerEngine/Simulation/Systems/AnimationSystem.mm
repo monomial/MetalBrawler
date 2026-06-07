@@ -34,8 +34,13 @@ static bool clip_loops(AnimClipID id) {
     return id == AnimClipID::Idle || id == AnimClipID::Walk;
 }
 
-static bool is_combat_speed_clip(AnimClipID id) {
-    return id == AnimClipID::Attack || id == AnimClipID::Hurt || id == AnimClipID::Dodge;
+static float clip_speed_multiplier(AnimClipID id) {
+    switch (id) {
+        case AnimClipID::Attack: return 4.0f; // very snappy punches
+        case AnimClipID::Hurt:   return 2.0f;
+        case AnimClipID::Dodge:  return 2.0f;
+        default:                 return 1.0f;
+    }
 }
 
 void AnimationSystem_update(World& world, float gameDt) {
@@ -56,8 +61,7 @@ void AnimationSystem_update(World& world, float gameDt) {
         float duration = clip_duration(charData, anim.currentClip);
         // Attack and Hurt play at 1.5× so punches feel snappy and hit reactions
         // are brief. Idle/Walk/Death keep normal speed.
-        static constexpr float kCombatSpeed = 2.0f;
-        anim.clipTime += gameDt * (is_combat_speed_clip(anim.currentClip) ? kCombatSpeed : 1.0f);
+        anim.clipTime += gameDt * clip_speed_multiplier(anim.currentClip);
         anim.clipDone  = false;
 
         if (clip_loops(anim.currentClip)) {

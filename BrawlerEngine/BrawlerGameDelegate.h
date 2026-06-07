@@ -53,4 +53,7 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 // room and lives reflect the NEW state after the transition.
 @property (copy, nonatomic) void (^onPhaseChanged)(BrawlerGamePhase phase, int room, int lives);
 
+// Called when the player takes damage (survives). Use for screen-flash feedback.
+@property (copy, nonatomic) void (^onPlayerDamaged)(void);
+
 @end
