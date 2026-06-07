@@ -278,9 +278,15 @@ static const float kLoseDuration      = 3.5f;
     if (simActive) {
         _world.update(dt, dt);
 
-        _world.events().for_each(EventType::HitContact, [self](const Event&) {
-            [_audio  playHitSound];
-            [_haptics playHitHaptic];
+        // Play hit sound/haptic once per frame regardless of how many enemies connected —
+        // queuing one buffer per HitContact event causes sounds to pile up sequentially.
+        bool hitThisFrame = false;
+        _world.events().for_each(EventType::HitContact, [self, &hitThisFrame](const Event&) {
+            if (!hitThisFrame) {
+                [_audio  playHitSound];
+                [_haptics playHitHaptic];
+                hitThisFrame = true;
+            }
         });
 
         _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
