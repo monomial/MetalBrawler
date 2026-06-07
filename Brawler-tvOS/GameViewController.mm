@@ -121,7 +121,7 @@ static const int kMaxPlayers = 4;
             _overlayLabel.text   = kBrawlerStringTitle;
             _overlayLabel.hidden = NO;
             _subtitleLabel.text  = [self _hasGamepad]
-                                   ? kBrawlerStringPressToStart
+                                   ? @"Press A to start"
                                    : kBrawlerStringNoController;
             _subtitleLabel.hidden = NO;
             break;

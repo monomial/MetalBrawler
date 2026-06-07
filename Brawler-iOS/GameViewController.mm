@@ -109,8 +109,8 @@
         if (!vc) return;
         switch (phase) {
             case BrawlerGamePhaseTitle:
-                vc->_overlayLabel.text      = [NSString stringWithFormat:@"%@\n%@",
-                    kBrawlerStringTitle, kBrawlerStringPressToStart];
+                vc->_overlayLabel.text      = [NSString stringWithFormat:@"%@\nTap to start",
+                    kBrawlerStringTitle];
                 vc->_overlayLabel.hidden    = NO;
                 vc->_pauseButton.hidden     = YES;
                 vc->_onePlayerButton.hidden = YES;

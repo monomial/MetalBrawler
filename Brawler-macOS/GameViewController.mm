@@ -77,8 +77,8 @@
         if (!vc) return;
         switch (phase) {
             case BrawlerGamePhaseTitle:
-                vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\n%@",
-                    kBrawlerStringTitle, kBrawlerStringPressToStart];
+                vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\nPress any key to start",
+                    kBrawlerStringTitle];
                 vc->_overlayField.hidden = NO; break;
             case BrawlerGamePhasePlayerSelect:
                 vc->_overlayField.stringValue = @"SELECT PLAYERS\n[1]  1 Player\n[2]  2 Players";
