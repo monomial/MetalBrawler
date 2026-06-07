@@ -14,6 +14,8 @@
     NSTimeInterval       _moveTouchStartTime;
     UILabel             *_overlayLabel;
     UIButton            *_pauseButton;
+    UIButton            *_onePlayerButton;
+    UIButton            *_twoPlayersButton;
     UIView              *_damageFlashView;
 }
 
@@ -52,6 +54,36 @@
     [_pauseButton addTarget:self action:@selector(_pauseTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_pauseButton];
 
+    // Player-select buttons — shown only during player-select phase.
+    CGFloat bw = self.view.bounds.size.width * 0.38f;
+    CGFloat bh = 80.f;
+    CGFloat cy = self.view.bounds.size.height * 0.55f;
+    CGFloat cx = self.view.bounds.size.width  * 0.5f;
+
+    _onePlayerButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [_onePlayerButton setTitle:@"1 PLAYER" forState:UIControlStateNormal];
+    _onePlayerButton.titleLabel.font = [UIFont boldSystemFontOfSize:28];
+    _onePlayerButton.backgroundColor = [UIColor colorWithWhite:0.15 alpha:0.9];
+    [_onePlayerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    _onePlayerButton.layer.cornerRadius = 12;
+    _onePlayerButton.frame = CGRectMake(cx - bw - 12, cy, bw, bh);
+    _onePlayerButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
+    _onePlayerButton.hidden = YES;
+    [_onePlayerButton addTarget:self action:@selector(_onePlayerTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_onePlayerButton];
+
+    _twoPlayersButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [_twoPlayersButton setTitle:@"2 PLAYERS" forState:UIControlStateNormal];
+    _twoPlayersButton.titleLabel.font = [UIFont boldSystemFontOfSize:28];
+    _twoPlayersButton.backgroundColor = [UIColor colorWithWhite:0.15 alpha:0.9];
+    [_twoPlayersButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    _twoPlayersButton.layer.cornerRadius = 12;
+    _twoPlayersButton.frame = CGRectMake(cx + 12, cy, bw, bh);
+    _twoPlayersButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
+    _twoPlayersButton.hidden = YES;
+    [_twoPlayersButton addTarget:self action:@selector(_twoPlayersTapped) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_twoPlayersButton];
+
     // Red edge flash when the player takes a hit.
     _damageFlashView = [[UIView alloc] initWithFrame:self.view.bounds];
     _damageFlashView.backgroundColor = [UIColor colorWithRed:1 green:0 blue:0 alpha:0.42];
@@ -77,24 +109,38 @@
         if (!vc) return;
         switch (phase) {
             case BrawlerGamePhaseTitle:
-                vc->_overlayLabel.text   = [NSString stringWithFormat:@"%@\n%@",
+                vc->_overlayLabel.text      = [NSString stringWithFormat:@"%@\n%@",
                     kBrawlerStringTitle, kBrawlerStringPressToStart];
-                vc->_overlayLabel.hidden = NO;
-                vc->_pauseButton.hidden  = YES; break;
+                vc->_overlayLabel.hidden    = NO;
+                vc->_pauseButton.hidden     = YES;
+                vc->_onePlayerButton.hidden = YES;
+                vc->_twoPlayersButton.hidden = YES; break;
+            case BrawlerGamePhasePlayerSelect:
+                vc->_overlayLabel.text      = kBrawlerStringSelectPlayers;
+                vc->_overlayLabel.hidden    = NO;
+                vc->_pauseButton.hidden     = YES;
+                vc->_onePlayerButton.hidden  = NO;
+                vc->_twoPlayersButton.hidden = NO; break;
             case BrawlerGamePhasePlaying:
-                vc->_overlayLabel.hidden = YES;
-                vc->_pauseButton.hidden  = NO; break;
+                vc->_overlayLabel.hidden     = YES;
+                vc->_pauseButton.hidden      = NO;
+                vc->_onePlayerButton.hidden  = YES;
+                vc->_twoPlayersButton.hidden = YES; break;
             case BrawlerGamePhaseRoomClear:
                 vc->_overlayLabel.text   = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
                 vc->_overlayLabel.hidden = NO; break;
             case BrawlerGamePhaseWin:
-                vc->_overlayLabel.text   = kBrawlerStringWin;
-                vc->_overlayLabel.hidden = NO;
-                vc->_pauseButton.hidden  = YES; break;
+                vc->_overlayLabel.text      = kBrawlerStringWin;
+                vc->_overlayLabel.hidden    = NO;
+                vc->_pauseButton.hidden     = YES;
+                vc->_onePlayerButton.hidden = YES;
+                vc->_twoPlayersButton.hidden = YES; break;
             case BrawlerGamePhaseLose:
-                vc->_overlayLabel.text   = kBrawlerStringGameOver;
-                vc->_overlayLabel.hidden = NO;
-                vc->_pauseButton.hidden  = YES; break;
+                vc->_overlayLabel.text      = kBrawlerStringGameOver;
+                vc->_overlayLabel.hidden    = NO;
+                vc->_pauseButton.hidden     = YES;
+                vc->_onePlayerButton.hidden = YES;
+                vc->_twoPlayersButton.hidden = YES; break;
             case BrawlerGamePhasePaused:
                 vc->_overlayLabel.text   = [NSString stringWithFormat:@"%@\n%@",
                     kBrawlerStringPaused, kBrawlerStringPausedResume];
@@ -107,9 +153,9 @@
     _delegate.onPhaseChanged(BrawlerGamePhaseTitle, 1, 3);
 }
 
-- (void)_pauseTapped {
-    [_delegate triggerPause];
-}
+- (void)_pauseTapped      { [_delegate triggerPause]; }
+- (void)_onePlayerTapped  { [_delegate startGameWithPlayers:1]; }
+- (void)_twoPlayersTapped { [_delegate startGameWithPlayers:2]; }
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
 - (void)resumeRendering { _mtkView.paused = NO; }

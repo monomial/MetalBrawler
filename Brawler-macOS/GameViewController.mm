@@ -80,6 +80,9 @@
                 vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\n%@",
                     kBrawlerStringTitle, kBrawlerStringPressToStart];
                 vc->_overlayField.hidden = NO; break;
+            case BrawlerGamePhasePlayerSelect:
+                vc->_overlayField.stringValue = @"SELECT PLAYERS\n[1]  1 Player\n[2]  2 Players";
+                vc->_overlayField.hidden = NO; break;
             case BrawlerGamePhasePlaying:
                 vc->_overlayField.hidden = YES; break;
             case BrawlerGamePhaseRoomClear:
@@ -151,9 +154,11 @@
         case 124: _right  = YES; break; // →
         case 126: _up     = YES; break; // ↑
         case 125: _down   = YES; break; // ↓
-        case 49:  _attack = YES; break;             // Space  — attack
-        case 12:  [_delegate triggerDodge]; break; // Q      — dodge
-        case 53:  [_delegate triggerPause];  break; // Escape — pause
+        case 49:  _attack = YES; break;                         // Space  — attack
+        case 12:  [_delegate triggerDodge]; break;             // Q      — dodge
+        case 53:  [_delegate triggerPause];  break;            // Escape — pause
+        case 18:  [_delegate startGameWithPlayers:1]; break;  // 1      — 1 player
+        case 19:  [_delegate startGameWithPlayers:2]; break;  // 2      — 2 players
         default: [super keyDown:event];
     }
 }

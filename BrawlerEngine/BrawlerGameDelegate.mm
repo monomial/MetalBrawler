@@ -53,6 +53,7 @@ static const float kLoseDuration      = 3.5f;
     BOOL                 _attackPulse;
     BOOL                 _dodgePulse;
     BOOL                 _pausePulse;
+    int                  _numPlayers; // 1 or 2; set at player-select, remembered between runs
 
     BrawlerGamePhase     _phase;
     float                _phaseTimer;
@@ -84,7 +85,8 @@ static const float kLoseDuration      = 3.5f;
     [_audio startupInit];
 
     [self _loadCharacters:device];
-    _phase = BrawlerGamePhaseTitle; // show title screen; _startNewRun called on first button press
+    _numPlayers = 1; // default; overridden at player-select
+    _phase = BrawlerGamePhaseTitle;
 
     return self;
 }
@@ -114,6 +116,9 @@ static const float kLoseDuration      = 3.5f;
     switch (newPhase) {
         case BrawlerGamePhaseTitle:
             [_audio stopMusic];
+            break;
+        case BrawlerGamePhasePlayerSelect:
+            [self resetInput]; // clear any button that triggered the title→select transition
             break;
         case BrawlerGamePhasePlaying:
             [_audio startBattleMusic];
@@ -155,8 +160,8 @@ static const float kLoseDuration      = 3.5f;
 }
 
 - (void)_spawnPlayers {
-    [self _spawnPlayer:0 at:-150 y:-100];
-    [self _spawnPlayer:1 at: 150 y:-100];
+    if (_numPlayers >= 1) [self _spawnPlayer:0 at:(_numPlayers == 1 ? 0 : -150) y:-100];
+    if (_numPlayers >= 2) [self _spawnPlayer:1 at:150 y:-100];
 }
 
 - (void)_spawnPlayer:(uint8_t)index at:(float)x y:(float)y {
@@ -222,6 +227,15 @@ static const float kLoseDuration      = 3.5f;
 - (InputState)currentInputStateForPlayer:(int)p          { return _world.current_input(p); }
 - (void)setInputState:(InputState)state                  { _world.set_input(state, 0); }
 - (InputState)currentInputState                          { return _world.current_input(0); }
+- (void)startGameWithPlayers:(int)playerCount {
+    _numPlayers = MAX(1, MIN(2, playerCount));
+    _currentRoom = 0;
+    _lives       = kStartingLives;
+    _phase       = (BrawlerGamePhase)-1;
+    [self _loadRoom];
+    [self _transitionToPhase:BrawlerGamePhasePlaying];
+}
+
 - (void)triggerAttack                                    { _attackPulse = YES; }
 - (void)triggerDodge                                     { _dodgePulse  = YES; }
 - (void)triggerPause                                     { _pausePulse  = YES; }
@@ -294,12 +308,21 @@ static const float kLoseDuration      = 3.5f;
     switch (_phase) {
 
         case BrawlerGamePhaseTitle: {
-            // anyActionPulse covers touch/gamepad pulses and Escape.
-            // Also check world input directly for platforms (macOS keyboard) that feed
-            // attack/dodge through setInputState: rather than triggerAttack:/triggerDodge:.
             InputState s0 = _world.current_input(0);
             if (anyActionPulse || s0.attack || s0.dodge)
-                [self _startNewRun];
+                [self _transitionToPhase:BrawlerGamePhasePlayerSelect];
+            break;
+        }
+
+        case BrawlerGamePhasePlayerSelect: {
+            // attack pulse / A button → 1 player
+            // dodge  pulse / B button → 2 players
+            // Platform VCs may also call startGameWithPlayers: directly (macOS keys, iOS buttons).
+            InputState s0 = _world.current_input(0);
+            if (_attackPulse || s0.attack)
+                [self startGameWithPlayers:1];
+            else if (_dodgePulse || s0.dodge)
+                [self startGameWithPlayers:2];
             break;
         }
 

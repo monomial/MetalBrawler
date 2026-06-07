@@ -3,12 +3,13 @@
 #include "Platform/InputState.h"
 
 typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
-    BrawlerGamePhaseTitle      = 0, // title screen — waiting for any button
-    BrawlerGamePhasePlaying    = 1, // active combat
-    BrawlerGamePhaseRoomClear  = 2, // brief pause between rooms
-    BrawlerGamePhaseWin        = 3, // all rooms beaten
-    BrawlerGamePhaseLose       = 4, // all lives exhausted
-    BrawlerGamePhasePaused     = 5, // mid-game pause
+    BrawlerGamePhaseTitle        = 0, // title screen — waiting for any button
+    BrawlerGamePhasePlayerSelect = 1, // 1 or 2 players?
+    BrawlerGamePhasePlaying      = 2, // active combat
+    BrawlerGamePhaseRoomClear    = 3, // brief pause between rooms
+    BrawlerGamePhaseWin          = 4, // all rooms beaten
+    BrawlerGamePhaseLose         = 5, // all lives exhausted
+    BrawlerGamePhasePaused       = 6, // mid-game pause
 };
 
 // Shared game delegate used by all three platform targets (macOS, iOS, tvOS).
@@ -39,6 +40,9 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 
 // Fire a one-frame pause/resume pulse.
 - (void)triggerPause;
+
+// Start the game with a specific player count. Call from the player-select UI.
+- (void)startGameWithPlayers:(int)playerCount;
 
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.

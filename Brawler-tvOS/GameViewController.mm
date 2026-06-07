@@ -125,6 +125,11 @@ static const int kMaxPlayers = 4;
                                    : kBrawlerStringNoController;
             _subtitleLabel.hidden = NO;
             break;
+        case BrawlerGamePhasePlayerSelect:
+            _overlayLabel.text    = @"SELECT PLAYERS\n[A]  1 Player\n[B]  2 Players";
+            _overlayLabel.hidden  = NO;
+            _subtitleLabel.hidden = YES;
+            break;
         case BrawlerGamePhasePlaying:
             _overlayLabel.hidden  = YES;
             _subtitleLabel.hidden = YES;
@@ -162,8 +167,9 @@ static const int kMaxPlayers = 4;
     if (!ctrl) return;
 
     // Refresh title subtitle now that a gamepad may be available.
-    if (_delegate.gamePhase == BrawlerGamePhaseTitle)
-        [self _updateOverlayForPhase:BrawlerGamePhaseTitle room:1 lives:3];
+    BrawlerGamePhase ph = _delegate.gamePhase;
+    if (ph == BrawlerGamePhaseTitle || ph == BrawlerGamePhasePlayerSelect)
+        [self _updateOverlayForPhase:ph room:1 lives:3];
 
     int slot = -1;
     for (int i = 0; i < kMaxPlayers; ++i) {
