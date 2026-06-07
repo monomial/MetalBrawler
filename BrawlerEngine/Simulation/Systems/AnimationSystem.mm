@@ -36,9 +36,10 @@ static bool clip_loops(AnimClipID id) {
 
 static float clip_speed_multiplier(AnimClipID id) {
     switch (id) {
-        case AnimClipID::Attack: return 4.0f; // very snappy punches
+        case AnimClipID::Attack: return 4.0f;
         case AnimClipID::Hurt:   return 2.0f;
         case AnimClipID::Dodge:  return 2.0f;
+        case AnimClipID::Death:  return 2.0f;
         default:                 return 1.0f;
     }
 }
