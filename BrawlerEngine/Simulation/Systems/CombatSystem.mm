@@ -104,6 +104,13 @@ void CombatSystem_update(World& world, float gameDt) {
                 } else {
                     world.defer_destroy(targetID);
                 }
+                // Zero velocity so the entity doesn't slide during its death animation.
+                // EnemyAISystem skips dying entities, but the velocity it set this tick
+                // would otherwise persist and keep moving the body.
+                if (world.has_component<VelocityComponent>(targetID)) {
+                    VelocityComponent& vel = world.get_component<VelocityComponent>(targetID);
+                    vel.vx = vel.vy = vel.vz = 0.f;
+                }
             } else if (world.has_component<AnimationComponent>(targetID)) {
                 // Players stay mobile when hit (no stun) — TMNT-style.
                 // Enemies react unless they're a boss; bosses react ~10% of the time.
