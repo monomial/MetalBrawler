@@ -145,6 +145,11 @@
 
 - (void)keyDown:(NSEvent *)event {
     if (event.isARepeat) return;
+    // Title screen: any key advances to player select.
+    if (_delegate.gamePhase == BrawlerGamePhaseTitle) {
+        [_delegate triggerAttack];
+        return;
+    }
     switch (event.keyCode) {
         case 0:   _left   = YES; break; // A
         case 2:   _right  = YES; break; // D
