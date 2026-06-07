@@ -334,6 +334,7 @@ static float clampf(float v, float lo, float hi) {
             float scale = (charData->meshHeight > 0.01f)
                         ? kTargetCharHeight / charData->meshHeight
                         : 1.0f;
+            if (world->has_component<BossTagComponent>(eid)) scale *= 2.0f;
 
             [enc setRenderPipelineState:_skinnedPipeline];
             [enc setDepthStencilState:_depthState];
