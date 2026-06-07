@@ -47,9 +47,19 @@
     // Red flash when the player takes a hit.
     _damageFlashView = [[NSView alloc] initWithFrame:self.view.bounds];
     _damageFlashView.wantsLayer = YES;
-    _damageFlashView.layer.backgroundColor = [NSColor colorWithRed:1 green:0 blue:0 alpha:0.42].CGColor;
     _damageFlashView.layer.opacity = 0;
     _damageFlashView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    CAGradientLayer *macFlashGrad = [CAGradientLayer layer];
+    macFlashGrad.frame = _damageFlashView.bounds;
+    macFlashGrad.startPoint = CGPointMake(0, 0.5);
+    macFlashGrad.endPoint   = CGPointMake(1, 0.5);
+    NSColor *macRed   = [NSColor colorWithRed:0.90 green:0.05 blue:0.05 alpha:0.80];
+    NSColor *macClear = [NSColor colorWithRed:0.90 green:0.05 blue:0.05 alpha:0.0];
+    macFlashGrad.colors    = @[(id)macRed.CGColor, (id)macClear.CGColor,
+                               (id)macClear.CGColor, (id)macRed.CGColor];
+    macFlashGrad.locations = @[@0, @0.22, @0.78, @1.0];
+    macFlashGrad.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    [_damageFlashView.layer addSublayer:macFlashGrad];
     [self.view addSubview:_damageFlashView positioned:NSWindowAbove relativeTo:nil];
 
     __weak GameViewController *weakSelf = self;

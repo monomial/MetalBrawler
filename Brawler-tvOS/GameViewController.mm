@@ -59,10 +59,20 @@ static const int kMaxPlayers = 4;
 
     // Red edge flash when the player takes a hit.
     _damageFlashView = [[UIView alloc] initWithFrame:self.view.bounds];
-    _damageFlashView.backgroundColor = [UIColor colorWithRed:1 green:0 blue:0 alpha:0.42];
     _damageFlashView.userInteractionEnabled = NO;
     _damageFlashView.alpha = 0;
     _damageFlashView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    CAGradientLayer *tvFlashGrad = [CAGradientLayer layer];
+    tvFlashGrad.frame = _damageFlashView.bounds;
+    tvFlashGrad.startPoint = CGPointMake(0, 0.5);
+    tvFlashGrad.endPoint   = CGPointMake(1, 0.5);
+    UIColor *tvRed   = [UIColor colorWithRed:0.90 green:0.05 blue:0.05 alpha:0.80];
+    UIColor *tvClear = [UIColor colorWithRed:0.90 green:0.05 blue:0.05 alpha:0.0];
+    tvFlashGrad.colors    = @[(id)tvRed.CGColor, (id)tvClear.CGColor,
+                              (id)tvClear.CGColor, (id)tvRed.CGColor];
+    tvFlashGrad.locations = @[@0, @0.22, @0.78, @1.0];
+    tvFlashGrad.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    [_damageFlashView.layer addSublayer:tvFlashGrad];
     [self.view addSubview:_damageFlashView];
 
     __weak GameViewController *weakSelf = self;

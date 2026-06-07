@@ -86,10 +86,20 @@
 
     // Red edge flash when the player takes a hit.
     _damageFlashView = [[UIView alloc] initWithFrame:self.view.bounds];
-    _damageFlashView.backgroundColor = [UIColor colorWithRed:1 green:0 blue:0 alpha:0.42];
     _damageFlashView.userInteractionEnabled = NO;
     _damageFlashView.alpha = 0;
     _damageFlashView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    CAGradientLayer *iosFlashGrad = [CAGradientLayer layer];
+    iosFlashGrad.frame = _damageFlashView.bounds;
+    iosFlashGrad.startPoint = CGPointMake(0, 0.5);
+    iosFlashGrad.endPoint   = CGPointMake(1, 0.5);
+    UIColor *iosRed   = [UIColor colorWithRed:0.90 green:0.05 blue:0.05 alpha:0.80];
+    UIColor *iosClear = [UIColor colorWithRed:0.90 green:0.05 blue:0.05 alpha:0.0];
+    iosFlashGrad.colors    = @[(id)iosRed.CGColor, (id)iosClear.CGColor,
+                               (id)iosClear.CGColor, (id)iosRed.CGColor];
+    iosFlashGrad.locations = @[@0, @0.22, @0.78, @1.0];
+    iosFlashGrad.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    [_damageFlashView.layer addSublayer:iosFlashGrad];
     [self.view addSubview:_damageFlashView];
 
     __weak GameViewController *weakSelf = self;
