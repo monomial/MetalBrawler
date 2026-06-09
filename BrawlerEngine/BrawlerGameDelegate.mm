@@ -225,8 +225,10 @@ static const float kLoseDuration      = 3.5f;
         _world.add_component<FacingComponent>(e);
         _world.add_component<EnemyAttackCooldownComponent>(e);
         _world.add_component<EnemyArchetypeComponent>(e).type = (uint8_t)spawn.type;
-        if (spawn.type == EnemyArchetype::Boss)
+        if (spawn.type == EnemyArchetype::Boss) {
             _world.add_component<BossTagComponent>(e);
+            _world.add_component<BossChargeComponent>(e); // charge attack state machine
+        }
     }
 }
 
@@ -371,6 +373,18 @@ static const float kLoseDuration      = 3.5f;
             if (!_world.player_tags().present(ev.dodgeStarted.entityID)) return;
             [_audio  playDodgeSound];
             [_haptics playDodgeHaptic];
+        });
+
+        // Boss winding up a charge: warning burst + an audible cue.
+        _world.events().for_each(EventType::BossTelegraph, [self](const Event& ev) {
+            uint32_t bid = ev.bossTelegraph.entityID;
+            if (_world.has_component<PositionComponent>(bid)) {
+                const auto& p = _world.get_component<PositionComponent>(bid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 120.f}
+                                  count:32 speed:260.f size:18.f
+                                  color:(simd_float4){1.0f, 0.15f, 0.10f, 1.f}];
+            }
+            [_audio playSwingSound];
         });
 
         _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {

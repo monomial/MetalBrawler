@@ -110,6 +110,16 @@ struct BossTagComponent {
     bool active = true; // presence in storage is the real signal
 };
 
+// Boss charge-attack state machine, driven by BossSystem (runs after
+// EnemyAISystem and overrides its velocity/clip while not Idle).
+struct BossChargeComponent {
+    enum State : uint8_t { Idle = 0, Telegraph = 1, Charge = 2, Recover = 3 };
+    uint8_t state = Idle;
+    float   timer = 4.f;  // Idle: until next charge; other states: time left
+    float   dirX  = 0.f;  // locked charge direction
+    float   dirY  = 1.f;
+};
+
 // Shove applied to an entity that just took a hit. KnockbackSystem owns the
 // entity's velocity while this is present (same ownership trick as Dodge):
 // linear decay from the initial impulse to zero over `duration` seconds,

@@ -10,6 +10,7 @@ enum class EventType : uint8_t {
     HitContact,    // attack landed (triggers hit-stop + shake)
     AttackStarted, // an Attack/Attack2 clip actually began (audio: swing whoosh)
     DodgeStarted,  // a Dodge clip actually began (audio + haptics)
+    BossTelegraph, // boss is winding up a charge (audio + warning particles)
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -17,6 +18,7 @@ struct EntityDiedPayload    { uint32_t entityID; };
 struct HitContactPayload    { uint32_t attackerID; uint32_t targetID; };
 struct AttackStartedPayload { uint32_t entityID; uint8_t clipID; }; // clipID = (uint8_t)AnimClipID
 struct DodgeStartedPayload  { uint32_t entityID; };
+struct BossTelegraphPayload { uint32_t entityID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -27,6 +29,7 @@ struct Event {
         HitContactPayload    hitContact;
         AttackStartedPayload attackStarted;
         DodgeStartedPayload  dodgeStarted;
+        BossTelegraphPayload bossTelegraph;
     };
 };
 
@@ -78,6 +81,11 @@ struct EventBus {
     void emit_dodge_started(uint32_t entityID) {
         Event e{}; e.type = EventType::DodgeStarted;
         e.dodgeStarted = { entityID };
+        push(e);
+    }
+    void emit_boss_telegraph(uint32_t entityID) {
+        Event e{}; e.type = EventType::BossTelegraph;
+        e.bossTelegraph = { entityID };
         push(e);
     }
 

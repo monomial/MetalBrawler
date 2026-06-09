@@ -8,6 +8,7 @@
 #include "Systems/ScreenShakeSystem.h"
 #include "Systems/DodgeSystem.h"
 #include "Systems/KnockbackSystem.h"
+#include "Systems/BossSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -27,6 +28,7 @@ template<> ComponentStorage<DodgeComponent>&              World::_pool() { retur
 template<> ComponentStorage<BossTagComponent>&            World::_pool() { return _bossTags; }
 template<> ComponentStorage<KnockbackComponent>&          World::_pool() { return _knockbacks; }
 template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool() { return _archetypes; }
+template<> ComponentStorage<BossChargeComponent>&         World::_pool() { return _bossCharges; }
 
 // ----
 
@@ -70,6 +72,7 @@ void World::flush() {
         _bossTags.remove(id);
         _knockbacks.remove(id);
         _archetypes.remove(id);
+        _bossCharges.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -84,6 +87,9 @@ void World::tick(float gameDt) {
     InputSystem_update(*this);
     // 1.5. EnemyAISystem — steers enemies toward player
     EnemyAISystem_update(*this, gameDt);
+    // 1.6. BossSystem — charge state machine, overrides AI velocity/clip while
+    //      telegraphing/charging/recovering; owns DamageCooldown decrement
+    BossSystem_update(*this, gameDt);
     // 1.75. KnockbackSystem — overrides AI/input velocity while an entity is
     //       being shoved (runs after the velocity writers, before integration)
     KnockbackSystem_update(*this, gameDt);
