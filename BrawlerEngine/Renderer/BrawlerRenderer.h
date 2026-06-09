@@ -19,6 +19,9 @@ struct LoadedCharacter;
 // Lives shown in HUD. Set each frame before drawWorld:.
 @property (nonatomic) int livesRemaining;
 
+// 0-based room number — selects the room color palette. Set at room load.
+@property (nonatomic) int roomIndex;
+
 // Call once per frame after World::update(). Encodes draw calls into cmd.
 - (void)drawWorld:(World*)world
             inView:(MTKView*)view

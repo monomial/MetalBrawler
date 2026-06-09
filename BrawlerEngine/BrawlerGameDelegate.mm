@@ -176,6 +176,7 @@ static const float kLoseDuration      = 3.5f;
     [self _spawnPlayers];
     [self _spawnEnemiesForCurrentRoom];
     _renderer.livesRemaining = _lives;
+    _renderer.roomIndex      = _currentRoom;
 }
 
 - (void)_spawnPlayers {

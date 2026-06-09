@@ -12,6 +12,22 @@ typedef struct { simd_float4x4 mvp; simd_float4 color; } DrawUniforms;
 // These two must match ParticleInstance / ParticleUniforms in Brawler.metal.
 typedef struct { simd_float3 pos; float size; simd_float4 color; } ParticleInstanceGPU;
 typedef struct { simd_float4x4 vp; simd_float3 camRight; simd_float3 camUp; } ParticleUniformsGPU;
+// Must match FloorUniforms in Brawler.metal.
+typedef struct { simd_float4x4 mvp; simd_float4 baseColor; simd_float4 lineColor;
+                 simd_float2 center; simd_float2 size; } FloorUniformsGPU;
+
+// Per-room palette — indexed by roomIndex, wraps if there are more rooms.
+typedef struct {
+    simd_float4 floorBase, floorLine, wall;
+    MTLClearColor clear;
+} RoomPalette;
+static const RoomPalette kRoomPalettes[] = {
+    {{0.13f,0.13f,0.18f,1}, {0.20f,0.21f,0.30f,1}, {0.30f,0.30f,0.40f,1}, {0.08,0.08,0.12,1}},  // slate
+    {{0.10f,0.15f,0.14f,1}, {0.16f,0.24f,0.21f,1}, {0.24f,0.36f,0.31f,1}, {0.06,0.10,0.09,1}},  // moss
+    {{0.16f,0.12f,0.10f,1}, {0.25f,0.18f,0.13f,1}, {0.38f,0.27f,0.18f,1}, {0.10,0.07,0.06,1}},  // rust
+    {{0.15f,0.10f,0.16f,1}, {0.24f,0.15f,0.26f,1}, {0.36f,0.22f,0.38f,1}, {0.09,0.06,0.10,1}},  // boss violet
+};
+static const int kNumRoomPalettes = sizeof(kRoomPalettes) / sizeof(kRoomPalettes[0]);
 // Layout must match SkinnedUniforms in SkinnedMesh.metal.
 typedef struct { simd_float4x4 mvp; simd_float4 color; float tintStrength; } SkinnedUniforms;
 
@@ -104,6 +120,19 @@ static simd_float4x4 make_model_rect(float x, float y, float z, float w, float h
     return m;
 }
 
+// Vertical wall quad standing in Z. alongX: quad x → world X (north/south
+// walls); otherwise quad x → world Y (east/west walls). Quad y → world Z.
+static simd_float4x4 make_model_wall(float cx, float cy, float length, float height, bool alongX) {
+    simd_float4x4 m = matrix_identity_float4x4;
+    m.columns[0] = alongX ? (simd_float4){length, 0, 0, 0}
+                          : (simd_float4){0, length, 0, 0};
+    m.columns[1] = (simd_float4){0, 0, height, 0};
+    m.columns[2] = alongX ? (simd_float4){0, 1, 0, 0}
+                          : (simd_float4){1, 0, 0, 0};
+    m.columns[3] = (simd_float4){cx, cy, height * 0.5f, 1.f};
+    return m;
+}
+
 static float clampf(float v, float lo, float hi) {
     return v < lo ? lo : (v > hi ? hi : v);
 }
@@ -113,6 +142,7 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
 
 @implementation BrawlerRenderer {
     id<MTLRenderPipelineState> _pipeline;        // flat-color quads
+    id<MTLRenderPipelineState> _floorPipeline;   // grid floor
     id<MTLRenderPipelineState> _shadowPipeline;  // alpha-blended blob shadows
     id<MTLRenderPipelineState> _skinnedPipeline; // skinned meshes
     id<MTLDepthStencilState>   _depthState;
@@ -172,6 +202,22 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         pd.vertexDescriptor = vd;
         _pipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
         if (!_pipeline) { NSLog(@"Flat pipeline: %@", err); return nil; }
+    }
+
+    // Floor pipeline — same vertex layout as flat, grid fragment shader.
+    {
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction   = [lib newFunctionWithName:@"floor_vertex"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"floor_fragment"];
+        pd.colorAttachments[0].pixelFormat = pfmt;
+        pd.depthAttachmentPixelFormat      = MTLPixelFormatDepth32Float;
+        MTLVertexDescriptor *vd = [MTLVertexDescriptor new];
+        vd.attributes[0].format = MTLVertexFormatFloat3;
+        vd.attributes[0].offset = 0; vd.attributes[0].bufferIndex = 0;
+        vd.layouts[0].stride    = sizeof(simd_float3);
+        pd.vertexDescriptor = vd;
+        _floorPipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!_floorPipeline) NSLog(@"Floor pipeline: %@", err);
     }
 
     // Particle pipeline — instanced billboards, additive blending.
@@ -348,38 +394,56 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
 
     simd_float4x4 vp = simd_mul(_proj, make_look_at(eye, target, (simd_float3){0,0,1}));
 
-    rpd.colorAttachments[0].clearColor  = MTLClearColorMake(0.08,0.08,0.12,1);
+    const RoomPalette& pal = kRoomPalettes[
+        (_roomIndex % kNumRoomPalettes + kNumRoomPalettes) % kNumRoomPalettes];
+
+    rpd.colorAttachments[0].clearColor  = pal.clear;
     rpd.colorAttachments[0].loadAction  = MTLLoadActionClear;
     rpd.colorAttachments[0].storeAction = MTLStoreActionStore;
 
     id<MTLRenderCommandEncoder> enc = [cmd renderCommandEncoderWithDescriptor:rpd];
-    [enc setRenderPipelineState:_pipeline];
     [enc setDepthStencilState:_depthState];
     [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
 
-    // Floor quad — drawn first at Z=-1 so entities render on top.
+    // Floor — grid shader at Z=-1 so entities render on top.
     {
-        DrawUniforms u;
-        u.mvp   = simd_mul(vp, make_model_rect(kRoomCenterX, kRoomCenterY, -1.f,
-                                               kRoomWidth, kRoomHeight));
-        u.color = (simd_float4){0.13f, 0.13f, 0.18f, 1.f}; // slightly lighter than clear
-        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        FloorUniformsGPU fu;
+        fu.mvp       = simd_mul(vp, make_model_rect(kRoomCenterX, kRoomCenterY, -1.f,
+                                                    kRoomWidth, kRoomHeight));
+        fu.baseColor = pal.floorBase;
+        fu.lineColor = pal.floorLine;
+        fu.center    = (simd_float2){kRoomCenterX, kRoomCenterY};
+        fu.size      = (simd_float2){kRoomWidth, kRoomHeight};
+        [enc setRenderPipelineState:_floorPipeline ?: _pipeline];
+        [enc setVertexBytes:&fu length:sizeof(fu) atIndex:1];
         [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
     }
 
-    // Wall outlines — thin quads along each boundary edge, at Z=0.
-    static const simd_float4 kWallColor = {0.30f, 0.30f, 0.40f, 1.f};
-    static const float kWallThick = 20.f;
-    struct { float cx,cy,w,h; } walls[4] = {
-        {kRoomCenterX, kRoomMinY + kWallThick*0.5f, kRoomWidth, kWallThick}, // bottom
-        {kRoomCenterX, kRoomMaxY - kWallThick*0.5f, kRoomWidth, kWallThick}, // top
-        {kRoomMinX + kWallThick*0.5f, kRoomCenterY, kWallThick, kRoomHeight}, // left
-        {kRoomMaxX - kWallThick*0.5f, kRoomCenterY, kWallThick, kRoomHeight}, // right
-    };
-    for (auto& w : walls) {
+    [enc setRenderPipelineState:_pipeline];
+
+    // Walls: standing quads along the far and side edges give the arena
+    // height; the near edge stays a flat strip so it never occludes play.
+    {
+        static const float kWallHeight = 80.f;
+        static const float kWallThick  = 20.f;
+
         DrawUniforms u;
-        u.mvp   = simd_mul(vp, make_model_rect(w.cx, w.cy, 0.f, w.w, w.h));
-        u.color = kWallColor;
+        u.color = pal.wall;
+
+        // Far (top) wall + side walls — vertical.
+        u.mvp = simd_mul(vp, make_model_wall(kRoomCenterX, kRoomMaxY, kRoomWidth, kWallHeight, true));
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        u.mvp = simd_mul(vp, make_model_wall(kRoomMinX, kRoomCenterY, kRoomHeight, kWallHeight, false));
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        u.mvp = simd_mul(vp, make_model_wall(kRoomMaxX, kRoomCenterY, kRoomHeight, kWallHeight, false));
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+        // Near (bottom) edge — flat strip.
+        u.mvp = simd_mul(vp, make_model_rect(kRoomCenterX, kRoomMinY + kWallThick * 0.5f, 0.f,
+                                             kRoomWidth, kWallThick));
         [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
         [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
     }

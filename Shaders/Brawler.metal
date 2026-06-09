@@ -29,6 +29,57 @@ fragment float4 fragment_main(VertexOut in [[stage_in]]) {
 }
 
 // ---------------------------------------------------------------------------
+// Floor — flat base color with subtle grid lines in world space, plus a soft
+// radial darkening toward the room edges.
+// ---------------------------------------------------------------------------
+
+struct FloorUniforms {            // matches FloorUniformsGPU in BrawlerRenderer.mm
+    float4x4 mvp;
+    float4   baseColor;
+    float4   lineColor;
+    float2   center;              // room center (world)
+    float2   size;                // room extents (world)
+};
+
+struct FloorOut {
+    float4 position [[position]];
+    float2 world;
+    float4 base;
+    float4 line;
+    float2 center;
+    float2 halfSize;
+};
+
+vertex FloorOut floor_vertex(VertexIn in [[stage_in]],
+                             constant FloorUniforms& u [[buffer(1)]]) {
+    FloorOut out;
+    out.position = u.mvp * float4(in.position, 1.0);
+    out.world    = in.position.xy * u.size + u.center;
+    out.base     = u.baseColor;
+    out.line     = u.lineColor;
+    out.center   = u.center;
+    out.halfSize = u.size * 0.5;
+    return out;
+}
+
+fragment float4 floor_fragment(FloorOut in [[stage_in]]) {
+    // Grid every 125 world units, ~3 units thick, softened.
+    const float cell = 125.0;
+    float2 g  = abs(fract(in.world / cell + 0.5) - 0.5) * cell;
+    float dist = min(g.x, g.y);
+    float lineMix = 1.0 - smoothstep(1.0, 3.0, dist);
+
+    float3 c = mix(in.base.rgb, in.line.rgb, lineMix * 0.6);
+
+    // Vignette toward room edges grounds the arena in the void around it.
+    float2 rel = abs(in.world - in.center) / in.halfSize; // 0 center → 1 edge
+    float edge = smoothstep(0.55, 1.05, max(rel.x, rel.y));
+    c *= (1.0 - 0.35 * edge);
+
+    return float4(c, 1.0);
+}
+
+// ---------------------------------------------------------------------------
 // Blob shadow — soft dark circle under each character. Uses the same unit
 // quad as the flat pipeline; quad-local xy (±0.5) becomes the falloff radius.
 // Drawn with alpha blending, depth-write off.
