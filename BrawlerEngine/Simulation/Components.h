@@ -95,6 +95,17 @@ struct BossTagComponent {
     bool active = true; // presence in storage is the real signal
 };
 
+// Shove applied to an entity that just took a hit. KnockbackSystem owns the
+// entity's velocity while this is present (same ownership trick as Dodge):
+// linear decay from the initial impulse to zero over `duration` seconds,
+// then the component is removed. Added by CombatSystem on hit.
+struct KnockbackComponent {
+    float velX     = 0.f; // initial impulse velocity (direction * speed)
+    float velY     = 0.f;
+    float elapsed  = 0.f; // seconds since the hit
+    float duration = 0.f; // total knockback time
+};
+
 // Present on a player entity for the duration of a dodge roll.
 // Presence = invincible: CombatSystem skips damage to any entity that has this.
 // Added and removed entirely by DodgeSystem — do not add manually.

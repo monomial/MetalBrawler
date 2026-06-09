@@ -10,6 +10,11 @@ static constexpr float kAttackRange    = 130.0f;
 static constexpr int   kHitStopTicks   = 4;      // ~33ms freeze on hit
 // Punch arc: target must be within ±70° of the attacker's facing direction.
 static constexpr float kPunchArcCosine = 0.342f; // cos(70°)
+// Knockback shove on hit: enemies fly back from the attacker and decelerate
+// linearly. Bosses barely budge; players are exempt (stay mobile, TMNT-style).
+static constexpr float kKnockbackSpeed     = 480.0f;
+static constexpr float kKnockbackDuration  = 0.18f;
+static constexpr float kBossKnockbackScale = 0.25f;
 
 // Active-frame window for each clip: the fraction of clip duration where the
 // hitbox is live, and the damage dealt on contact. Zero damage = not an attack.
@@ -95,6 +100,21 @@ void CombatSystem_update(World& world, float gameDt) {
 
             world.events().emit_hit_contact(attackerID, targetID);
             world.events().emit_damage(targetID, win.damage);
+
+            // Knockback: shove the target away from the attacker. Players are
+            // exempt (no stun, no shove); bosses get a much weaker push.
+            bool tgtIsPlayer = world.has_component<PlayerTagComponent>(targetID);
+            if (!tgtIsPlayer && dist > 0.001f && hp.current > 0) {
+                float scale = world.has_component<BossTagComponent>(targetID)
+                            ? kBossKnockbackScale : 1.f;
+                KnockbackComponent& kb = world.has_component<KnockbackComponent>(targetID)
+                    ? world.get_component<KnockbackComponent>(targetID)
+                    : world.add_component<KnockbackComponent>(targetID);
+                kb.velX     = (dx / dist) * kKnockbackSpeed * scale;
+                kb.velY     = (dy / dist) * kKnockbackSpeed * scale;
+                kb.elapsed  = 0.f;
+                kb.duration = kKnockbackDuration;
+            }
 
             if (hp.current <= 0) {
                 world.events().emit_died(targetID);

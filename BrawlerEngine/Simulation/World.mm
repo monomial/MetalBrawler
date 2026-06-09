@@ -7,6 +7,7 @@
 #include "Systems/AnimationSystem.h"
 #include "Systems/ScreenShakeSystem.h"
 #include "Systems/DodgeSystem.h"
+#include "Systems/KnockbackSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -24,6 +25,7 @@ template<> ComponentStorage<FacingComponent>&              World::_pool() { retu
 template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool() { return _attackCooldowns; }
 template<> ComponentStorage<DodgeComponent>&              World::_pool() { return _dodges; }
 template<> ComponentStorage<BossTagComponent>&            World::_pool() { return _bossTags; }
+template<> ComponentStorage<KnockbackComponent>&          World::_pool() { return _knockbacks; }
 
 // ----
 
@@ -65,6 +67,7 @@ void World::flush() {
         _attackCooldowns.remove(id);
         _dodges.remove(id);
         _bossTags.remove(id);
+        _knockbacks.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -79,6 +82,9 @@ void World::tick(float gameDt) {
     InputSystem_update(*this);
     // 1.5. EnemyAISystem — steers enemies toward player
     EnemyAISystem_update(*this, gameDt);
+    // 1.75. KnockbackSystem — overrides AI/input velocity while an entity is
+    //       being shoved (runs after the velocity writers, before integration)
+    KnockbackSystem_update(*this, gameDt);
     // 2. PhysicsSystem
     PhysicsSystem_update(*this, gameDt);
     // 2.5. WallCollisionSystem — clamp entities to room bounds
