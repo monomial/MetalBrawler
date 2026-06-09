@@ -111,7 +111,16 @@ static const double   kExitGrace      = 1.5;    // let async PNG writes finish
         }
         case BrawlerGamePhaseUpgrade: {
             [self _shoot:[NSString stringWithFormat:@"room%d-upgrade", room]];
-            if (inPhase > kBeatDelay) [_delegate triggerAttack]; // pick perk 0
+            if (inPhase > kBeatDelay) {
+                // Same priority a competent player uses: damage > health > rest.
+                NSString *a = [_delegate upgradeChoiceLabel:0];
+                NSString *b = [_delegate upgradeChoiceLabel:1];
+                if      ([a containsString:@"Damage"]) [_delegate triggerAttack];
+                else if ([b containsString:@"Damage"]) [_delegate triggerDodge];
+                else if ([a containsString:@"Health"]) [_delegate triggerAttack];
+                else if ([b containsString:@"Health"]) [_delegate triggerDodge];
+                else                                   [_delegate triggerAttack];
+            }
             break;
         }
         case BrawlerGamePhaseWin: {

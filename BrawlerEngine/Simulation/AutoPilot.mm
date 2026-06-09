@@ -45,10 +45,47 @@ InputState AutoPilot_input(World& world, int playerIndex) {
     if (!found) return in; // room clearing — stand still
 
     float dist = sqrtf(bestD2);
-    if (dist > kEngageDist) {
-        in.moveX = bdx / dist;
-        in.moveY = bdy / dist;
-    } else {
+
+    // Defense: dodge ONLY boss threats (its swing, its charge telegraph/rush —
+    // the 2-damage hits). Normal enemy hits are traded through: dodging costs
+    // ~1.2s of attack time, which loses the war of attrition in crowded rooms.
+    bool meCanDodge = world.has_component<AnimationComponent>(me) &&
+                      (world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Idle ||
+                       world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Walk);
+    if (meCanDodge) {
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (!world.boss_tags().present(id)) continue;
+            if (!world.has_component<PositionComponent>(id)) continue;
+            if (world.has_component<AnimationComponent>(id) &&
+                world.get_component<AnimationComponent>(id).dying) continue;
+
+            bool threatening = world.has_component<AnimationComponent>(id) &&
+                               world.get_component<AnimationComponent>(id).currentClip
+                                   == AnimClipID::Attack;
+            if (world.has_component<BossChargeComponent>(id)) {
+                uint8_t st = world.get_component<BossChargeComponent>(id).state;
+                threatening |= (st == BossChargeComponent::Telegraph ||
+                                st == BossChargeComponent::Charge);
+            }
+            if (!threatening) continue;
+
+            const auto& p = world.get_component<PositionComponent>(id);
+            float dx = p.x - myPos.x, dy = p.y - myPos.y;
+            if (dx * dx + dy * dy < 240.f * 240.f) {
+                in.dodge = true;
+                return in;
+            }
+        }
+    }
+
+    // Always steer toward the target — also while punching. Movement is what
+    // updates FacingComponent, and a stale facing fails CombatSystem's ±70°
+    // arc check forever (the bot once dead-locked whiffing at a rusher that
+    // approached from a different direction than its previous kill).
+    in.moveX = (dist > 0.001f) ? bdx / dist : 0.f;
+    in.moveY = (dist > 0.001f) ? bdy / dist : 0.f;
+
+    if (dist <= kEngageDist) {
         // Hold attack through the first punch (which both starts the swing and
         // queues the Attack→Attack2 combo), but release during the finisher so
         // the clip can exit to Idle and the next swing can start.

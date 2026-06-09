@@ -22,33 +22,54 @@ struct RoomDef {
     int               count;
 };
 
-static const EnemySpawn kRoom1[] = {
+// Run structure: fixed intro room, then kMiddlePerRun of the middle pool in a
+// seeded-shuffled order, boss last.
+static const EnemySpawn kIntroSpawns[] = {
     {EnemyArchetype::Grunt,     0, 350},
     {EnemyArchetype::Grunt,  -200, 250},
 };
-static const EnemySpawn kRoom2[] = {
+static const EnemySpawn kMidGruntsRusher[] = {
     {EnemyArchetype::Grunt,  -200, 250},
     {EnemyArchetype::Grunt,   200, 250},
     {EnemyArchetype::Rusher,    0, 400},
 };
-static const EnemySpawn kRoom3[] = {
+static const EnemySpawn kMidRusherPack[] = {
+    {EnemyArchetype::Rusher, -250, 380},
+    {EnemyArchetype::Rusher,  250, 380},
+    {EnemyArchetype::Rusher,    0, 450},
+};
+static const EnemySpawn kMidHeavyEscort[] = {
+    {EnemyArchetype::Heavy,     0, 300},
+    {EnemyArchetype::Grunt,  -250, 400},
+    {EnemyArchetype::Grunt,   250, 400},
+};
+static const EnemySpawn kMidMixed[] = {
     {EnemyArchetype::Rusher, -250, 380},
     {EnemyArchetype::Rusher,  250, 380},
     {EnemyArchetype::Heavy,     0, 300},
     {EnemyArchetype::Grunt,     0, 150},
 };
-static const EnemySpawn kRoom4[] = {
+static const EnemySpawn kMidTwinHeavies[] = {
+    {EnemyArchetype::Heavy,  -180, 320},
+    {EnemyArchetype::Heavy,   180, 320},
+};
+static const EnemySpawn kBossSpawns[] = {
     {EnemyArchetype::Boss,      0, 350},
 };
 
-static const RoomDef kRooms[] = {
-    {kRoom1, 2},
-    {kRoom2, 3},
-    {kRoom3, 4},
-    {kRoom4, 1},
+static const RoomDef kIntroRoom = {kIntroSpawns, 2};
+static const RoomDef kBossRoom  = {kBossSpawns, 1};
+static const RoomDef kMiddleRooms[] = {
+    {kMidGruntsRusher, 3},
+    {kMidRusherPack,   3},
+    {kMidHeavyEscort,  3},
+    {kMidMixed,        4},
+    {kMidTwinHeavies,  2},
 };
-static const int kNumRooms      = 4;
-static const int kStartingLives = 3;
+static const int kNumMiddleRooms = 5;
+static const int kMiddlePerRun   = 4;                  // middle rooms per run
+static const int kNumRooms       = kMiddlePerRun + 2;  // intro + middles + boss
+static const int kStartingLives  = 3;
 
 // Phase timers (seconds).
 static const float kRoomClearDuration = 2.0f;
@@ -104,6 +125,7 @@ struct PlayerPerks {
 
     PlayerPerks          _perks;            // run-level, reset each new run
     int                  _upgradeChoice[2]; // BrawlerPerk indices on offer
+    int                  _middleOrder[kNumMiddleRooms]; // seeded shuffle per run
 }
 
 @synthesize onPhaseChanged;
@@ -213,9 +235,28 @@ struct PlayerPerks {
     _currentRoom = 0;
     _lives       = kStartingLives;
     _perks       = PlayerPerks{};
-    _phase       = (BrawlerGamePhase)-1; // sentinel: force the first transition to fire
+
+    // Seeded Fisher-Yates over the middle-room pool: rooms 2..N-1 differ per
+    // run (the run plays kMiddlePerRun of kNumMiddleRooms), deterministic when
+    // rngSeedOverride is set.
+    uint32_t s = self.rngSeedOverride ? self.rngSeedOverride : arc4random();
+    if (!s) s = 1;
+    for (int i = 0; i < kNumMiddleRooms; ++i) _middleOrder[i] = i;
+    for (int i = kNumMiddleRooms - 1; i > 0; --i) {
+        s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+        int j = (int)(s % (uint32_t)(i + 1));
+        int t = _middleOrder[i]; _middleOrder[i] = _middleOrder[j]; _middleOrder[j] = t;
+    }
+
+    _phase = (BrawlerGamePhase)-1; // sentinel: force the first transition to fire
     [self _loadRoom];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
+}
+
+- (const RoomDef&)_currentRoomDef {
+    if (_currentRoom <= 0)              return kIntroRoom;
+    if (_currentRoom >= kNumRooms - 1)  return kBossRoom;
+    return kMiddleRooms[_middleOrder[_currentRoom - 1]];
 }
 
 // Roll two distinct perks from the pool using the (seeded) world RNG so
@@ -256,7 +297,9 @@ struct PlayerPerks {
     [self _spawnPlayers];
     [self _spawnEnemiesForCurrentRoom];
     _renderer.livesRemaining = _lives;
-    _renderer.roomIndex      = _currentRoom;
+    // Boss room always gets the last (violet) palette; others cycle.
+    BOOL isBossRoom = (_currentRoom >= kNumRooms - 1);
+    _renderer.roomIndex = isBossRoom ? 5 : (_currentRoom % 5);
 }
 
 - (void)_spawnPlayers {
@@ -281,7 +324,7 @@ struct PlayerPerks {
 }
 
 - (void)_spawnEnemiesForCurrentRoom {
-    const RoomDef& room = kRooms[_currentRoom];
+    const RoomDef& room = [self _currentRoomDef];
     for (int i = 0; i < room.count; ++i) {
         const EnemySpawn& spawn = room.spawns[i];
         const EnemyArchetypeDef& def = enemy_archetype_def((uint8_t)spawn.type);

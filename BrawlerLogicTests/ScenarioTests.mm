@@ -8,16 +8,27 @@
 
 static const float kFrameDt = 1.0f / 60.0f;
 
+// Bot perk strategy: damage beats health beats anything else — same priority
+// a competent player uses. Pulses pick: attack → choice 0, dodge → choice 1.
+static void pickPerk(BrawlerGameDelegate *d) {
+    NSString *a = [d upgradeChoiceLabel:0];
+    NSString *b = [d upgradeChoiceLabel:1];
+    if      ([a containsString:@"Damage"]) [d triggerAttack];
+    else if ([b containsString:@"Damage"]) [d triggerDodge];
+    else if ([a containsString:@"Health"]) [d triggerAttack];
+    else if ([b containsString:@"Health"]) [d triggerDodge];
+    else                                   [d triggerAttack];
+}
+
 // Advance until the delegate reaches `phase` or `maxSimSeconds` of simulated
-// time elapses. Returns YES if the phase was reached. The "bot" always takes
-// the first perk when an upgrade choice appears.
+// time elapses. Returns YES if the phase was reached.
 static BOOL advanceUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
                               float maxSimSeconds) {
     int maxFrames = (int)(maxSimSeconds / kFrameDt);
     for (int i = 0; i < maxFrames; ++i) {
         if (d.gamePhase == phase) return YES;
         if (d.gamePhase == BrawlerGamePhaseUpgrade && phase != BrawlerGamePhaseUpgrade)
-            [d triggerAttack]; // pick perk 0
+            pickPerk(d);
         [d advanceFrame:kFrameDt];
     }
     return d.gamePhase == phase;
@@ -27,7 +38,7 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     int frames = (int)(seconds / kFrameDt);
     for (int i = 0; i < frames; ++i) {
         if (d.gamePhase == BrawlerGamePhaseUpgrade)
-            [d triggerAttack]; // pick perk 0
+            pickPerk(d);
         [d advanceFrame:kFrameDt];
     }
 }
@@ -59,19 +70,18 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     XCTAssertEqual(d.currentRoom, 1);
 
     BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 240.f);
-    XCTAssertTrue(won, @"AutoPilot failed to clear all 4 rooms within 240 sim-seconds (ended in phase %ld, room %d, lives %d)",
+    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 240 sim-seconds (ended in phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
+    XCTAssertEqual(d.currentRoom, 6, @"a full run is intro + 4 middle rooms + boss");
 
-    // The run must have passed through RoomClear at least 3 times (rooms 1-3;
-    // room 4 transitions straight to Win) and offered an upgrade after each
-    // non-final clear.
+    // Every room fires RoomClear; every non-final clear offers an upgrade.
     NSInteger clears = 0, upgrades = 0;
     for (NSNumber *p in phases) {
         if (p.integerValue == BrawlerGamePhaseRoomClear) clears++;
         if (p.integerValue == BrawlerGamePhaseUpgrade)   upgrades++;
     }
-    XCTAssertGreaterThanOrEqual(clears,   (NSInteger)3);
-    XCTAssertGreaterThanOrEqual(upgrades, (NSInteger)3);
+    XCTAssertGreaterThanOrEqual(clears,   (NSInteger)5);
+    XCTAssertGreaterThanOrEqual(upgrades, (NSInteger)4);
 }
 
 - (void)test_autoPilot_2P_winsFullRun {

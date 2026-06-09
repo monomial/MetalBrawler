@@ -21,10 +21,14 @@ typedef struct {
     simd_float4 floorBase, floorLine, wall;
     MTLClearColor clear;
 } RoomPalette;
+// The last palette (violet) is reserved for the boss room — the delegate
+// passes kBossPaletteIndex for it and cycles the others for normal rooms.
 static const RoomPalette kRoomPalettes[] = {
     {{0.13f,0.13f,0.18f,1}, {0.20f,0.21f,0.30f,1}, {0.30f,0.30f,0.40f,1}, {0.08,0.08,0.12,1}},  // slate
     {{0.10f,0.15f,0.14f,1}, {0.16f,0.24f,0.21f,1}, {0.24f,0.36f,0.31f,1}, {0.06,0.10,0.09,1}},  // moss
     {{0.16f,0.12f,0.10f,1}, {0.25f,0.18f,0.13f,1}, {0.38f,0.27f,0.18f,1}, {0.10,0.07,0.06,1}},  // rust
+    {{0.10f,0.13f,0.17f,1}, {0.15f,0.21f,0.27f,1}, {0.22f,0.32f,0.42f,1}, {0.06,0.08,0.11,1}},  // deep teal
+    {{0.16f,0.14f,0.10f,1}, {0.24f,0.21f,0.14f,1}, {0.38f,0.33f,0.20f,1}, {0.10,0.09,0.06,1}},  // sand
     {{0.15f,0.10f,0.16f,1}, {0.24f,0.15f,0.26f,1}, {0.36f,0.22f,0.38f,1}, {0.09,0.06,0.10,1}},  // boss violet
 };
 static const int kNumRoomPalettes = sizeof(kRoomPalettes) / sizeof(kRoomPalettes[0]);
