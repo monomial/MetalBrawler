@@ -110,6 +110,25 @@ struct BossTagComponent {
     bool active = true; // presence in storage is the real signal
 };
 
+// Ground hazard (lava snake): deals passive area damage to players inside
+// `radius`, gated by their DamageCooldownComponent. Despawns after lifetime.
+// Hazards are NOT killable and carry no FactionComponent (so the AI, combat,
+// and room-clear logic all ignore them).
+struct HazardComponent {
+    float radius   = 70.f;
+    int   damage   = 1;
+    float lifetime = 6.f; // seconds until despawn
+};
+
+// Looping waypoint path. HazardSystem moves the entity along the closed
+// polyline pts[0..count-1] → pts[0] at `speed`, wrapping forever.
+struct PathFollowComponent {
+    float   pts[4][2] = {};
+    uint8_t count     = 0;
+    float   distance  = 0.f;   // distance traveled along the loop
+    float   speed     = 300.f; // units/sec
+};
+
 // Boss charge-attack state machine, driven by BossSystem (runs after
 // EnemyAISystem and overrides its velocity/clip while not Idle).
 struct BossChargeComponent {

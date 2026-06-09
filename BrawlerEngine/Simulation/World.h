@@ -112,6 +112,8 @@ public:
     ComponentStorage<EnemyArchetypeComponent>&     archetypes()       { return _archetypes; }
     ComponentStorage<BossChargeComponent>&         boss_charges()     { return _bossCharges; }
     ComponentStorage<StatsComponent>&              stats()            { return _stats; }
+    ComponentStorage<HazardComponent>&             hazards()          { return _hazards; }
+    ComponentStorage<PathFollowComponent>&         paths()            { return _paths; }
 
 private:
     void flush();
@@ -146,6 +148,8 @@ private:
     ComponentStorage<EnemyArchetypeComponent>     _archetypes;
     ComponentStorage<BossChargeComponent>         _bossCharges;
     ComponentStorage<StatsComponent>              _stats;
+    ComponentStorage<HazardComponent>             _hazards;
+    ComponentStorage<PathFollowComponent>         _paths;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -178,3 +182,5 @@ template<> ComponentStorage<KnockbackComponent>&          World::_pool<Knockback
 template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool<EnemyArchetypeComponent>();
 template<> ComponentStorage<BossChargeComponent>&         World::_pool<BossChargeComponent>();
 template<> ComponentStorage<StatsComponent>&              World::_pool<StatsComponent>();
+template<> ComponentStorage<HazardComponent>&             World::_pool<HazardComponent>();
+template<> ComponentStorage<PathFollowComponent>&         World::_pool<PathFollowComponent>();

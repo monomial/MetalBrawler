@@ -486,6 +486,16 @@ struct PlayerPerks {
             [_haptics playDodgeHaptic];
         });
 
+        // Ember trail on every lava snake (a few particles per frame).
+        for (EntityID id = 0; id < _world.entity_count(); ++id) {
+            if (!_world.hazards().present(id)) continue;
+            if (!_world.has_component<PositionComponent>(id)) continue;
+            const auto& p = _world.get_component<PositionComponent>(id);
+            [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 14.f}
+                              count:1 speed:90.f size:9.f
+                              color:(simd_float4){1.0f, 0.5f, 0.12f, 1.f}];
+        }
+
         // Boss winding up a charge: warning burst + an audible cue.
         _world.events().for_each(EventType::BossTelegraph, [self](const Event& ev) {
             uint32_t bid = ev.bossTelegraph.entityID;

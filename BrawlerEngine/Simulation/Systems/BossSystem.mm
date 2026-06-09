@@ -2,6 +2,7 @@
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/HazardSystem.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
@@ -140,6 +141,17 @@ void BossSystem_update(World& world, float gameDt) {
                     charge.state = BossChargeComponent::Recover;
                     charge.timer = kRecoverTime;
                     if (hitWall) ScreenShakeSystem_trigger(world, 22.f); // slam into the wall
+
+                    // The slam cracks the floor: lava snakes fan out from the
+                    // boss on looping paths (the design doc's ground hazard).
+                    float bx = pos.x, by = pos.y;
+                    float baseAng = atan2f(-charge.dirY, -charge.dirX); // back the way it came
+                    for (int s = -1; s <= 1; ++s) {
+                        float ang = baseAng + (float)s * 0.7f;
+                        HazardSystem_spawn_snake(world, bx, by,
+                                                 bx + cosf(ang) * 380.f,
+                                                 by + sinf(ang) * 380.f);
+                    }
                 }
                 break;
             }

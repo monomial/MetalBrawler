@@ -485,6 +485,22 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         if (!world->has_component<PositionComponent>(eid)) continue;
         auto& pos = world->get_component<PositionComponent>(eid);
 
+        // Hazards (lava snakes): pulsing molten quad on the floor, no mesh.
+        if (world->hazards().present(eid)) {
+            const auto& hz = world->get_component<HazardComponent>(eid);
+            float pulse = 0.8f + 0.2f * sinf((float)CACurrentMediaTime() * 9.f + (float)eid);
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp   = simd_mul(vp, make_model_rect(pos.x, pos.y, 1.f,
+                                                   hz.radius * 1.6f, hz.radius * 1.6f));
+            u.color = (simd_float4){1.0f * pulse, 0.42f * pulse, 0.10f * pulse, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            continue;
+        }
+
         simd_float4 color = {1,1,1,1};
         FactionComponent::Type faction = FactionComponent::Player;
         if (world->has_component<FactionComponent>(eid)) {

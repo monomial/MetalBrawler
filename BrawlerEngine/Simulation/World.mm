@@ -9,6 +9,7 @@
 #include "Systems/DodgeSystem.h"
 #include "Systems/KnockbackSystem.h"
 #include "Systems/BossSystem.h"
+#include "Systems/HazardSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -30,6 +31,8 @@ template<> ComponentStorage<KnockbackComponent>&          World::_pool() { retur
 template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool() { return _archetypes; }
 template<> ComponentStorage<BossChargeComponent>&         World::_pool() { return _bossCharges; }
 template<> ComponentStorage<StatsComponent>&              World::_pool() { return _stats; }
+template<> ComponentStorage<HazardComponent>&             World::_pool() { return _hazards; }
+template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
 
 // ----
 
@@ -75,6 +78,8 @@ void World::flush() {
         _archetypes.remove(id);
         _bossCharges.remove(id);
         _stats.remove(id);
+        _hazards.remove(id);
+        _paths.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -92,6 +97,9 @@ void World::tick(float gameDt) {
     // 1.6. BossSystem — charge state machine, overrides AI velocity/clip while
     //      telegraphing/charging/recovering; owns DamageCooldown decrement
     BossSystem_update(*this, gameDt);
+    // 1.7. HazardSystem — moves lava snakes along their loops, applies area
+    //      damage to players inside (gated by DamageCooldown), expires them
+    HazardSystem_update(*this, gameDt);
     // 1.75. KnockbackSystem — overrides AI/input velocity while an entity is
     //       being shoved (runs after the velocity writers, before integration)
     KnockbackSystem_update(*this, gameDt);
