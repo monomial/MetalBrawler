@@ -112,6 +112,12 @@
                 vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\n%@",
                     kBrawlerStringPaused, kBrawlerStringPausedResume];
                 vc->_overlayField.hidden = NO; break;
+            case BrawlerGamePhaseUpgrade:
+                vc->_overlayField.stringValue = [NSString stringWithFormat:
+                    @"CHOOSE UPGRADE\n[Space]  %@\n[Q]  %@",
+                    [vc->_delegate upgradeChoiceLabel:0],
+                    [vc->_delegate upgradeChoiceLabel:1]];
+                vc->_overlayField.hidden = NO; break;
         }
     };
 

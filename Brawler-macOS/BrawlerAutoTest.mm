@@ -108,6 +108,11 @@ static const double   kExitGrace      = 1.5;    // let async PNG writes finish
             [self _shoot:[NSString stringWithFormat:@"room%d-clear", room]];
             break;
         }
+        case BrawlerGamePhaseUpgrade: {
+            [self _shoot:[NSString stringWithFormat:@"room%d-upgrade", room]];
+            if (inPhase > kBeatDelay) [_delegate triggerAttack]; // pick perk 0
+            break;
+        }
         case BrawlerGamePhaseWin: {
             [self _shoot:@"win"];
             [self _finishWithStatus:0 reason:@"WIN: bot cleared all rooms"];

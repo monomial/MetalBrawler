@@ -71,7 +71,8 @@ static const int kMaxPlayers = 4;
     tvFlashGrad.colors    = @[(id)tvRed.CGColor, (id)tvClear.CGColor,
                               (id)tvClear.CGColor, (id)tvRed.CGColor];
     tvFlashGrad.locations = @[@0, @0.22, @0.78, @1.0];
-    tvFlashGrad.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    // CALayer autoresizing masks are macOS-only; sync the sublayer frame when
+    // the flash fires instead (the tvOS window never resizes anyway).
     [_damageFlashView.layer addSublayer:tvFlashGrad];
     [self.view addSubview:_damageFlashView];
 
@@ -80,6 +81,7 @@ static const int kMaxPlayers = 4;
     _delegate.onPlayerDamaged = ^{
         GameViewController *vc = weakSelf;
         if (!vc) return;
+        vc->_damageFlashView.layer.sublayers.firstObject.frame = vc->_damageFlashView.bounds;
         vc->_damageFlashView.alpha = 1.f;
         [UIView animateWithDuration:0.35 delay:0
                             options:UIViewAnimationOptionCurveEaseOut
@@ -163,6 +165,14 @@ static const int kMaxPlayers = 4;
             _overlayLabel.text   = kBrawlerStringPaused;
             _overlayLabel.hidden = NO;
             _subtitleLabel.text  = kBrawlerStringPausedResume;
+            _subtitleLabel.hidden = NO;
+            break;
+        case BrawlerGamePhaseUpgrade:
+            _overlayLabel.text   = @"CHOOSE UPGRADE";
+            _overlayLabel.hidden = NO;
+            _subtitleLabel.text  = [NSString stringWithFormat:@"[A]  %@      [X]  %@",
+                                    [_delegate upgradeChoiceLabel:0],
+                                    [_delegate upgradeChoiceLabel:1]];
             _subtitleLabel.hidden = NO;
             break;
     }

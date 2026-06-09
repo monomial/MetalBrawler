@@ -111,6 +111,43 @@ static void setAttack(World& world, bool down) {
                    @"finisher deals 2 (8 → 6)");
 }
 
+// --- StatsComponent (perk effects) -------------------------------------------
+
+- (void)test_damageBonus_increasesPunchDamage {
+    World world;
+    EntityID player = spawnPlayer(world);
+    world.add_component<StatsComponent>(player).damageBonus = 2;
+    EntityID enemy = spawnEnemy(world, 50, 0, /*hp=*/9);
+
+    setAttack(world, true);
+    // Advance until the first punch lands (a held button would chain into the
+    // finisher and double-dip, so stop at the first damage tick).
+    int hp = 9;
+    for (int i = 0; i < kAttackTicks * 2 && hp == 9; ++i) {
+        world.update(kFixedDt, kFixedDt);
+        hp = world.get_component<HealthComponent>(enemy).current;
+    }
+
+    XCTAssertEqual(hp, 9 - 3, @"1 base + 2 bonus damage per landed punch");
+}
+
+- (void)test_speedMult_movesFaster {
+    World world;
+    EntityID slow = spawnPlayer(world);
+    World world2;
+    EntityID fast = spawnPlayer(world2);
+    world2.add_component<StatsComponent>(fast).speedMult = 1.4f;
+
+    InputState right = {}; right.moveX = 1.f;
+    world.set_input(right, 0);
+    world2.set_input(right, 0);
+    for (int i = 0; i < 60; ++i) { world.update(kFixedDt, kFixedDt); world2.update(kFixedDt, kFixedDt); }
+
+    XCTAssertGreaterThan(world2.get_component<PositionComponent>(fast).x,
+                         world.get_component<PositionComponent>(slow).x,
+                         @"+40%% speed must out-distance base speed");
+}
+
 - (void)test_attack2WindowTable_nonZero {
     // Guard against the silent-zero clip-table trap: Attack2 must have a real
     // duration fallback (a zero-length clip would complete instantly).

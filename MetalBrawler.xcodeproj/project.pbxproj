@@ -28,6 +28,7 @@
 		1A24493F2CEA9F3111464437 /* CombatTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B56D567E7D4F96112FC6281 /* CombatTests.mm */; };
 		1A4F8325E8230AFF75A3129F /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
 		1C6DCB5DD71DC9929B3D0D29 /* ContactDamageSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */; };
+		1CD1BFCA9672538F83060190 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A75FE85F1481015D8E48A17 /* ImageIO.framework */; };
 		1D86F9EC26F02B9310D9F094 /* EnemyAISystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A6357873050DA593E566E786 /* EnemyAISystem.mm */; };
 		211CEC22717D991D82FF8A78 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 784575DC4C4D5FF355458A61 /* main.mm */; };
 		2205005CB9BC88415861AE2B /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
@@ -57,6 +58,7 @@
 		496D78135C2F218EB0F885F9 /* EnemyAISystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A6357873050DA593E566E786 /* EnemyAISystem.mm */; };
 		49B54C9FD4E369E70ED14D4E /* BossSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = D711454C8F92BBE53B3F45C4 /* BossSystem.mm */; };
 		4BF8BAD89CABEAD53BD10A44 /* CombatSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 538BD37CD7D75E3768953CB5 /* CombatSystem.mm */; };
+		4E14456C7391B77F4D3D34EB /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A75FE85F1481015D8E48A17 /* ImageIO.framework */; };
 		4E3B27489DAF8938C14FDB71 /* WallCollisionSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B76A9E58C446E2F8B6C06DD /* WallCollisionSystem.mm */; };
 		50ED2FD06E22B72E86F64103 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
 		5174FD522C2B1B2FCFECFBAD /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
@@ -72,6 +74,7 @@
 		5C91656310A87543E524BA66 /* KnockbackSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC5FF81E52FAB811994FD9FD /* KnockbackSystem.mm */; };
 		5D4C09FFFBE60C5156067F9B /* WallCollisionSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B76A9E58C446E2F8B6C06DD /* WallCollisionSystem.mm */; };
 		5DCE9194F444C661CA7CA1DC /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = D31A0F222CD904A069458F57 /* AppDelegate.mm */; };
+		6060D8DCB27E954B115BA1D4 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A75FE85F1481015D8E48A17 /* ImageIO.framework */; };
 		6232FD0FD00A65A3D2EB1B4E /* ScreenShakeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */; };
 		62A56767E4B9F025583090A1 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
 		66D9B003B7F8D43669896681 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
@@ -189,6 +192,7 @@
 		30796A6CE2160427FFD83AE4 /* BrawlerGameDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrawlerGameDelegate.h; sourceTree = "<group>"; };
 		3288EB8DE9747307AEFD95B3 /* AnimationSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationSystem.h; sourceTree = "<group>"; };
 		38D9FE09D0A8707F1172F4F4 /* CombatSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CombatSystem.h; sourceTree = "<group>"; };
+		3A75FE85F1481015D8E48A17 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
 		3B5CE91A2D9A83DDCAB5E3A4 /* AudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioEngine.h; sourceTree = "<group>"; };
 		3B654BC47BEF5B4177B0841B /* BossChargeTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BossChargeTests.mm; sourceTree = "<group>"; };
 		464D6EAD162F5B5D40F83D07 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
@@ -286,6 +290,7 @@
 				1480CCC427C95F8AB5DCDAA6 /* AVFoundation.framework in Frameworks */,
 				9E51F37359FADBB24271E89D /* CoreHaptics.framework in Frameworks */,
 				0D4DA439B768BF7A351AE2F4 /* CoreGraphics.framework in Frameworks */,
+				6060D8DCB27E954B115BA1D4 /* ImageIO.framework in Frameworks */,
 				62A56767E4B9F025583090A1 /* GameController.framework in Frameworks */,
 				B753C3AB69AAA47602838E2B /* QuartzCore.framework in Frameworks */,
 			);
@@ -302,6 +307,7 @@
 				5174FD522C2B1B2FCFECFBAD /* AVFoundation.framework in Frameworks */,
 				0A0BA8DB85739775A09E298C /* CoreHaptics.framework in Frameworks */,
 				50ED2FD06E22B72E86F64103 /* CoreGraphics.framework in Frameworks */,
+				1CD1BFCA9672538F83060190 /* ImageIO.framework in Frameworks */,
 				37172235127E8C412A05EB6F /* GameController.framework in Frameworks */,
 				1324D5A2408718818172BAE6 /* QuartzCore.framework in Frameworks */,
 			);
@@ -318,6 +324,7 @@
 				F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */,
 				BDBADE24F64F889CC36FBA69 /* CoreHaptics.framework in Frameworks */,
 				929D4BACEF301869C19C76B7 /* CoreGraphics.framework in Frameworks */,
+				4E14456C7391B77F4D3D34EB /* ImageIO.framework in Frameworks */,
 				30A752048F21D44D1EB86E61 /* GameController.framework in Frameworks */,
 				2748F493B68B3B6D5A588B52 /* QuartzCore.framework in Frameworks */,
 			);
@@ -483,6 +490,7 @@
 				7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */,
 				0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */,
 				856406A32C732664791F661B /* GameController.framework */,
+				3A75FE85F1481015D8E48A17 /* ImageIO.framework */,
 				7C1CF591F48BAC2512642C39 /* Metal.framework */,
 				189A9141A8E1CF5522C84640 /* MetalKit.framework */,
 				1A002302E6D7EE53F38E2D27 /* ModelIO.framework */,

@@ -10,6 +10,7 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
     BrawlerGamePhaseWin          = 4, // all rooms beaten
     BrawlerGamePhaseLose         = 5, // all lives exhausted
     BrawlerGamePhasePaused       = 6, // mid-game pause
+    BrawlerGamePhaseUpgrade      = 7, // pick a perk before the next room
 };
 
 // Shared game delegate used by all three platform targets (macOS, iOS, tvOS).
@@ -53,6 +54,11 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 
 // Start the game with a specific player count. Call from the player-select UI.
 - (void)startGameWithPlayers:(int)playerCount;
+
+// Upgrade phase: label for choice 0 or 1 (shown by the platform overlay).
+// In-phase input also picks directly: attack pulse → 0, dodge pulse → 1.
+- (NSString *)upgradeChoiceLabel:(int)index;
+- (void)chooseUpgrade:(int)index;
 
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.

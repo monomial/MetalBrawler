@@ -28,6 +28,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
+      - sdk: ImageIO.framework
       - sdk: GameController.framework
       - sdk: QuartzCore.framework
     settings:
@@ -60,6 +61,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
+      - sdk: ImageIO.framework
       - sdk: GameController.framework
       - sdk: QuartzCore.framework
     settings:
@@ -93,6 +95,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
+      - sdk: ImageIO.framework
       - sdk: GameController.framework
       - sdk: QuartzCore.framework
     settings:

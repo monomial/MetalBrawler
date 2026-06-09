@@ -120,6 +120,14 @@ struct BossChargeComponent {
     float   dirY  = 1.f;
 };
 
+// Run-level player stat modifiers from between-room perk choices. Applied to
+// player entities at spawn from BrawlerGameDelegate's run state (the World is
+// rebuilt every room, so the run-level truth lives in the delegate).
+struct StatsComponent {
+    int   damageBonus = 0;   // added to attack damage
+    float speedMult   = 1.f; // multiplies move speed
+};
+
 // Shove applied to an entity that just took a hit. KnockbackSystem owns the
 // entity's velocity while this is present (same ownership trick as Dodge):
 // linear decay from the initial impulse to zero over `duration` seconds,

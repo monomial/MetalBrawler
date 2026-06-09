@@ -54,6 +54,33 @@ static const int kStartingLives = 3;
 static const float kRoomClearDuration = 2.0f;
 static const float kWinDuration       = 5.0f;
 static const float kLoseDuration      = 3.5f;
+static const float kUpgradeGrace      = 0.35f; // ignore held buttons right after entering Upgrade
+
+// ---------------------------------------------------------------------------
+// Perk pool — two distinct picks are offered between rooms; the chosen perk
+// folds into run-level PlayerPerks and is re-applied to players at each spawn
+// (the World is rebuilt per room, so entities can't carry run state).
+// ---------------------------------------------------------------------------
+typedef NS_ENUM(int, BrawlerPerk) {
+    BrawlerPerkDamage = 0,
+    BrawlerPerkSpeed,
+    BrawlerPerkMaxHP,
+    BrawlerPerkLife,
+    BrawlerPerkCount
+};
+
+static NSString *const kPerkLabels[BrawlerPerkCount] = {
+    @"+1 Punch Damage",
+    @"+20% Move Speed",
+    @"+3 Max Health",
+    @"+1 Life",
+};
+
+struct PlayerPerks {
+    int   bonusDamage = 0;
+    float speedMult   = 1.f;
+    int   bonusMaxHP  = 0;
+};
 
 // ---------------------------------------------------------------------------
 
@@ -74,6 +101,9 @@ static const float kLoseDuration      = 3.5f;
     float                _phaseTimer;
     int                  _currentRoom;  // 0-indexed internally
     int                  _lives;
+
+    PlayerPerks          _perks;            // run-level, reset each new run
+    int                  _upgradeChoice[2]; // BrawlerPerk indices on offer
 }
 
 @synthesize onPhaseChanged;
@@ -170,6 +200,10 @@ static const float kLoseDuration      = 3.5f;
         case BrawlerGamePhasePaused:
             // Leave music playing — startBattleMusic has a guard so resuming won't restart it.
             break;
+        case BrawlerGamePhaseUpgrade:
+            [self resetInput];
+            _phaseTimer = kUpgradeGrace; // brief grace so held buttons don't insta-pick
+            break;
     }
     if (self.onPhaseChanged)
         self.onPhaseChanged(newPhase, _currentRoom + 1, _lives);
@@ -178,7 +212,39 @@ static const float kLoseDuration      = 3.5f;
 - (void)_startNewRun {
     _currentRoom = 0;
     _lives       = kStartingLives;
+    _perks       = PlayerPerks{};
     _phase       = (BrawlerGamePhase)-1; // sentinel: force the first transition to fire
+    [self _loadRoom];
+    [self _transitionToPhase:BrawlerGamePhasePlaying];
+}
+
+// Roll two distinct perks from the pool using the (seeded) world RNG so
+// deterministic runs offer deterministic choices.
+- (void)_rollUpgradeChoices {
+    _upgradeChoice[0] = (int)_world.rand_range(BrawlerPerkCount);
+    _upgradeChoice[1] = (_upgradeChoice[0] + 1 +
+                         (int)_world.rand_range(BrawlerPerkCount - 1)) % BrawlerPerkCount;
+}
+
+- (NSString *)upgradeChoiceLabel:(int)index {
+    if (index < 0 || index > 1) return @"";
+    return kPerkLabels[_upgradeChoice[index]];
+}
+
+- (void)chooseUpgrade:(int)index {
+    if (_phase != BrawlerGamePhaseUpgrade) return;
+    if (index < 0 || index > 1) return;
+
+    switch ((BrawlerPerk)_upgradeChoice[index]) {
+        case BrawlerPerkDamage: _perks.bonusDamage += 1;   break;
+        case BrawlerPerkSpeed:  _perks.speedMult   += 0.2f; break;
+        case BrawlerPerkMaxHP:  _perks.bonusMaxHP  += 3;   break;
+        case BrawlerPerkLife:   _lives += 1;               break;
+        case BrawlerPerkCount:  break;
+    }
+    [_audio playUIClickSound];
+
+    _currentRoom += 1;
     [self _loadRoom];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
 }
@@ -204,10 +270,14 @@ static const float kLoseDuration      = 3.5f;
     _world.add_component<PositionComponent>(e)  = {x, y, 0};
     _world.add_component<VelocityComponent>(e)  = {0, 0, 0};
     _world.add_component<FactionComponent>(e).type = FactionComponent::Player;
-    _world.add_component<HealthComponent>(e)    = {10, 10};
+    int maxHP = 10 + _perks.bonusMaxHP;
+    _world.add_component<HealthComponent>(e)    = {maxHP, maxHP};
     _world.add_component<DamageCooldownComponent>(e).remaining = 0.f;
     _world.add_component<AnimationComponent>(e);
     _world.add_component<FacingComponent>(e);
+    auto& stats = _world.add_component<StatsComponent>(e);
+    stats.damageBonus = _perks.bonusDamage;
+    stats.speedMult   = _perks.speedMult;
 }
 
 - (void)_spawnEnemiesForCurrentRoom {
@@ -269,11 +339,7 @@ static const float kLoseDuration      = 3.5f;
 - (InputState)currentInputState                          { return _world.current_input(0); }
 - (void)startGameWithPlayers:(int)playerCount {
     _numPlayers = MAX(1, MIN(2, playerCount));
-    _currentRoom = 0;
-    _lives       = kStartingLives;
-    _phase       = (BrawlerGamePhase)-1;
-    [self _loadRoom];
-    [self _transitionToPhase:BrawlerGamePhasePlaying];
+    [self _startNewRun];
 }
 
 - (void)captureNextFrameToPath:(NSString *)path          { [_renderer captureNextFrameToPath:path]; }
@@ -317,8 +383,10 @@ static const float kLoseDuration      = 3.5f;
         _world.set_input(s, 0);
     }
 
-    // Title and Paused phases freeze the simulation.
-    BOOL simActive = (_phase != BrawlerGamePhaseTitle && _phase != BrawlerGamePhasePaused);
+    // Title, Paused, and Upgrade phases freeze the simulation.
+    BOOL simActive = (_phase != BrawlerGamePhaseTitle &&
+                      _phase != BrawlerGamePhasePaused &&
+                      _phase != BrawlerGamePhaseUpgrade);
 
     if (simActive) {
         _world.update(dt, dt);
@@ -474,15 +542,25 @@ static const float kLoseDuration      = 3.5f;
         case BrawlerGamePhaseRoomClear: {
             _phaseTimer -= dt;
             if (_phaseTimer <= 0.f) {
-                int nextRoom = _currentRoom + 1;
-                if (nextRoom >= kNumRooms) {
+                if (_currentRoom + 1 >= kNumRooms) {
                     [self _transitionToPhase:BrawlerGamePhaseWin];
                 } else {
-                    _currentRoom = nextRoom;
-                    [self _loadRoom];
-                    [self _transitionToPhase:BrawlerGamePhasePlaying];
+                    // Pick a perk before the next room (chooseUpgrade: advances).
+                    [self _rollUpgradeChoices];
+                    [self _transitionToPhase:BrawlerGamePhaseUpgrade];
                 }
             }
+            break;
+        }
+
+        case BrawlerGamePhaseUpgrade: {
+            _phaseTimer -= dt;
+            if (_phaseTimer > 0.f) break; // input grace window
+            // Platform VCs may call chooseUpgrade: directly (keys/buttons);
+            // the universal mapping is attack → choice 0, dodge → choice 1.
+            InputState s0 = _world.current_input(0);
+            if (_attackPulse || s0.attack)      [self chooseUpgrade:0];
+            else if (_dodgePulse || s0.dodge)   [self chooseUpgrade:1];
             break;
         }
 

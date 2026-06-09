@@ -9,12 +9,15 @@
 static const float kFrameDt = 1.0f / 60.0f;
 
 // Advance until the delegate reaches `phase` or `maxSimSeconds` of simulated
-// time elapses. Returns YES if the phase was reached.
+// time elapses. Returns YES if the phase was reached. The "bot" always takes
+// the first perk when an upgrade choice appears.
 static BOOL advanceUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
                               float maxSimSeconds) {
     int maxFrames = (int)(maxSimSeconds / kFrameDt);
     for (int i = 0; i < maxFrames; ++i) {
         if (d.gamePhase == phase) return YES;
+        if (d.gamePhase == BrawlerGamePhaseUpgrade && phase != BrawlerGamePhaseUpgrade)
+            [d triggerAttack]; // pick perk 0
         [d advanceFrame:kFrameDt];
     }
     return d.gamePhase == phase;
@@ -22,8 +25,11 @@ static BOOL advanceUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
 
 static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     int frames = (int)(seconds / kFrameDt);
-    for (int i = 0; i < frames; ++i)
+    for (int i = 0; i < frames; ++i) {
+        if (d.gamePhase == BrawlerGamePhaseUpgrade)
+            [d triggerAttack]; // pick perk 0
         [d advanceFrame:kFrameDt];
+    }
 }
 
 @interface ScenarioTests : XCTestCase
@@ -57,11 +63,15 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
 
     // The run must have passed through RoomClear at least 3 times (rooms 1-3;
-    // room 4 transitions straight to Win).
-    NSInteger clears = 0;
-    for (NSNumber *p in phases)
+    // room 4 transitions straight to Win) and offered an upgrade after each
+    // non-final clear.
+    NSInteger clears = 0, upgrades = 0;
+    for (NSNumber *p in phases) {
         if (p.integerValue == BrawlerGamePhaseRoomClear) clears++;
-    XCTAssertGreaterThanOrEqual(clears, (NSInteger)3);
+        if (p.integerValue == BrawlerGamePhaseUpgrade)   upgrades++;
+    }
+    XCTAssertGreaterThanOrEqual(clears,   (NSInteger)3);
+    XCTAssertGreaterThanOrEqual(upgrades, (NSInteger)3);
 }
 
 - (void)test_autoPilot_2P_winsFullRun {
@@ -146,6 +156,34 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1);
     XCTAssertEqual(d.livesRemaining, 3);
+}
+
+// --- Perks -------------------------------------------------------------------
+
+- (void)test_upgradePhase_freezesSimAndAppliesChoice {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:42];
+    d.autoPilotEnabled = YES;
+
+    [d startGameWithPlayers:1];
+    BOOL reached = NO;
+    int maxFrames = (int)(120.f / kFrameDt);
+    for (int i = 0; i < maxFrames; ++i) {
+        if (d.gamePhase == BrawlerGamePhaseUpgrade) { reached = YES; break; }
+        [d advanceFrame:kFrameDt];
+    }
+    XCTAssertTrue(reached, @"room 1 clear must lead to an upgrade choice");
+    XCTAssertEqual(d.currentRoom, 1, @"still on room 1 while choosing");
+    XCTAssertNotEqualObjects([d upgradeChoiceLabel:0], @"");
+    XCTAssertNotEqualObjects([d upgradeChoiceLabel:1], @"");
+
+    // Sitting on the choice screen must not let enemies act (sim frozen).
+    for (int i = 0; i < 600; ++i) [d advanceFrame:kFrameDt];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhaseUpgrade);
+    XCTAssertEqual(d.livesRemaining, 3);
+
+    [d chooseUpgrade:0];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+    XCTAssertEqual(d.currentRoom, 2, @"choice advances to the next room");
 }
 
 // --- Determinism -------------------------------------------------------------

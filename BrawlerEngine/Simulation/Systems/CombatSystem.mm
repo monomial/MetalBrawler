@@ -100,12 +100,17 @@ void CombatSystem_update(World& world, float gameDt) {
                 if (dot < kPunchArcCosine) continue;
             }
 
+            // Perk-modified damage: players carry a StatsComponent with run-level bonuses.
+            int damage = win.damage;
+            if (world.has_component<StatsComponent>(attackerID))
+                damage += world.get_component<StatsComponent>(attackerID).damageBonus;
+
             HealthComponent& hp = world.get_component<HealthComponent>(targetID);
-            hp.current -= win.damage;
+            hp.current -= damage;
             hitAnything = true;
 
             world.events().emit_hit_contact(attackerID, targetID);
-            world.events().emit_damage(targetID, win.damage);
+            world.events().emit_damage(targetID, damage);
 
             // Knockback: shove the target away from the attacker. Players are
             // exempt (no stun, no shove); heavies/bosses barely budge.

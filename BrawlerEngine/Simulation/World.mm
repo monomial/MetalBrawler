@@ -29,6 +29,7 @@ template<> ComponentStorage<BossTagComponent>&            World::_pool() { retur
 template<> ComponentStorage<KnockbackComponent>&          World::_pool() { return _knockbacks; }
 template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool() { return _archetypes; }
 template<> ComponentStorage<BossChargeComponent>&         World::_pool() { return _bossCharges; }
+template<> ComponentStorage<StatsComponent>&              World::_pool() { return _stats; }
 
 // ----
 
@@ -73,6 +74,7 @@ void World::flush() {
         _knockbacks.remove(id);
         _archetypes.remove(id);
         _bossCharges.remove(id);
+        _stats.remove(id);
     }
     _deferredDestroyCount = 0;
 }

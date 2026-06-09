@@ -98,7 +98,8 @@
     iosFlashGrad.colors    = @[(id)iosRed.CGColor, (id)iosClear.CGColor,
                                (id)iosClear.CGColor, (id)iosRed.CGColor];
     iosFlashGrad.locations = @[@0, @0.22, @0.78, @1.0];
-    iosFlashGrad.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+    // CALayer autoresizing masks are macOS-only; sync the sublayer frame when
+    // the flash fires instead (rotation mid-flash is a non-issue).
     [_damageFlashView.layer addSublayer:iosFlashGrad];
     [self.view addSubview:_damageFlashView];
 
@@ -107,6 +108,7 @@
     _delegate.onPlayerDamaged = ^{
         GameViewController *vc = weakSelf;
         if (!vc) return;
+        vc->_damageFlashView.layer.sublayers.firstObject.frame = vc->_damageFlashView.bounds;
         vc->_damageFlashView.alpha = 1.f;
         [UIView animateWithDuration:0.35 delay:0
                             options:UIViewAnimationOptionCurveEaseOut
@@ -129,6 +131,8 @@
                 vc->_overlayLabel.text      = kBrawlerStringSelectPlayers;
                 vc->_overlayLabel.hidden    = NO;
                 vc->_pauseButton.hidden     = YES;
+                [vc->_onePlayerButton  setTitle:@"1 PLAYER"  forState:UIControlStateNormal];
+                [vc->_twoPlayersButton setTitle:@"2 PLAYERS" forState:UIControlStateNormal];
                 vc->_onePlayerButton.hidden  = NO;
                 vc->_twoPlayersButton.hidden = NO; break;
             case BrawlerGamePhasePlaying:
@@ -156,6 +160,17 @@
                     kBrawlerStringPaused, kBrawlerStringPausedResume];
                 vc->_overlayLabel.hidden = NO;
                 vc->_pauseButton.hidden  = NO; break;
+            case BrawlerGamePhaseUpgrade:
+                // Reuse the two select buttons as perk choices.
+                vc->_overlayLabel.text   = @"CHOOSE UPGRADE";
+                vc->_overlayLabel.hidden = NO;
+                vc->_pauseButton.hidden  = YES;
+                [vc->_onePlayerButton  setTitle:[vc->_delegate upgradeChoiceLabel:0]
+                                       forState:UIControlStateNormal];
+                [vc->_twoPlayersButton setTitle:[vc->_delegate upgradeChoiceLabel:1]
+                                       forState:UIControlStateNormal];
+                vc->_onePlayerButton.hidden  = NO;
+                vc->_twoPlayersButton.hidden = NO; break;
         }
     };
 
@@ -164,8 +179,14 @@
 }
 
 - (void)_pauseTapped      { [_delegate triggerPause]; }
-- (void)_onePlayerTapped  { [_delegate startGameWithPlayers:1]; }
-- (void)_twoPlayersTapped { [_delegate startGameWithPlayers:2]; }
+- (void)_onePlayerTapped  {
+    if (_delegate.gamePhase == BrawlerGamePhaseUpgrade) [_delegate chooseUpgrade:0];
+    else [_delegate startGameWithPlayers:1];
+}
+- (void)_twoPlayersTapped {
+    if (_delegate.gamePhase == BrawlerGamePhaseUpgrade) [_delegate chooseUpgrade:1];
+    else [_delegate startGameWithPlayers:2];
+}
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
 - (void)resumeRendering { _mtkView.paused = NO; }

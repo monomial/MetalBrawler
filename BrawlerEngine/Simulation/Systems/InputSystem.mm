@@ -39,9 +39,13 @@ void InputSystem_update(World& world) {
         if (!world.has_component<VelocityComponent>(id))
             world.add_component<VelocityComponent>(id) = {};
 
+        float speed = kPlayerSpeed;
+        if (world.has_component<StatsComponent>(id))
+            speed *= world.get_component<StatsComponent>(id).speedMult;
+
         VelocityComponent& vel = world.get_component<VelocityComponent>(id);
-        vel.vx = mx * kPlayerSpeed;
-        vel.vy = my * kPlayerSpeed;
+        vel.vx = mx * speed;
+        vel.vy = my * speed;
         vel.vz = 0.0f;
 
         // Update facing whenever the player is actually moving.
