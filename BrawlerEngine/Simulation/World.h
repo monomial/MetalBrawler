@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include "Components.h"
+#include "EnemyArchetypes.h"
 #include "Platform/InputState.h"
 #include "EventBus.h"
 
@@ -108,6 +109,7 @@ public:
     ComponentStorage<DodgeComponent>&              dodges()           { return _dodges; }
     ComponentStorage<BossTagComponent>&            boss_tags()        { return _bossTags; }
     ComponentStorage<KnockbackComponent>&          knockbacks()       { return _knockbacks; }
+    ComponentStorage<EnemyArchetypeComponent>&     archetypes()       { return _archetypes; }
 
 private:
     void flush();
@@ -139,6 +141,7 @@ private:
     ComponentStorage<DodgeComponent>              _dodges;
     ComponentStorage<BossTagComponent>            _bossTags;
     ComponentStorage<KnockbackComponent>          _knockbacks;
+    ComponentStorage<EnemyArchetypeComponent>     _archetypes;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -168,3 +171,4 @@ template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool<EnemyAtt
 template<> ComponentStorage<DodgeComponent>&              World::_pool<DodgeComponent>();
 template<> ComponentStorage<BossTagComponent>&            World::_pool<BossTagComponent>();
 template<> ComponentStorage<KnockbackComponent>&          World::_pool<KnockbackComponent>();
+template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool<EnemyArchetypeComponent>();

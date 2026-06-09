@@ -9,32 +9,46 @@
 #import "Audio/AudioEngine.h"
 
 // ---------------------------------------------------------------------------
-// Room definitions — 3 combat rooms + 1 boss room.
+// Room definitions — spawn lists of {archetype, x, y}. HP/speed/scale come
+// from the archetype table (Simulation/EnemyArchetypes.h).
 // ---------------------------------------------------------------------------
+struct EnemySpawn {
+    EnemyArchetype type;
+    float x, y;
+};
+
 struct RoomDef {
-    int  enemyCount;
-    int  enemyHP;
-    bool isBoss;
+    const EnemySpawn* spawns;
+    int               count;
+};
+
+static const EnemySpawn kRoom1[] = {
+    {EnemyArchetype::Grunt,     0, 350},
+    {EnemyArchetype::Grunt,  -200, 250},
+};
+static const EnemySpawn kRoom2[] = {
+    {EnemyArchetype::Grunt,  -200, 250},
+    {EnemyArchetype::Grunt,   200, 250},
+    {EnemyArchetype::Rusher,    0, 400},
+};
+static const EnemySpawn kRoom3[] = {
+    {EnemyArchetype::Rusher, -250, 380},
+    {EnemyArchetype::Rusher,  250, 380},
+    {EnemyArchetype::Heavy,     0, 300},
+    {EnemyArchetype::Grunt,     0, 150},
+};
+static const EnemySpawn kRoom4[] = {
+    {EnemyArchetype::Boss,      0, 350},
 };
 
 static const RoomDef kRooms[] = {
-    {2,  3, false}, // Room 1 — two grunts
-    {3,  3, false}, // Room 2 — three grunts
-    {4,  4, false}, // Room 3 — four tougher grunts
-    {1, 12, true }, // Room 4 — boss
+    {kRoom1, 2},
+    {kRoom2, 3},
+    {kRoom3, 4},
+    {kRoom4, 1},
 };
 static const int kNumRooms      = 4;
 static const int kStartingLives = 3;
-
-// Enemy spawn positions — first N are used for a room with N enemies.
-static const float kEnemySpawns[][2] = {
-    {   0, 350},
-    {-200, 250},
-    { 200, 250},
-    {   0, 150},
-    {-250, 380},
-    { 200, 380},
-};
 
 // Phase timers (seconds).
 static const float kRoomClearDuration = 2.0f;
@@ -198,16 +212,20 @@ static const float kLoseDuration      = 3.5f;
 
 - (void)_spawnEnemiesForCurrentRoom {
     const RoomDef& room = kRooms[_currentRoom];
-    for (int i = 0; i < room.enemyCount; ++i) {
+    for (int i = 0; i < room.count; ++i) {
+        const EnemySpawn& spawn = room.spawns[i];
+        const EnemyArchetypeDef& def = enemy_archetype_def((uint8_t)spawn.type);
+
         EntityID e = _world.defer_create();
-        _world.add_component<PositionComponent>(e)  = {kEnemySpawns[i][0], kEnemySpawns[i][1], 0};
+        _world.add_component<PositionComponent>(e)  = {spawn.x, spawn.y, 0};
         _world.add_component<VelocityComponent>(e)  = {0, 0, 0};
         _world.add_component<FactionComponent>(e).type = FactionComponent::Enemy;
-        _world.add_component<HealthComponent>(e)    = {room.enemyHP, room.enemyHP};
+        _world.add_component<HealthComponent>(e)    = {def.maxHP, def.maxHP};
         _world.add_component<AnimationComponent>(e);
         _world.add_component<FacingComponent>(e);
         _world.add_component<EnemyAttackCooldownComponent>(e);
-        if (room.isBoss)
+        _world.add_component<EnemyArchetypeComponent>(e).type = (uint8_t)spawn.type;
+        if (spawn.type == EnemyArchetype::Boss)
             _world.add_component<BossTagComponent>(e);
     }
 }

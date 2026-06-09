@@ -3,6 +3,8 @@
 #include "Simulation/Systems/AnimationSystem.h"
 #include <math.h>
 
+// Defaults for enemies without an EnemyArchetypeComponent — identical to the
+// Grunt row in kEnemyArchetypes (keeps pre-archetype behavior and tests).
 static constexpr float kEnemySpeed          = 150.0f; // units per second
 static constexpr float kStopRadius          = 110.0f; // stop chasing within this distance
 static constexpr float kEnemyAttackCooldown = 2.0f;   // seconds between attack initiations
@@ -37,6 +39,18 @@ void EnemyAISystem_update(World& world, float gameDt) {
 
         const PositionComponent& ePos = world.get_component<PositionComponent>(id);
 
+        // Per-archetype tuning, defaulting to the original grunt constants.
+        float moveSpeed  = kEnemySpeed;
+        float stopRadius = kStopRadius;
+        float cooldown   = kEnemyAttackCooldown;
+        if (world.has_component<EnemyArchetypeComponent>(id)) {
+            const EnemyArchetypeDef& def =
+                enemy_archetype_def(world.get_component<EnemyArchetypeComponent>(id).type);
+            moveSpeed  = def.moveSpeed;
+            stopRadius = def.stopRadius;
+            cooldown   = def.attackCooldown;
+        }
+
         // Find nearest alive player.
         PositionComponent playerPos = playerPositions[0];
         float dist = sqrtf((playerPos.x-ePos.x)*(playerPos.x-ePos.x) +
@@ -70,12 +84,12 @@ void EnemyAISystem_update(World& world, float gameDt) {
         VelocityComponent& vel = world.get_component<VelocityComponent>(id);
         bool moving;
 
-        if (dist <= kStopRadius) {
+        if (dist <= stopRadius) {
             vel = {0.f, 0.f, 0.f};
             moving = false;
         } else {
-            vel.vx = (dx / dist) * kEnemySpeed;
-            vel.vy = (dy / dist) * kEnemySpeed;
+            vel.vx = (dx / dist) * moveSpeed;
+            vel.vy = (dy / dist) * moveSpeed;
             vel.vz = 0.f;
             moving = true;
         }
@@ -91,7 +105,7 @@ void EnemyAISystem_update(World& world, float gameDt) {
             auto& cd = world.get_component<EnemyAttackCooldownComponent>(id);
             if (cd.remaining <= 0.f) {
                 nextClip = AnimClipID::Attack;
-                cd.remaining = kEnemyAttackCooldown;
+                cd.remaining = cooldown;
             }
         }
 

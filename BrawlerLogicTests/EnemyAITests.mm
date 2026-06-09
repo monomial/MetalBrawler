@@ -99,4 +99,65 @@ static EntityID spawnEnemy(World& world, float x, float y) {
     XCTAssertEqualWithAccuracy(x, 400.f, kEps);
 }
 
+// --- Archetypes ---------------------------------------------------------------
+
+- (void)test_archetypeTable_sane {
+    for (int i = 0; i < (int)EnemyArchetype::Count; ++i) {
+        const EnemyArchetypeDef& d = kEnemyArchetypes[i];
+        XCTAssertGreaterThan(d.moveSpeed, 0.f);
+        XCTAssertGreaterThan(d.stopRadius, 0.f);
+        XCTAssertGreaterThan(d.attackCooldown, 0.f);
+        XCTAssertGreaterThan(d.maxHP, 0);
+        XCTAssertGreaterThan(d.scale, 0.f);
+        XCTAssertGreaterThanOrEqual(d.knockbackScale, 0.f);
+    }
+    // Grunt row must equal the EnemyAISystem fallback constants so entities
+    // without the component behave identically.
+    XCTAssertEqual(kEnemyArchetypes[0].moveSpeed, 150.f);
+    XCTAssertEqual(kEnemyArchetypes[0].stopRadius, 110.f);
+    XCTAssertEqual(kEnemyArchetypes[0].attackCooldown, 2.f);
+}
+
+- (void)test_rusher_closesFasterThanGrunt {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID grunt  = spawnEnemy(world, 400,  200);
+    EntityID rusher = spawnEnemy(world, 400, -200);
+    world.add_component<EnemyArchetypeComponent>(grunt).type  = (uint8_t)EnemyArchetype::Grunt;
+    world.add_component<EnemyArchetypeComponent>(rusher).type = (uint8_t)EnemyArchetype::Rusher;
+
+    for (int i = 0; i < 60; ++i) world.update(kFixedDt, kFixedDt); // 0.5s
+
+    float gruntX  = world.get_component<PositionComponent>(grunt).x;
+    float rusherX = world.get_component<PositionComponent>(rusher).x;
+    XCTAssertLessThan(rusherX, gruntX, @"rusher (260 u/s) must outrun grunt (150 u/s)");
+}
+
+- (void)test_heavy_barelyKnockedBack {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    if (!world.has_component<FacingComponent>(player))
+        world.add_component<FacingComponent>(player) = {1.f, 0.f};
+    else
+        world.get_component<FacingComponent>(player) = {1.f, 0.f};
+    if (!world.has_component<AnimationComponent>(player))
+        world.add_component<AnimationComponent>(player);
+    auto& anim = world.get_component<AnimationComponent>(player);
+    anim.currentClip = anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime    = 1.03f * 0.475f;
+    anim.looping     = false;
+    anim.hitApplied  = false;
+
+    EntityID heavy = spawnEnemy(world, 50, 0);
+    world.add_component<HealthComponent>(heavy) = {8, 8};
+    world.add_component<EnemyArchetypeComponent>(heavy).type = (uint8_t)EnemyArchetype::Heavy;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertTrue(world.has_component<KnockbackComponent>(heavy));
+    const auto& kb = world.get_component<KnockbackComponent>(heavy);
+    XCTAssertEqualWithAccuracy(kb.velX, 480.f * 0.3f, 0.5f,
+                               @"heavy takes 30%% knockback per the archetype table");
+}
+
 @end

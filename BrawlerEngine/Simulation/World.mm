@@ -26,6 +26,7 @@ template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool() { retu
 template<> ComponentStorage<DodgeComponent>&              World::_pool() { return _dodges; }
 template<> ComponentStorage<BossTagComponent>&            World::_pool() { return _bossTags; }
 template<> ComponentStorage<KnockbackComponent>&          World::_pool() { return _knockbacks; }
+template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool() { return _archetypes; }
 
 // ----
 
@@ -68,6 +69,7 @@ void World::flush() {
         _dodges.remove(id);
         _bossTags.remove(id);
         _knockbacks.remove(id);
+        _archetypes.remove(id);
     }
     _deferredDestroyCount = 0;
 }

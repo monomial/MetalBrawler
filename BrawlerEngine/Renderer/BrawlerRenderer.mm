@@ -461,7 +461,11 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
             if (!world->has_component<AnimationComponent>(eid)) continue;
             auto& pos = world->get_component<PositionComponent>(eid);
             float size = kShadowSize;
-            if (world->has_component<BossTagComponent>(eid)) size *= 2.f;
+            if (world->has_component<EnemyArchetypeComponent>(eid))
+                size *= enemy_archetype_def(
+                    world->get_component<EnemyArchetypeComponent>(eid).type).scale;
+            else if (world->has_component<BossTagComponent>(eid))
+                size *= 2.f;
             float fade = world->get_component<AnimationComponent>(eid).deathFade;
             DrawUniforms u;
             u.mvp   = simd_mul(vp, make_model_rect(pos.x, pos.y, -0.5f, size, size));
@@ -510,7 +514,11 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
             float scale = (charData->meshHeight > 0.01f)
                         ? kTargetCharHeight / charData->meshHeight
                         : 1.0f;
-            if (world->has_component<BossTagComponent>(eid)) scale *= 2.0f;
+            if (world->has_component<EnemyArchetypeComponent>(eid))
+                scale *= enemy_archetype_def(
+                    world->get_component<EnemyArchetypeComponent>(eid).type).scale;
+            else if (world->has_component<BossTagComponent>(eid))
+                scale *= 2.0f;
 
             [enc setRenderPipelineState:_skinnedPipeline];
             [enc setDepthStencilState:_depthState];

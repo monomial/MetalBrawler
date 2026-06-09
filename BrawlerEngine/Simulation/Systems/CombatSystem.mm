@@ -108,11 +108,14 @@ void CombatSystem_update(World& world, float gameDt) {
             world.events().emit_damage(targetID, win.damage);
 
             // Knockback: shove the target away from the attacker. Players are
-            // exempt (no stun, no shove); bosses get a much weaker push.
+            // exempt (no stun, no shove); heavies/bosses barely budge.
             bool tgtIsPlayer = world.has_component<PlayerTagComponent>(targetID);
             if (!tgtIsPlayer && dist > 0.001f && hp.current > 0) {
                 float scale = world.has_component<BossTagComponent>(targetID)
                             ? kBossKnockbackScale : 1.f;
+                if (world.has_component<EnemyArchetypeComponent>(targetID))
+                    scale = enemy_archetype_def(
+                        world.get_component<EnemyArchetypeComponent>(targetID).type).knockbackScale;
                 KnockbackComponent& kb = world.has_component<KnockbackComponent>(targetID)
                     ? world.get_component<KnockbackComponent>(targetID)
                     : world.add_component<KnockbackComponent>(targetID);
