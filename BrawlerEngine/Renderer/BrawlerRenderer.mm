@@ -108,9 +108,11 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
 
 @implementation BrawlerRenderer {
     id<MTLRenderPipelineState> _pipeline;        // flat-color quads
+    id<MTLRenderPipelineState> _shadowPipeline;  // alpha-blended blob shadows
     id<MTLRenderPipelineState> _skinnedPipeline; // skinned meshes
     id<MTLDepthStencilState>   _depthState;
-    id<MTLDepthStencilState>   _noDepthState;   // for 2D HUD overlay
+    id<MTLDepthStencilState>   _noDepthState;     // for 2D HUD overlay
+    id<MTLDepthStencilState>   _shadowDepthState; // test, never write
     id<MTLSamplerState>        _linearSampler;
     id<MTLBuffer>              _quadVB;
     id<MTLBuffer>              _boneBuf[3];      // triple-buffered bone matrices
@@ -161,6 +163,27 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         if (!_pipeline) { NSLog(@"Flat pipeline: %@", err); return nil; }
     }
 
+    // Blob shadow pipeline — same vertex layout, alpha blending enabled.
+    {
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction   = [lib newFunctionWithName:@"shadow_vertex"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"shadow_fragment"];
+        pd.colorAttachments[0].pixelFormat = pfmt;
+        pd.depthAttachmentPixelFormat      = MTLPixelFormatDepth32Float;
+        pd.colorAttachments[0].blendingEnabled             = YES;
+        pd.colorAttachments[0].sourceRGBBlendFactor        = MTLBlendFactorSourceAlpha;
+        pd.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
+        pd.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorSourceAlpha;
+        pd.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+        MTLVertexDescriptor *vd = [MTLVertexDescriptor new];
+        vd.attributes[0].format = MTLVertexFormatFloat3;
+        vd.attributes[0].offset = 0; vd.attributes[0].bufferIndex = 0;
+        vd.layouts[0].stride    = sizeof(simd_float3);
+        pd.vertexDescriptor = vd;
+        _shadowPipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!_shadowPipeline) NSLog(@"Shadow pipeline: %@", err);
+    }
+
     // Skinned mesh pipeline
     {
         MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
@@ -199,6 +222,13 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     dd2.depthCompareFunction = MTLCompareFunctionAlways;
     dd2.depthWriteEnabled    = NO;
     _noDepthState = [device newDepthStencilStateWithDescriptor:dd2];
+
+    // Shadows: depth-test against the scene but never write — overlapping
+    // blobs must not z-fight each other.
+    MTLDepthStencilDescriptor *dd3 = [MTLDepthStencilDescriptor new];
+    dd3.depthCompareFunction = MTLCompareFunctionLess;
+    dd3.depthWriteEnabled    = NO;
+    _shadowDepthState = [device newDepthStencilStateWithDescriptor:dd3];
 
     // Linear sampler for character textures
     MTLSamplerDescriptor *sd = [MTLSamplerDescriptor new];
@@ -313,6 +343,28 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         u.color = kWallColor;
         [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
         [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+    }
+
+    // Blob shadows — soft dark circles grounding each character, drawn flat
+    // just above the floor before any entity so meshes render over them.
+    if (_shadowPipeline) {
+        static const float kShadowSize  = 95.f;
+        static const float kShadowAlpha = 0.45f;
+        [enc setRenderPipelineState:_shadowPipeline];
+        [enc setDepthStencilState:_shadowDepthState];
+        [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+        for (EntityID eid = 0; eid < world->entity_count(); ++eid) {
+            if (!world->has_component<PositionComponent>(eid)) continue;
+            if (!world->has_component<AnimationComponent>(eid)) continue;
+            auto& pos = world->get_component<PositionComponent>(eid);
+            float size = kShadowSize;
+            if (world->has_component<BossTagComponent>(eid)) size *= 2.f;
+            DrawUniforms u;
+            u.mvp   = simd_mul(vp, make_model_rect(pos.x, pos.y, -0.5f, size, size));
+            u.color = (simd_float4){0, 0, 0, kShadowAlpha};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
     }
 
     _frameIdx = (_frameIdx + 1) % 3;
