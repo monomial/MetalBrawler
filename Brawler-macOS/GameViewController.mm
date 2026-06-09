@@ -3,12 +3,14 @@
 #import <GameController/GameController.h>
 #import <QuartzCore/QuartzCore.h>
 #import "BrawlerGameDelegate.h"
+#import "BrawlerAutoTest.h"
 #import "BrawlerStrings.h"
 #include "Platform/InputState.h"
 
 @implementation GameViewController {
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
+    BrawlerAutoTest     *_autoTest;
     NSTextField         *_overlayField;
     NSView              *_damageFlashView;
     BOOL _left, _right, _up, _down, _attack;
@@ -19,6 +21,8 @@
                                        device:MTLCreateSystemDefaultDevice()];
     _mtkView.colorPixelFormat        = MTLPixelFormatBGRA8Unorm;
     _mtkView.depthStencilPixelFormat = MTLPixelFormatDepth32Float;
+    if ([BrawlerAutoTest isEnabled])
+        _mtkView.framebufferOnly = NO; // allow drawable blit for screenshots
     self.view = _mtkView;
 }
 
@@ -139,6 +143,12 @@
                name:GCControllerDidConnectNotification
              object:nil];
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
+
+    // --autotest: bot plays a full run, screenshots land in --autotest-out.
+    if ([BrawlerAutoTest isEnabled]) {
+        _autoTest = [[BrawlerAutoTest alloc] initWithDelegate:_delegate];
+        [_autoTest start];
+    }
 }
 
 // ---------------------------------------------------------------------------

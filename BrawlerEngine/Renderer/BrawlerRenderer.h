@@ -24,4 +24,8 @@ struct LoadedCharacter;
             inView:(MTKView*)view
      commandBuffer:(id<MTLCommandBuffer>)cmd;
 
+// Write the next rendered frame to a PNG at path (async, off-main). Used by
+// the --autotest smoke mode. Requires view.framebufferOnly == NO.
+- (void)captureNextFrameToPath:(NSString*)path;
+
 @end

@@ -132,6 +132,7 @@
 		E66F4BC5D009C5595D0C80B6 /* AnimationSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C375040E396E4D9619804D9B /* AnimationSystem.mm */; };
 		E8B124E0D81B7D76326033C2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E13413F89AC01BF3699C455 /* Cocoa.framework */; };
 		E96A56355052DB3DAD8A2B2D /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
+		EAB7B01040674FDBEF94CDC6 /* BrawlerAutoTest.mm in Sources */ = {isa = PBXBuildFile; fileRef = F170A9F94C362768722235B4 /* BrawlerAutoTest.mm */; };
 		EAC5D3D3EE60C3C72B17B627 /* DodgeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */; };
 		EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */; };
 		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
@@ -149,6 +150,7 @@
 
 /* Begin PBXFileReference section */
 		00C8BDF61BE29981A3BF1799 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		01943DCE90FE56C851CB6DAB /* BrawlerAutoTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrawlerAutoTest.h; sourceTree = "<group>"; };
 		027DE2E18E8F3FB22C010E6F /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		0716EB35B0F07AB5DD810FDB /* BrawlerLogicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BrawlerLogicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		082F14CDBDD078DD1EFF688D /* PhysicsTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PhysicsTests.mm; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 		EAA717FE7B2D2BFDC637ED65 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
 		EBD7464D60D21D33CB1F8405 /* PhysicsSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PhysicsSystem.mm; sourceTree = "<group>"; };
 		EDC56629B2591E36265F1929 /* CharacterLoader.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CharacterLoader.mm; sourceTree = "<group>"; };
+		F170A9F94C362768722235B4 /* BrawlerAutoTest.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BrawlerAutoTest.mm; sourceTree = "<group>"; };
 		F44352FD41BDCADB1E9D6EE1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F589CAA671997CF2E639FC51 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		F597F0F0761E7D3A6F230D61 /* HapticsEngine.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HapticsEngine.mm; sourceTree = "<group>"; };
@@ -478,6 +481,8 @@
 				9C58B0820BED229EE2C5D6D9 /* AppDelegate.h */,
 				82F1526BBF752AED74E1FC4E /* AppDelegate.mm */,
 				A6810614C2204A8150AF7081 /* Assets.xcassets */,
+				01943DCE90FE56C851CB6DAB /* BrawlerAutoTest.h */,
+				F170A9F94C362768722235B4 /* BrawlerAutoTest.mm */,
 				73B997F413EE7874F18915C7 /* GameViewController.h */,
 				F63305F8EE199B9C7E16C758 /* GameViewController.mm */,
 				F44352FD41BDCADB1E9D6EE1 /* Info.plist */,
@@ -741,6 +746,7 @@
 				FBA16BF0F243CF42183ED12F /* AudioEngine.mm in Sources */,
 				1846E9CEAE2717C5B3A6361E /* AutoPilot.mm in Sources */,
 				B79D22A89C73DD7F51A27241 /* Brawler.metal in Sources */,
+				EAB7B01040674FDBEF94CDC6 /* BrawlerAutoTest.mm in Sources */,
 				A4D2AC5F911EBD8509D4B64A /* BrawlerGameDelegate.mm in Sources */,
 				422EA068454728D5F207F7DD /* BrawlerRenderer.mm in Sources */,
 				BCE0400E90F2AFCA75821048 /* CharacterLoader.mm in Sources */,

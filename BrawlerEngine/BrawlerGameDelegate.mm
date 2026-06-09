@@ -251,6 +251,8 @@ static const float kLoseDuration      = 3.5f;
     [self _transitionToPhase:BrawlerGamePhasePlaying];
 }
 
+- (void)captureNextFrameToPath:(NSString *)path          { [_renderer captureNextFrameToPath:path]; }
+
 - (void)triggerAttack                                    { _attackPulse = YES; }
 - (void)triggerDodge                                     { _dodgePulse  = YES; }
 - (void)triggerPause                                     { _pausePulse  = YES; }

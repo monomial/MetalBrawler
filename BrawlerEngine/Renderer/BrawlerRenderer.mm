@@ -1,5 +1,6 @@
 #import "BrawlerRenderer.h"
 #import <simd/simd.h>
+#import <ImageIO/ImageIO.h>
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
@@ -102,6 +103,9 @@ static float clampf(float v, float lo, float hi) {
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
+static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
+                     NSUInteger bpr, NSString *path);
+
 @implementation BrawlerRenderer {
     id<MTLRenderPipelineState> _pipeline;        // flat-color quads
     id<MTLRenderPipelineState> _skinnedPipeline; // skinned meshes
@@ -117,6 +121,7 @@ static float clampf(float v, float lo, float hi) {
     LoadedCharacter* _playerChar;
     LoadedCharacter* _enemyChar;
     float            _facingAngle[kMaxAnimEntities]; // per-entity last known facing (atan2 radians)
+    NSString*        _pendingCapturePath;            // --autotest: next frame → PNG
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt {
@@ -463,7 +468,62 @@ static float clampf(float v, float lo, float hi) {
     }
 
     [enc endEncoding];
+
+    // --autotest screenshot: blit the drawable into a CPU-readable buffer and
+    // write a PNG once the GPU finishes the frame.
+    if (_pendingCapturePath) {
+        NSString *path = _pendingCapturePath;
+        _pendingCapturePath = nil;
+
+        id<MTLTexture> tex = view.currentDrawable.texture;
+        if (tex.framebufferOnly) {
+            NSLog(@"BrawlerRenderer: capture skipped — view.framebufferOnly must be NO");
+        } else {
+            NSUInteger w   = tex.width, h = tex.height;
+            NSUInteger bpr = ((w * 4 + 255) / 256) * 256; // blit requires 256-byte row alignment
+            id<MTLBuffer> staging = [tex.device newBufferWithLength:bpr * h
+                                                            options:MTLResourceStorageModeShared];
+            id<MTLBlitCommandEncoder> blit = [cmd blitCommandEncoder];
+            [blit copyFromTexture:tex sourceSlice:0 sourceLevel:0
+                     sourceOrigin:MTLOriginMake(0, 0, 0)
+                       sourceSize:MTLSizeMake(w, h, 1)
+                         toBuffer:staging destinationOffset:0
+            destinationBytesPerRow:bpr destinationBytesPerImage:bpr * h];
+            [blit endEncoding];
+
+            [cmd addCompletedHandler:^(id<MTLCommandBuffer> _) {
+                writePNG(staging, w, h, bpr, path);
+            }];
+        }
+    }
+
     [cmd presentDrawable:view.currentDrawable];
+}
+
+// Write a BGRA8 staging buffer as a PNG. Runs on the Metal completion thread.
+static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
+                     NSUInteger bpr, NSString *path) {
+    CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+    CGContextRef ctx = CGBitmapContextCreate(staging.contents, w, h, 8, bpr, cs,
+        kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Little); // BGRA, ignore alpha
+    CGImageRef img = ctx ? CGBitmapContextCreateImage(ctx) : NULL;
+    if (img) {
+        NSURL *url = [NSURL fileURLWithPath:path];
+        CGImageDestinationRef dst = CGImageDestinationCreateWithURL(
+            (__bridge CFURLRef)url, (__bridge CFStringRef)@"public.png", 1, NULL);
+        if (dst) {
+            CGImageDestinationAddImage(dst, img, NULL);
+            CGImageDestinationFinalize(dst);
+            CFRelease(dst);
+        }
+        CGImageRelease(img);
+    }
+    if (ctx) CGContextRelease(ctx);
+    CGColorSpaceRelease(cs);
+}
+
+- (void)captureNextFrameToPath:(NSString*)path {
+    _pendingCapturePath = [path copy];
 }
 
 @end

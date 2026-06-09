@@ -67,6 +67,10 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 // --autotest visual smoke mode.
 @property (nonatomic) BOOL autoPilotEnabled;
 
+// Write the next rendered frame to a PNG (async). No-op in headless mode.
+// Requires the MTKView's framebufferOnly == NO.
+- (void)captureNextFrameToPath:(NSString *)path;
+
 // Read-only game state for platform UIs (overlay labels, HUD).
 @property (readonly, nonatomic) BrawlerGamePhase gamePhase;
 @property (readonly, nonatomic) int currentRoom;    // 1-indexed (1–4)
