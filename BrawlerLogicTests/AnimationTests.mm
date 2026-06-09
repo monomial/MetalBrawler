@@ -186,6 +186,30 @@ static void advance(World& w, float seconds) {
     XCTAssertFalse(world.has_component<AnimationComponent>(e));
 }
 
+// Case 5b: the corpse lingers (dissolving) for ~1s after the clip ends instead
+// of popping out the same frame.
+- (void)test_dying_corpseDissolvesBeforeDestroy {
+    World world;
+    EntityID e = make_animated(world, FactionComponent::Enemy);
+    auto& anim = world.get_component<AnimationComponent>(e);
+    anim.currentClip   = AnimClipID::Death;
+    anim.requestedClip = AnimClipID::Death;
+    anim.looping       = false;
+    anim.dying         = true;
+
+    // Death clip plays at 2x: done at kDeathDur/2 ≈ 2.25s. Probe mid-fade.
+    advance(world, kDeathDur / 2.f + 0.3f);
+    XCTAssertTrue(world.has_component<AnimationComponent>(e),
+                  @"corpse must still exist shortly after the clip ends");
+    const auto& a = world.get_component<AnimationComponent>(e);
+    XCTAssertLessThan(a.deathFade, 1.f, @"fade must be in progress");
+    XCTAssertGreaterThan(a.deathFade, 0.f);
+
+    advance(world, 1.0f); // past the fade window
+    XCTAssertFalse(world.has_component<AnimationComponent>(e),
+                   @"corpse destroyed once the dissolve completes");
+}
+
 // Case 6: player entity is NOT destroyed after death clip (game loop handles it).
 - (void)test_dying_player_notDestroyedByAnimationSystem {
     World world;

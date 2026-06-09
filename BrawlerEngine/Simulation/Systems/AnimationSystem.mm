@@ -138,13 +138,19 @@ void AnimationSystem_update(World& world, float gameDt) {
                                 ? 0.f : anim.blendRemaining - gameDt;
     }
 
-    // Destroy non-player entities whose death animation has finished.
+    // Dissolve then destroy non-player entities whose death animation has
+    // finished: the corpse fades out over kDeathFadeDuration instead of
+    // popping out of existence the frame the clip ends.
+    static constexpr float kDeathFadeDuration = 1.0f;
     for (EntityID id = 0; id < count; ++id) {
         if (!world.has_component<AnimationComponent>(id)) continue;
         if (world.player_tags().present(id)) continue; // player death handled by game loop
-        const AnimationComponent& anim = world.get_component<AnimationComponent>(id);
-        if (anim.dying && anim.clipDone && anim.currentClip == AnimClipID::Death)
-            world.defer_destroy(id);
+        AnimationComponent& anim = world.get_component<AnimationComponent>(id);
+        if (anim.dying && anim.clipDone && anim.currentClip == AnimClipID::Death) {
+            anim.deathFade -= gameDt / kDeathFadeDuration;
+            if (anim.deathFade <= 0.f)
+                world.defer_destroy(id);
+        }
     }
 }
 

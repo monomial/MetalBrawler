@@ -398,9 +398,10 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
             auto& pos = world->get_component<PositionComponent>(eid);
             float size = kShadowSize;
             if (world->has_component<BossTagComponent>(eid)) size *= 2.f;
+            float fade = world->get_component<AnimationComponent>(eid).deathFade;
             DrawUniforms u;
             u.mvp   = simd_mul(vp, make_model_rect(pos.x, pos.y, -0.5f, size, size));
-            u.color = (simd_float4){0, 0, 0, kShadowAlpha};
+            u.color = (simd_float4){0, 0, 0, kShadowAlpha * fade};
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
         }
@@ -436,6 +437,7 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
 
         if (hasMesh) {
             auto& anim = world->get_component<AnimationComponent>(eid);
+            color.w = anim.deathFade; // 1 normally; < 1 = corpse dissolve
             NSUInteger boneOffset = (NSUInteger)eid * kBoneMatStride;
             memcpy((uint8_t*)_boneBuf[_frameIdx].contents + boneOffset,
                    anim.boneMatrices, kBoneMatStride);

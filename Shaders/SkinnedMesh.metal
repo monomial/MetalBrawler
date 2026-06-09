@@ -59,6 +59,14 @@ fragment float4 skinned_fragment_main(
     texture2d<float> diffuseTex   [[texture(0)]],
     sampler           texSampler  [[sampler(0)]])
 {
+    // Screen-door dissolve for corpse fade-out: tint.a carries deathFade
+    // (1 = solid). Discarding by a per-pixel hash needs no blending and no
+    // depth sorting.
+    if (in.tint.a < 1.0) {
+        float h = fract(sin(dot(in.position.xy, float2(12.9898, 78.233))) * 43758.5453);
+        if (h > in.tint.a) discard_fragment();
+    }
+
     // Sample character skin texture; fall back to white if texture is missing/1x1.
     float4 texColor = diffuseTex.sample(texSampler, in.texcoord);
 

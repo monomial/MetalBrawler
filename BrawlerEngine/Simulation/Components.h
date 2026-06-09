@@ -83,6 +83,9 @@ struct AnimationComponent {
     AnimClipID prevClip       = AnimClipID::Idle;
     float      prevClipTime   = 0.f; // frozen sample time of the outgoing clip
     float      blendRemaining = 0.f; // seconds of cross-fade left (0 = no blend)
+    // Death dissolve: after the death clip finishes the corpse fades 1 → 0
+    // (screen-door dissolve in the shader) before the entity is destroyed.
+    float      deathFade      = 1.f;
     float      boneMatrices[kMaxBones][16]; // column-major float4x4 per bone
 };
 
