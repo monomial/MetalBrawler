@@ -29,6 +29,7 @@ template<> ComponentStorage<BossTagComponent>&            World::_pool() { retur
 
 World::World()
     : _nextID(0)
+    , _rngState(0x9E3779B9u)
     , _deferredDestroyCount(0)
     , _accumulator(0.0f)
     , _hitStopTicks(0)

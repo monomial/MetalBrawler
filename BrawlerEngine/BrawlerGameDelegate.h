@@ -20,6 +20,16 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt;
 
+// Headless init for scenario tests and automation: full game logic and phase
+// machine, but no renderer, audio, haptics, or character meshes. All of those
+// are nil and every call to them is a no-op (ObjC nil messaging).
+- (instancetype)initHeadless;
+
+// Advance game logic by dt seconds: input pulses, simulation, event routing,
+// phase state machine. Called by drawInMTKView: each frame; headless drivers
+// call it directly with a fixed dt.
+- (void)advanceFrame:(float)dt;
+
 // Set the full input state for a specific player (0 = P1, 1 = P2, …).
 - (void)setInputState:(InputState)state forPlayer:(int)playerIndex;
 
@@ -47,6 +57,15 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.
 - (void)resetInput;
+
+// Deterministic-run override: when nonzero, every room load seeds the World
+// RNG with this value (scenario tests, --autotest). 0 = random seed per room.
+@property (nonatomic) uint32_t rngSeedOverride;
+
+// When YES, AutoPilot drives every active player during the Playing phase:
+// walk to the nearest enemy, punch in range. Used by scenario tests and the
+// --autotest visual smoke mode.
+@property (nonatomic) BOOL autoPilotEnabled;
 
 // Read-only game state for platform UIs (overlay labels, HUD).
 @property (readonly, nonatomic) BrawlerGamePhase gamePhase;

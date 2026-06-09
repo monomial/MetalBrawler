@@ -79,6 +79,19 @@ public:
 
     uint32_t entity_count() const { return _nextID; }
 
+    // Deterministic sim RNG (xorshift32). All gameplay randomness must come
+    // from here — a seeded World with identical inputs replays identically,
+    // which the headless scenario tests rely on.
+    void set_seed(uint32_t seed) { _rngState = seed ? seed : 0x9E3779B9u; }
+    uint32_t rand_u32() {
+        uint32_t x = _rngState;
+        x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+        return _rngState = x;
+    }
+    // Modulo bias is fine for gameplay-scale ranges.
+    uint32_t rand_range(uint32_t n) { return n ? rand_u32() % n : 0; }
+    float    rand_float01()         { return (float)(rand_u32() >> 8) * (1.0f / 16777216.0f); }
+
     // Per-frame event bus — cleared at top of each tick, readable by all systems.
     EventBus& events() { return _events; }
 
@@ -105,6 +118,7 @@ private:
     void tick(float gameDt); // one fixed-timestep physics step
 
     uint32_t _nextID;
+    uint32_t _rngState;
     uint32_t _deferredDestroyCount;
     EntityID _deferredDestroy[256];
     EventBus   _events;         // cleared each tick

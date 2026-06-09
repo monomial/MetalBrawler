@@ -116,7 +116,7 @@ void CombatSystem_update(World& world, float gameDt) {
                 // Enemies react unless they're a boss; bosses react ~10% of the time.
                 bool isPlayer = world.has_component<PlayerTagComponent>(targetID);
                 bool isBoss   = world.has_component<BossTagComponent>(targetID);
-                if (!isPlayer && (!isBoss || arc4random_uniform(10) == 0))
+                if (!isPlayer && (!isBoss || world.rand_range(10) == 0))
                     AnimationSystem_request_clip(world, targetID, AnimClipID::Hurt);
             }
         }

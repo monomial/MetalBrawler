@@ -1,6 +1,7 @@
 #import "BrawlerGameDelegate.h"
 #import <MetalKit/MetalKit.h>
 #include "Simulation/World.h"
+#include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Assets/CharacterLoader.h"
 #import "Renderer/BrawlerRenderer.h"
@@ -91,6 +92,19 @@ static const float kLoseDuration      = 3.5f;
     return self;
 }
 
+- (instancetype)initHeadless {
+    self = [super init];
+    if (!self) return nil;
+
+    // No command queue, renderer, audio, haptics, or meshes — every message to
+    // those nil ivars is a no-op, so the full game logic runs unchanged.
+    _lastTime   = CACurrentMediaTime();
+    _numPlayers = 1;
+    _phase      = BrawlerGamePhaseTitle;
+
+    return self;
+}
+
 - (void)_loadCharacters:(id<MTLDevice>)device {
     NSString *res = [NSBundle mainBundle].resourcePath;
     NSString *playerDir = [res stringByAppendingPathComponent:@"assets/characters/player"];
@@ -153,6 +167,7 @@ static const float kLoseDuration      = 3.5f;
 
 - (void)_loadRoom {
     _world = World();
+    _world.set_seed(self.rngSeedOverride ? self.rngSeedOverride : arc4random());
     [self resetInput];
     [self _spawnPlayers];
     [self _spawnEnemiesForCurrentRoom];
@@ -256,12 +271,15 @@ static const float kLoseDuration      = 3.5f;
     [_renderer updateDrawableSize:size];
 }
 
-- (void)drawInMTKView:(MTKView *)view {
-    dispatch_semaphore_wait(_frameSemaphore, DISPATCH_TIME_FOREVER);
-
-    CFTimeInterval now = CACurrentMediaTime();
-    float dt = fminf((float)(now - _lastTime), 0.1f);
-    _lastTime = now;
+// One frame of game logic, independent of rendering: input pulses, simulation,
+// event→audio/haptics routing, phase state machine. Headless drivers (scenario
+// tests, --autotest) call this directly with a fixed dt.
+- (void)advanceFrame:(float)dt {
+    // AutoPilot (scenario tests, --autotest): bot input replaces human input.
+    if (self.autoPilotEnabled && _phase == BrawlerGamePhasePlaying) {
+        for (int p = 0; p < _numPlayers; ++p)
+            _world.set_input(AutoPilot_input(_world, p), p);
+    }
 
     // Single-frame pulses (touch tap / flick / pause).
     BOOL anyActionPulse = _attackPulse || _dodgePulse || _pausePulse;
@@ -391,6 +409,16 @@ static const float kLoseDuration      = 3.5f;
     _attackPulse = NO;
     _dodgePulse  = NO;
     _pausePulse  = NO;
+}
+
+- (void)drawInMTKView:(MTKView *)view {
+    dispatch_semaphore_wait(_frameSemaphore, DISPATCH_TIME_FOREVER);
+
+    CFTimeInterval now = CACurrentMediaTime();
+    float dt = fminf((float)(now - _lastTime), 0.1f);
+    _lastTime = now;
+
+    [self advanceFrame:dt];
 
     id<MTLCommandBuffer> cmd = [_commandQueue commandBuffer];
     __block dispatch_semaphore_t sem = _frameSemaphore;

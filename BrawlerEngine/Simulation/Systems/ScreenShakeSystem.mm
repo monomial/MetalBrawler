@@ -13,7 +13,13 @@ void ScreenShakeSystem_trigger(World& /*world*/, float magnitude) {
     if (magnitude > s_magnitude) s_magnitude = magnitude;
 }
 
-void ScreenShakeSystem_update(World& /*world*/, float physicalDt) {
+void ScreenShakeSystem_update(World& world, float physicalDt) {
+    // Always consume exactly one RNG draw per tick, even when idle: shake
+    // magnitude is global (one camera) while the RNG belongs to the World, so
+    // conditional consumption would let one World's shake state shift another
+    // seeded World's RNG stream and break deterministic replays.
+    float angle = world.rand_float01() * 2.f * (float)M_PI;
+
     if (s_magnitude < 0.5f) {
         s_magnitude = 0.f;
         s_offset    = {0, 0};
@@ -22,9 +28,6 @@ void ScreenShakeSystem_update(World& /*world*/, float physicalDt) {
 
     // Exponential decay.
     s_magnitude *= expf(-kDecayRate * physicalDt);
-
-    // Random direction each tick → jitter effect.
-    float angle = ((float)rand() / (float)RAND_MAX) * 2.f * (float)M_PI;
     s_offset = { cosf(angle) * s_magnitude, sinf(angle) * s_magnitude };
 }
 

@@ -1,0 +1,174 @@
+#import <XCTest/XCTest.h>
+#import "BrawlerGameDelegate.h"
+
+// Full-game integration tests: a headless BrawlerGameDelegate driven at a
+// fixed 60Hz frame rate, with AutoPilot standing in for human input. These are
+// the regression gate for gameplay changes — if the bot can no longer fight
+// through a run, something load-bearing broke.
+
+static const float kFrameDt = 1.0f / 60.0f;
+
+// Advance until the delegate reaches `phase` or `maxSimSeconds` of simulated
+// time elapses. Returns YES if the phase was reached.
+static BOOL advanceUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
+                              float maxSimSeconds) {
+    int maxFrames = (int)(maxSimSeconds / kFrameDt);
+    for (int i = 0; i < maxFrames; ++i) {
+        if (d.gamePhase == phase) return YES;
+        [d advanceFrame:kFrameDt];
+    }
+    return d.gamePhase == phase;
+}
+
+static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
+    int frames = (int)(seconds / kFrameDt);
+    for (int i = 0; i < frames; ++i)
+        [d advanceFrame:kFrameDt];
+}
+
+@interface ScenarioTests : XCTestCase
+@end
+
+@implementation ScenarioTests
+
+- (BrawlerGameDelegate *)makeDelegateWithSeed:(uint32_t)seed {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    d.rngSeedOverride = seed;
+    return d;
+}
+
+// --- Full win run -----------------------------------------------------------
+
+- (void)test_autoPilot_1P_winsFullRun {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:42];
+    d.autoPilotEnabled = YES;
+
+    NSMutableArray<NSNumber *> *phases = [NSMutableArray array];
+    d.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
+        [phases addObject:@(phase)];
+    };
+
+    [d startGameWithPlayers:1];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+    XCTAssertEqual(d.currentRoom, 1);
+
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 240.f);
+    XCTAssertTrue(won, @"AutoPilot failed to clear all 4 rooms within 240 sim-seconds (ended in phase %ld, room %d, lives %d)",
+                  (long)d.gamePhase, d.currentRoom, d.livesRemaining);
+
+    // The run must have passed through RoomClear at least 3 times (rooms 1-3;
+    // room 4 transitions straight to Win).
+    NSInteger clears = 0;
+    for (NSNumber *p in phases)
+        if (p.integerValue == BrawlerGamePhaseRoomClear) clears++;
+    XCTAssertGreaterThanOrEqual(clears, (NSInteger)3);
+}
+
+- (void)test_autoPilot_2P_winsFullRun {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:1337];
+    d.autoPilotEnabled = YES;
+
+    [d startGameWithPlayers:2];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 240.f);
+    XCTAssertTrue(won, @"2P AutoPilot failed to win (phase %ld, room %d, lives %d)",
+                  (long)d.gamePhase, d.currentRoom, d.livesRemaining);
+}
+
+// --- Lose path --------------------------------------------------------------
+
+- (void)test_idlePlayer_losesAllLivesThenGameOver {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:7];
+    // No autopilot: the player stands at spawn until the enemies beat them down.
+
+    [d startGameWithPlayers:1];
+    XCTAssertEqual(d.livesRemaining, 3);
+
+    BOOL lost = advanceUntilPhase(d, BrawlerGamePhaseLose, 240.f);
+    XCTAssertTrue(lost, @"Idle player never reached the Lose phase (phase %ld, room %d, lives %d)",
+                  (long)d.gamePhase, d.currentRoom, d.livesRemaining);
+    XCTAssertEqual(d.livesRemaining, 0);
+
+    // Lose screen times out back to the title.
+    BOOL backToTitle = advanceUntilPhase(d, BrawlerGamePhaseTitle, 10.f);
+    XCTAssertTrue(backToTitle);
+}
+
+- (void)test_lifeLoss_reloadsSameRoom {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:7];
+
+    [d startGameWithPlayers:1];
+
+    // Advance until exactly one life is gone.
+    int maxFrames = (int)(120.f / kFrameDt);
+    for (int i = 0; i < maxFrames && d.livesRemaining == 3; ++i)
+        [d advanceFrame:kFrameDt];
+
+    XCTAssertEqual(d.livesRemaining, 2, @"expected to lose exactly one life");
+    XCTAssertEqual(d.currentRoom, 1, @"life loss must reload the same room, not advance");
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+}
+
+// --- Pause ------------------------------------------------------------------
+
+- (void)test_pause_freezesSimulation {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:7];
+
+    [d startGameWithPlayers:1];
+    [d triggerPause];
+    [d advanceFrame:kFrameDt];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePaused);
+
+    // An idle player would normally be dead well within 60s; paused, nothing
+    // can touch them.
+    advanceSeconds(d, 60.f);
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePaused);
+    XCTAssertEqual(d.livesRemaining, 3);
+
+    [d triggerPause];
+    [d advanceFrame:kFrameDt];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+}
+
+// --- Title / player-select flow ----------------------------------------------
+
+- (void)test_titleFlow_attackSelectsOnePlayer {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:7];
+
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhaseTitle);
+    [d triggerAttack];
+    [d advanceFrame:kFrameDt];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlayerSelect);
+
+    [d triggerAttack];
+    [d advanceFrame:kFrameDt];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+    XCTAssertEqual(d.currentRoom, 1);
+    XCTAssertEqual(d.livesRemaining, 3);
+}
+
+// --- Determinism -------------------------------------------------------------
+
+- (void)test_sameSeed_identicalPhaseTranscript {
+    // Two runs with the same seed and the same (bot) inputs must produce the
+    // same sequence of phase transitions with the same room/lives at each.
+    NSMutableArray<NSString *> *a = [NSMutableArray array];
+    NSMutableArray<NSString *> *b = [NSMutableArray array];
+
+    for (NSMutableArray<NSString *> *transcript in @[a, b]) {
+        BrawlerGameDelegate *d = [self makeDelegateWithSeed:9001];
+        d.autoPilotEnabled = YES;
+        d.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
+            [transcript addObject:[NSString stringWithFormat:@"%ld/%d/%d",
+                                   (long)phase, room, lives]];
+        };
+        [d startGameWithPlayers:1];
+        advanceSeconds(d, 90.f);
+    }
+
+    XCTAssertGreaterThan(a.count, (NSUInteger)1, @"expected at least some phase transitions");
+    XCTAssertEqualObjects(a, b, @"identical seeds must replay identically");
+}
+
+@end
