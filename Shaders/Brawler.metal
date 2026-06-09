@@ -149,3 +149,54 @@ fragment float4 particle_fragment(ParticleOut in [[stage_in]]) {
     glow *= glow;                                  // hot core, fast falloff
     return float4(in.color.rgb * glow * in.color.a, 1.0); // additive: alpha unused
 }
+
+// ---------------------------------------------------------------------------
+// Post-process — fullscreen pass over the offscreen scene texture:
+// radial blur toward screen center on hits, red edge vignette on damage.
+// ---------------------------------------------------------------------------
+
+struct PostUniforms {              // matches PostUniformsGPU in BrawlerRenderer.mm
+    float hitBlur;                 // 0..1, decays ~0.15s after a hit
+    float damageFlash;             // 0..1, decays ~0.35s after the player is hit
+};
+
+struct PostOut {
+    float4 position [[position]];
+    float2 uv;
+};
+
+vertex PostOut post_vertex(uint vid [[vertex_id]]) {
+    // Single fullscreen triangle.
+    float2 pos[3] = { float2(-1.0, -1.0), float2(3.0, -1.0), float2(-1.0, 3.0) };
+    PostOut o;
+    o.position = float4(pos[vid], 0.0, 1.0);
+    o.uv = float2(pos[vid].x * 0.5 + 0.5, 1.0 - (pos[vid].y * 0.5 + 0.5));
+    return o;
+}
+
+fragment float4 post_fragment(PostOut in [[stage_in]],
+                              texture2d<float> scene [[texture(0)]],
+                              sampler           s    [[sampler(0)]],
+                              constant PostUniforms& u [[buffer(0)]])
+{
+    float3 c = scene.sample(s, in.uv).rgb;
+
+    // Radial blur: extra taps marching toward screen center, scaled by hit
+    // strength. Cheap (5 taps) and only sampled while a hit is fresh.
+    if (u.hitBlur > 0.003) {
+        float2 toCenter = float2(0.5, 0.5) - in.uv;
+        float3 acc = c;
+        for (int i = 1; i <= 5; i++) {
+            float t = (float)i * (0.035 / 5.0) * u.hitBlur;
+            acc += scene.sample(s, in.uv + toCenter * t).rgb;
+        }
+        c = acc / 6.0;
+    }
+
+    // Damage vignette: red bleed from the screen edges.
+    float2 d   = abs(in.uv - 0.5) * 2.0;
+    float edge = smoothstep(0.55, 1.0, max(d.x, d.y));
+    c = mix(c, float3(0.9, 0.04, 0.04), edge * u.damageFlash * 0.85);
+
+    return float4(c, 1.0);
+}

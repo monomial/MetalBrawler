@@ -31,6 +31,11 @@ struct LoadedCharacter;
 // the --autotest smoke mode. Requires view.framebufferOnly == NO.
 - (void)captureNextFrameToPath:(NSString*)path;
 
+// Post-FX triggers: brief radial blur on a landed hit (strength 0..1) and a
+// red edge vignette when the player takes damage. Both decay automatically.
+- (void)triggerHitBlur:(float)strength;
+- (void)triggerDamageFlash;
+
 // Spawn a radial particle burst (hit sparks, telegraphs, clears) at a world
 // position. Rendered as additive camera-facing billboards next frame.
 - (void)spawnBurstAt:(simd_float3)pos

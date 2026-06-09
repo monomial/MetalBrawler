@@ -458,8 +458,9 @@ struct PlayerPerks {
                                       color:(simd_float4){1.0f, 0.85f, 0.35f, 1.f}];
             }
 
-            if (hitThisFrame) return; // sound/haptic once per frame
+            if (hitThisFrame) return; // sound/haptic/blur once per frame
             hitThisFrame = true;
+            [_renderer triggerHitBlur:finisher ? 1.f : 0.45f];
             if (finisher) {
                 [_audio  playFinisherSound];
                 [_haptics playFinisherHaptic];
@@ -530,6 +531,7 @@ struct PlayerPerks {
                 _world.has_component<HealthComponent>(tid) &&
                 _world.get_component<HealthComponent>(tid).current > 0) {
                 [_audio playHurtSound];
+                [_renderer triggerDamageFlash]; // in-shader red edge vignette
                 if (self.onPlayerDamaged)
                     dispatch_async(dispatch_get_main_queue(), self.onPlayerDamaged);
             }

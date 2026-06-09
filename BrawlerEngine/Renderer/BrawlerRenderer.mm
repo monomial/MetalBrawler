@@ -15,6 +15,8 @@ typedef struct { simd_float4x4 vp; simd_float3 camRight; simd_float3 camUp; } Pa
 // Must match FloorUniforms in Brawler.metal.
 typedef struct { simd_float4x4 mvp; simd_float4 baseColor; simd_float4 lineColor;
                  simd_float2 center; simd_float2 size; } FloorUniformsGPU;
+// Must match PostUniforms in Brawler.metal.
+typedef struct { float hitBlur; float damageFlash; } PostUniformsGPU;
 
 // Per-room palette — indexed by roomIndex, wraps if there are more rooms.
 typedef struct {
@@ -168,7 +170,16 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     id<MTLBuffer>              _particleVB[3];       // triple-buffered instances
     ParticleSim                _particles;
     uint32_t                   _burstSeed;
-    CFTimeInterval             _lastParticleTime;    // renderer-local dt for the sim
+    CFTimeInterval             _lastParticleTime;    // renderer-local dt for sim + decays
+
+    // Post-process: the scene renders into _sceneColor, then a fullscreen
+    // pass applies radial hit blur + damage vignette into the drawable.
+    id<MTLRenderPipelineState> _postPipeline;
+    id<MTLTexture>             _sceneColor;
+    id<MTLTexture>             _sceneDepth;
+    MTLPixelFormat             _pixelFormat;
+    float                      _hitBlur;     // 0..1, decays fast
+    float                      _damageFlash; // 0..1, decays slower
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt {
@@ -206,6 +217,19 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         pd.vertexDescriptor = vd;
         _pipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
         if (!_pipeline) { NSLog(@"Flat pipeline: %@", err); return nil; }
+    }
+
+    _pixelFormat = pfmt;
+
+    // Post-process pipeline — fullscreen triangle, no vertex buffers.
+    {
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction   = [lib newFunctionWithName:@"post_vertex"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"post_fragment"];
+        pd.colorAttachments[0].pixelFormat = pfmt;
+        pd.depthAttachmentPixelFormat      = MTLPixelFormatDepth32Float;
+        _postPipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!_postPipeline) NSLog(@"Post pipeline: %@", err);
     }
 
     // Floor pipeline — same vertex layout as flat, grid fragment shader.
@@ -345,13 +369,59 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
 }
 
 - (void)updateDrawableSize:(CGSize)size {
-    if (size.width > 0 && size.height > 0)
-        _proj = make_perspective(kFOVY, (float)size.width/(float)size.height, kNear, kFar);
+    if (size.width <= 0 || size.height <= 0) return;
+    _proj = make_perspective(kFOVY, (float)size.width/(float)size.height, kNear, kFar);
+
+    // (Re)allocate the offscreen scene targets for the post pass.
+    id<MTLDevice> device = _quadVB.device;
+    MTLTextureDescriptor *cd = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:_pixelFormat
+                                     width:(NSUInteger)size.width
+                                    height:(NSUInteger)size.height
+                                 mipmapped:NO];
+    cd.usage       = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+    cd.storageMode = MTLStorageModePrivate;
+    _sceneColor = [device newTextureWithDescriptor:cd];
+
+    MTLTextureDescriptor *dd = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+                                     width:(NSUInteger)size.width
+                                    height:(NSUInteger)size.height
+                                 mipmapped:NO];
+    dd.usage       = MTLTextureUsageRenderTarget;
+    dd.storageMode = MTLStorageModePrivate;
+    _sceneDepth = [device newTextureWithDescriptor:dd];
+}
+
+// Effect triggers — called by BrawlerGameDelegate off combat events.
+- (void)triggerHitBlur:(float)strength {
+    if (strength > _hitBlur) _hitBlur = fminf(strength, 1.f);
+}
+
+- (void)triggerDamageFlash {
+    _damageFlash = 1.f;
 }
 
 - (void)drawWorld:(World*)world inView:(MTKView*)view commandBuffer:(id<MTLCommandBuffer>)cmd {
-    MTLRenderPassDescriptor *rpd = view.currentRenderPassDescriptor;
-    if (!rpd || !view.currentDrawable) return;
+    MTLRenderPassDescriptor *viewRPD = view.currentRenderPassDescriptor;
+    if (!viewRPD || !view.currentDrawable) return;
+
+    // Renderer-local wall-clock dt: drives the particle sim and the post-FX
+    // decays — both keep moving during hit-stop and pause.
+    CFTimeInterval now = CACurrentMediaTime();
+    float pdt = fminf((float)(now - _lastParticleTime), 0.1f);
+    _lastParticleTime = now;
+    _hitBlur     *= expf(-pdt / 0.06f);  // sharp: gone ~0.15s after a hit
+    _damageFlash *= expf(-pdt / 0.14f);  // softer: ~0.35s red bleed
+    if (_hitBlur     < 0.01f) _hitBlur     = 0.f;
+    if (_damageFlash < 0.01f) _damageFlash = 0.f;
+
+    // Lazily match the offscreen scene targets to the drawable size.
+    if (!_sceneColor ||
+        _sceneColor.width  != view.currentDrawable.texture.width ||
+        _sceneColor.height != view.currentDrawable.texture.height)
+        [self updateDrawableSize:CGSizeMake(view.currentDrawable.texture.width,
+                                            view.currentDrawable.texture.height)];
 
     // Multi-player camera: track centroid of all alive players.
     // Zoom out proportionally to player spread so everyone stays in frame.
@@ -401,9 +471,16 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     const RoomPalette& pal = kRoomPalettes[
         (_roomIndex % kNumRoomPalettes + kNumRoomPalettes) % kNumRoomPalettes];
 
+    // Scene pass — renders into the offscreen texture for the post pass.
+    MTLRenderPassDescriptor *rpd = [MTLRenderPassDescriptor renderPassDescriptor];
+    rpd.colorAttachments[0].texture     = _sceneColor;
     rpd.colorAttachments[0].clearColor  = pal.clear;
     rpd.colorAttachments[0].loadAction  = MTLLoadActionClear;
     rpd.colorAttachments[0].storeAction = MTLStoreActionStore;
+    rpd.depthAttachment.texture     = _sceneDepth;
+    rpd.depthAttachment.clearDepth  = 1.0;
+    rpd.depthAttachment.loadAction  = MTLLoadActionClear;
+    rpd.depthAttachment.storeAction = MTLStoreActionDontCare;
 
     id<MTLRenderCommandEncoder> enc = [cmd renderCommandEncoderWithDescriptor:rpd];
     [enc setDepthStencilState:_depthState];
@@ -579,9 +656,6 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     // hit-stop and pause, which reads as energy rather than freezing.
     // -----------------------------------------------------------------------
     {
-        CFTimeInterval now = CACurrentMediaTime();
-        float pdt = fminf((float)(now - _lastParticleTime), 0.1f);
-        _lastParticleTime = now;
         _particles.update(pdt);
 
         if (_particlePipeline && _particles.count > 0) {
@@ -608,6 +682,26 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6
                   instanceCount:(NSUInteger)_particles.count];
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Post pass — fullscreen radial hit blur + damage vignette from the scene
+    // texture into the drawable. The HUD is drawn after, unaffected by FX.
+    // -----------------------------------------------------------------------
+    [enc endEncoding];
+
+    viewRPD.colorAttachments[0].loadAction  = MTLLoadActionClear;
+    viewRPD.colorAttachments[0].storeAction = MTLStoreActionStore;
+    enc = [cmd renderCommandEncoderWithDescriptor:viewRPD];
+
+    {
+        PostUniformsGPU pu = { _hitBlur, _damageFlash };
+        [enc setRenderPipelineState:_postPipeline];
+        [enc setDepthStencilState:_noDepthState];
+        [enc setFragmentTexture:_sceneColor atIndex:0];
+        [enc setFragmentSamplerState:_linearSampler atIndex:0];
+        [enc setFragmentBytes:&pu length:sizeof(pu) atIndex:0];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     }
 
     // -----------------------------------------------------------------------
