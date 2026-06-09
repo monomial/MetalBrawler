@@ -11,7 +11,17 @@ SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 PLAYER_DIR  = os.path.join(PROJECT_DIR, "assets", "characters", "player")
 
-CLIPS = ["idle", "walk", "attack", "hurt", "death"]
+CLIPS = ["idle", "walk", "attack", "attack2", "hurt", "hurt2", "death", "dodge"]
+
+# Incremental: skip outputs that already exist and are newer than their FBX.
+# Set BRAWLER_FORCE_CONVERT=1 to re-export everything.
+FORCE = os.environ.get("BRAWLER_FORCE_CONVERT") == "1"
+
+
+def up_to_date(src, dst):
+    if FORCE:
+        return False
+    return os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src)
 
 
 def clear_scene():
@@ -66,8 +76,11 @@ if not char_arm:
 print(f"Loaded: {[o.name for o in bpy.context.scene.objects]}")
 
 char_out = os.path.join(PLAYER_DIR, "Ch24_nonPBR.usdz")
-export_usdz(char_out, animated=False, with_materials=True)
-print(f"Exported base mesh: {char_out}  ({os.path.getsize(char_out)//1024}KB)")
+if up_to_date(char_fbx, char_out):
+    print(f"Base mesh up to date: {char_out}")
+else:
+    export_usdz(char_out, animated=False, with_materials=True)
+    print(f"Exported base mesh: {char_out}  ({os.path.getsize(char_out)//1024}KB)")
 
 # -----------------------------------------------------------------------
 # Export each animation clip
@@ -76,6 +89,10 @@ for clip_name in CLIPS:
     anim_fbx = os.path.join(PLAYER_DIR, f"{clip_name}.fbx")
     if not os.path.exists(anim_fbx):
         print(f"Skipping {clip_name} — {clip_name}.fbx not found")
+        continue
+    clip_out_path = os.path.join(PLAYER_DIR, f"{clip_name}.usdz")
+    if up_to_date(anim_fbx, clip_out_path):
+        print(f"Up to date: {clip_out_path}")
         continue
 
     import_fbx(anim_fbx)

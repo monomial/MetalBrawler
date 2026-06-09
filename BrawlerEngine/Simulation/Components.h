@@ -50,6 +50,10 @@ struct FacingComponent {
 static constexpr int kMaxBones = 64;
 
 // Which animation clip is playing. Matches the clip names exported from Mixamo.
+// NOTE: when adding a clip, update ALL of: kClipDurationFallback +
+// clip_speed_multiplier (AnimationSystem.mm), kAttackWindows (CombatSystem.mm),
+// and the clips array in BrawlerGameDelegate._loadCharacters. Missing entries
+// aggregate-initialize to 0 (a zero-length clip with no hitbox) — silently.
 enum class AnimClipID : uint8_t {
     Idle    = 0,
     Walk    = 1,
@@ -57,6 +61,7 @@ enum class AnimClipID : uint8_t {
     Hurt    = 3,
     Death   = 4,
     Dodge   = 5,
+    Attack2 = 6, // combo finisher — chained from Attack via comboQueued
     Count
 };
 
@@ -71,6 +76,8 @@ struct AnimationComponent {
     bool       clipDone  = false; // true on last frame of a non-looping clip
     bool       dying      = false; // entity is playing death animation; pending destruction
     bool       hitApplied = false; // damage already dealt this swing; cleared on new attack
+    bool       comboQueued = false; // attack pressed during the Attack clip's chain
+                                    // window → chain into Attack2 at clip end
     float      boneMatrices[kMaxBones][16]; // column-major float4x4 per bone
 };
 

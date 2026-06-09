@@ -20,6 +20,7 @@ static const float kClipDurationFallback[(int)AnimClipID::Count] = {
     1.50f, // Hurt    — one-shot
     4.50f, // Death   — one-shot
     2.40f, // Dodge   — one-shot (72 frames @ 30fps)
+    1.03f, // Attack2 — one-shot combo finisher (31 frames @ 30fps)
 };
 
 static float clip_duration(const LoadedCharacter* charData, AnimClipID id) {
@@ -36,11 +37,12 @@ static bool clip_loops(AnimClipID id) {
 
 static float clip_speed_multiplier(AnimClipID id) {
     switch (id) {
-        case AnimClipID::Attack: return 4.0f;
-        case AnimClipID::Hurt:   return 2.0f;
-        case AnimClipID::Dodge:  return 2.0f;
-        case AnimClipID::Death:  return 2.0f;
-        default:                 return 1.0f;
+        case AnimClipID::Attack:  return 4.0f;
+        case AnimClipID::Attack2: return 3.0f; // finisher lands a touch heavier
+        case AnimClipID::Hurt:    return 2.0f;
+        case AnimClipID::Dodge:   return 2.0f;
+        case AnimClipID::Death:   return 2.0f;
+        default:                  return 1.0f;
     }
 }
 
@@ -80,15 +82,27 @@ void AnimationSystem_update(World& world, float gameDt) {
             if (anim.clipTime >= duration) {
                 anim.clipTime = duration;
                 anim.clipDone = true;
-                // Dying entities may only transition to Death (not back to Idle/Walk).
-                // Non-dying entities may transition to any requested clip.
-                bool canTransition = !anim.dying || anim.requestedClip == AnimClipID::Death;
-                if (canTransition && anim.requestedClip != anim.currentClip) {
-                    anim.currentClip  = anim.requestedClip;
-                    anim.clipTime     = 0.f;
-                    anim.hitApplied   = false;
+                // Combo chain: a queued press during the Attack clip overrides
+                // whatever was requested — flow straight into the finisher.
+                if (anim.currentClip == AnimClipID::Attack && anim.comboQueued && !anim.dying) {
+                    anim.currentClip = AnimClipID::Attack2;
+                    anim.clipTime    = 0.f;
+                    anim.hitApplied  = false;
                     anim.clipDone    = false;
-                    anim.looping     = clip_loops(anim.currentClip);
+                    anim.looping     = false;
+                    anim.comboQueued = false;
+                } else {
+                    // Dying entities may only transition to Death (not back to Idle/Walk).
+                    // Non-dying entities may transition to any requested clip.
+                    bool canTransition = !anim.dying || anim.requestedClip == AnimClipID::Death;
+                    if (canTransition && anim.requestedClip != anim.currentClip) {
+                        anim.currentClip  = anim.requestedClip;
+                        anim.clipTime     = 0.f;
+                        anim.hitApplied   = false;
+                        anim.clipDone    = false;
+                        anim.looping     = clip_loops(anim.currentClip);
+                        anim.comboQueued = false;
+                    }
                 }
             }
         }

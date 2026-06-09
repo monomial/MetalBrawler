@@ -49,13 +49,12 @@ InputState AutoPilot_input(World& world, int playerIndex) {
         in.moveX = bdx / dist;
         in.moveY = bdy / dist;
     } else {
-        // Tap attack like a human: a held button never re-triggers, because a
-        // finished non-looping clip only transitions when a DIFFERENT clip is
-        // requested (AnimationSystem). Release while mid-swing so the clip can
-        // exit to Idle, then press again next frame.
-        bool midSwing = world.has_component<AnimationComponent>(me) &&
-                        world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Attack;
-        in.attack = !midSwing;
+        // Hold attack through the first punch (which both starts the swing and
+        // queues the Attack→Attack2 combo), but release during the finisher so
+        // the clip can exit to Idle and the next swing can start.
+        bool inFinisher = world.has_component<AnimationComponent>(me) &&
+                          world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Attack2;
+        in.attack = !inFinisher;
     }
     return in;
 }

@@ -139,6 +139,7 @@
 		EAB7B01040674FDBEF94CDC6 /* BrawlerAutoTest.mm in Sources */ = {isa = PBXBuildFile; fileRef = F170A9F94C362768722235B4 /* BrawlerAutoTest.mm */; };
 		EAC5D3D3EE60C3C72B17B627 /* DodgeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A156CDAE5FBDEBC34F3CA6D4 /* DodgeSystem.mm */; };
 		EFFB7B08D4E84A4530F4A901 /* EventBusTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */; };
+		F16C7ED29AB832EEA7DD642F /* ComboTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 772B27D11CA47F87C7091469 /* ComboTests.mm */; };
 		F1B0E275C2F5C6F7475FD6DF /* KnockbackSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC5FF81E52FAB811994FD9FD /* KnockbackSystem.mm */; };
 		F2C4DFDE6615A3EA716AFEDC /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
 		F326708B5F0FB965A5BE1833 /* InputSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF5371A1FA10DE17872A35 /* InputSystem.mm */; };
@@ -189,6 +190,7 @@
 		72EF48FFC9B95A1916C4568A /* EventBus.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EventBus.h; sourceTree = "<group>"; };
 		73B997F413EE7874F18915C7 /* GameViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GameViewController.h; sourceTree = "<group>"; };
 		74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ScreenShakeSystem.mm; sourceTree = "<group>"; };
+		772B27D11CA47F87C7091469 /* ComboTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ComboTests.mm; sourceTree = "<group>"; };
 		784575DC4C4D5FF355458A61 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		7A8452E098211B9F752E4A4C /* ContactDamageSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ContactDamageSystem.h; sourceTree = "<group>"; };
 		7B4C71C96BADA923A9B9BDB9 /* RespawnTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RespawnTests.mm; sourceTree = "<group>"; };
@@ -506,6 +508,7 @@
 			children = (
 				25D5EF275206644E9DE55572 /* AnimationTests.mm */,
 				9B56D567E7D4F96112FC6281 /* CombatTests.mm */,
+				772B27D11CA47F87C7091469 /* ComboTests.mm */,
 				C198EE6AC4B8C900025F2E54 /* ContactDamageTests.mm */,
 				7B578A52EC9FECB06192D70B /* EdgeCaseTests.mm */,
 				9872E2A72357EB6205023978 /* EnemyAITests.mm */,
@@ -794,6 +797,7 @@
 				59CE7AD96D1F598CD531EF41 /* CharacterLoader.mm in Sources */,
 				DCC751F29351E8B4E42819AB /* CombatSystem.mm in Sources */,
 				1A24493F2CEA9F3111464437 /* CombatTests.mm in Sources */,
+				F16C7ED29AB832EEA7DD642F /* ComboTests.mm in Sources */,
 				7C5930E3F0038BB5D235C1C6 /* ContactDamageSystem.mm in Sources */,
 				31CC37ACBD9CDF76BB3857EB /* ContactDamageTests.mm in Sources */,
 				3649286F02112A180528BCA9 /* DodgeSystem.mm in Sources */,

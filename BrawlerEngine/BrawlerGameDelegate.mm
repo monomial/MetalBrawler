@@ -110,9 +110,11 @@ static const float kLoseDuration      = 3.5f;
     NSString *playerDir = [res stringByAppendingPathComponent:@"assets/characters/player"];
     NSString *mesh = [playerDir stringByAppendingPathComponent:@"Ch24_nonPBR.usdz"];
 
+    // Order must match AnimClipID: Idle, Walk, Attack, Hurt, Death, Dodge, Attack2.
     NSMutableArray<NSString*> *clips = [NSMutableArray array];
     for (NSString *n in @[@"idle.usdz", @"walk.usdz", @"attack.usdz",
-                           @"hurt.usdz", @"death.usdz", @"dodge.usdz"])
+                           @"hurt.usdz", @"death.usdz", @"dodge.usdz",
+                           @"attack2.usdz"])
         [clips addObject:[playerDir stringByAppendingPathComponent:n]];
 
     LoadedCharacter *player = CharacterLoader_load(mesh, clips, device);

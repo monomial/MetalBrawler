@@ -53,7 +53,17 @@ void InputSystem_update(World& world) {
 
         if (world.has_component<AnimationComponent>(id)) {
             bool moving = (mx * mx + my * my) > 0.01f;
-            const AnimationComponent& anim = world.get_component<AnimationComponent>(id);
+            AnimationComponent& anim = world.get_component<AnimationComponent>(id);
+
+            // Combo: an attack press while the first punch is past 35% of its
+            // clip queues the finisher — AnimationSystem chains into Attack2
+            // when the Attack clip completes.
+            if (input.attack && anim.currentClip == AnimClipID::Attack) {
+                float dur = AnimationSystem_clip_duration(world, id, AnimClipID::Attack);
+                if (anim.clipTime > 0.35f * dur)
+                    anim.comboQueued = true;
+            }
+
             // Dodge: allowed from Idle or Walk (not mid-attack, hurt, death, or another dodge).
             bool canDodge = input.dodge &&
                             (anim.currentClip == AnimClipID::Idle ||

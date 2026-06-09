@@ -25,13 +25,19 @@ struct AttackWindow {
 };
 
 static const AttackWindow kAttackWindows[(int)AnimClipID::Count] = {
-    {0.f,   0.f,   0},  // Idle   — no hitbox
-    {0.f,   0.f,   0},  // Walk   — no hitbox
-    {0.35f, 0.60f, 1},  // Attack — fist extends around 35–60% of clip
-    {0.f,   0.f,   0},  // Hurt   — no hitbox
-    {0.f,   0.f,   0},  // Death  — no hitbox
-    {0.f,   0.f,   0},  // Dodge  — no hitbox
+    {0.f,   0.f,   0},  // Idle    — no hitbox
+    {0.f,   0.f,   0},  // Walk    — no hitbox
+    {0.35f, 0.60f, 1},  // Attack  — fist extends around 35–60% of clip
+    {0.f,   0.f,   0},  // Hurt    — no hitbox
+    {0.f,   0.f,   0},  // Death   — no hitbox
+    {0.f,   0.f,   0},  // Dodge   — no hitbox
+    {0.30f, 0.60f, 2},  // Attack2 — combo finisher, double damage
 };
+
+// Finisher feel: the combo's second hit freezes longer and shakes harder.
+static constexpr int   kFinisherHitStopTicks = 7;
+static constexpr float kHitShake             = 18.f;
+static constexpr float kFinisherShake        = 30.f;
 
 void CombatSystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // frozen during HitStop
@@ -143,8 +149,9 @@ void CombatSystem_update(World& world, float gameDt) {
 
         if (hitAnything) {
             atkAnim.hitApplied = true;
-            world.trigger_hit_stop(kHitStopTicks);
-            ScreenShakeSystem_trigger(world, 18.f);
+            bool finisher = (atkAnim.currentClip == AnimClipID::Attack2);
+            world.trigger_hit_stop(finisher ? kFinisherHitStopTicks : kHitStopTicks);
+            ScreenShakeSystem_trigger(world, finisher ? kFinisherShake : kHitShake);
         }
     }
 }
