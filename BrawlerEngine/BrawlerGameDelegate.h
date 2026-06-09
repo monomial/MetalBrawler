@@ -73,6 +73,12 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 // --autotest visual smoke mode.
 @property (nonatomic) BOOL autoPilotEnabled;
 
+// When > 0, drawInMTKView: advances the simulation by exactly this much per
+// frame instead of wall-clock dt. Combined with rngSeedOverride this makes a
+// live --autotest run reproduce the headless scenario bit-for-bit (wall-clock
+// dt jitter is the only nondeterminism left otherwise).
+@property (nonatomic) float fixedFrameDt;
+
 // Write the next rendered frame to a PNG (async). No-op in headless mode.
 // Requires the MTKView's framebufferOnly == NO.
 - (void)captureNextFrameToPath:(NSString *)path;

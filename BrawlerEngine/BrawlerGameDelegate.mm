@@ -584,6 +584,7 @@ struct PlayerPerks {
     CFTimeInterval now = CACurrentMediaTime();
     float dt = fminf((float)(now - _lastTime), 0.1f);
     _lastTime = now;
+    if (self.fixedFrameDt > 0.f) dt = self.fixedFrameDt; // deterministic autotest
 
     [self advanceFrame:dt];
 

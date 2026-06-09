@@ -46,6 +46,7 @@ static const double   kExitGrace      = 1.5;    // let async PNG writes finish
                               withIntermediateDirectories:YES attributes:nil error:nil];
     _delegate.autoPilotEnabled = YES;
     _delegate.rngSeedOverride  = 42;
+    _delegate.fixedFrameDt     = 1.f / 60.f; // reproduce the headless scenario exactly
     _startTime      = CACurrentMediaTime();
     _phaseEnteredAt = _startTime;
 
