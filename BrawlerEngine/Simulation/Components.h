@@ -78,6 +78,11 @@ struct AnimationComponent {
     bool       hitApplied = false; // damage already dealt this swing; cleared on new attack
     bool       comboQueued = false; // attack pressed during the Attack clip's chain
                                     // window → chain into Attack2 at clip end
+    // Cross-fade: on every clip transition the outgoing pose is frozen and
+    // blended into the incoming clip over kAnimBlendDuration seconds.
+    AnimClipID prevClip       = AnimClipID::Idle;
+    float      prevClipTime   = 0.f; // frozen sample time of the outgoing clip
+    float      blendRemaining = 0.f; // seconds of cross-fade left (0 = no blend)
     float      boneMatrices[kMaxBones][16]; // column-major float4x4 per bone
 };
 

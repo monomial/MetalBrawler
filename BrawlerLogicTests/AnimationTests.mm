@@ -203,4 +203,35 @@ static void advance(World& w, float seconds) {
     XCTAssertTrue(world.has_component<AnimationComponent>(e));
 }
 
+// ---------------------------------------------------------------------------
+// Cross-fade bookkeeping (matrix output needs real assets; not tested here)
+// ---------------------------------------------------------------------------
+
+- (void)test_transition_armsCrossFade {
+    World world;
+    EntityID e = make_animated(world);
+    auto& anim = world.get_component<AnimationComponent>(e);
+    anim.clipTime = 0.5f;
+
+    anim.requestedClip = AnimClipID::Walk;
+    world.update(kFixedDt, kFixedDt);
+
+    const auto& a = world.get_component<AnimationComponent>(e);
+    XCTAssertEqual((int)a.currentClip, (int)AnimClipID::Walk);
+    XCTAssertEqual((int)a.prevClip,    (int)AnimClipID::Idle);
+    XCTAssertGreaterThan(a.blendRemaining, 0.f, @"transition must arm the cross-fade");
+    XCTAssertGreaterThan(a.prevClipTime, 0.4f, @"outgoing pose frozen at its clip time");
+}
+
+- (void)test_crossFade_decaysToZero {
+    World world;
+    EntityID e = make_animated(world);
+    world.get_component<AnimationComponent>(e).requestedClip = AnimClipID::Walk;
+
+    advance(world, 0.2f); // > kAnimBlendDuration (0.1s)
+
+    XCTAssertEqual(world.get_component<AnimationComponent>(e).blendRemaining, 0.f,
+                   @"blend must fully decay after the fade window");
+}
+
 @end

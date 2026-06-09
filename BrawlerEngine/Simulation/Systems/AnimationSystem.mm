@@ -35,6 +35,24 @@ static bool clip_loops(AnimClipID id) {
     return id == AnimClipID::Idle || id == AnimClipID::Walk;
 }
 
+// Cross-fade length for every clip transition. Long enough to kill the visual
+// pop, short enough not to soften attack startup.
+static constexpr float kAnimBlendDuration = 0.1f;
+
+// All clip changes go through here so the cross-fade bookkeeping can't be
+// forgotten at one of the transition sites.
+static void begin_transition(AnimationComponent& anim, AnimClipID next) {
+    anim.prevClip       = anim.currentClip;
+    anim.prevClipTime   = anim.clipTime;
+    anim.blendRemaining = kAnimBlendDuration;
+    anim.currentClip    = next;
+    anim.clipTime       = 0.f;
+    anim.hitApplied     = false;
+    anim.clipDone       = false;
+    anim.looping        = clip_loops(next);
+    anim.comboQueued    = false;
+}
+
 static float clip_speed_multiplier(AnimClipID id) {
     switch (id) {
         case AnimClipID::Attack:  return 4.0f;
@@ -70,10 +88,7 @@ void AnimationSystem_update(World& world, float gameDt) {
         if (clip_loops(anim.currentClip)) {
             // Looping clips transition immediately when any different clip is requested.
             if (anim.requestedClip != anim.currentClip) {
-                anim.currentClip  = anim.requestedClip;
-                anim.clipTime     = 0.f;
-                anim.hitApplied   = false;
-                anim.looping      = clip_loops(anim.currentClip);
+                begin_transition(anim, anim.requestedClip);
             } else if (anim.clipTime >= duration) {
                 anim.clipTime = fmodf(anim.clipTime, duration);
             }
@@ -85,30 +100,34 @@ void AnimationSystem_update(World& world, float gameDt) {
                 // Combo chain: a queued press during the Attack clip overrides
                 // whatever was requested — flow straight into the finisher.
                 if (anim.currentClip == AnimClipID::Attack && anim.comboQueued && !anim.dying) {
-                    anim.currentClip = AnimClipID::Attack2;
-                    anim.clipTime    = 0.f;
-                    anim.hitApplied  = false;
-                    anim.clipDone    = false;
-                    anim.looping     = false;
-                    anim.comboQueued = false;
+                    begin_transition(anim, AnimClipID::Attack2);
                 } else {
                     // Dying entities may only transition to Death (not back to Idle/Walk).
                     // Non-dying entities may transition to any requested clip.
                     bool canTransition = !anim.dying || anim.requestedClip == AnimClipID::Death;
-                    if (canTransition && anim.requestedClip != anim.currentClip) {
-                        anim.currentClip  = anim.requestedClip;
-                        anim.clipTime     = 0.f;
-                        anim.hitApplied   = false;
-                        anim.clipDone    = false;
-                        anim.looping     = clip_loops(anim.currentClip);
-                        anim.comboQueued = false;
-                    }
+                    if (canTransition && anim.requestedClip != anim.currentClip)
+                        begin_transition(anim, anim.requestedClip);
                 }
             }
         }
 
-        if (charData && charData->clipLoaded[(int)anim.currentClip])
+        if (charData && charData->clipLoaded[(int)anim.currentClip]) {
             charData->clips[(int)anim.currentClip].sample(anim.clipTime, anim.boneMatrices);
+
+            // Cross-fade: blend the frozen outgoing pose into the incoming clip.
+            if (anim.blendRemaining > 0.f && charData->clipLoaded[(int)anim.prevClip]) {
+                float prevPose[kMaxBones][16];
+                charData->clips[(int)anim.prevClip].sample(anim.prevClipTime, prevPose);
+                float w = anim.blendRemaining / kAnimBlendDuration; // 1 → 0
+                for (int b = 0; b < kMaxBones; ++b)
+                    for (int k = 0; k < 16; ++k)
+                        anim.boneMatrices[b][k] =
+                            anim.boneMatrices[b][k] * (1.f - w) + prevPose[b][k] * w;
+            }
+        }
+        if (anim.blendRemaining > 0.f)
+            anim.blendRemaining = anim.blendRemaining - gameDt < 0.f
+                                ? 0.f : anim.blendRemaining - gameDt;
     }
 
     // Destroy non-player entities whose death animation has finished.
