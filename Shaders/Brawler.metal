@@ -54,3 +54,47 @@ fragment float4 shadow_fragment(ShadowOut in [[stage_in]]) {
     float a = smoothstep(1.0, 0.45, r) * in.alpha; // soft edge, solid core
     return float4(0.0, 0.0, 0.0, a);
 }
+
+// ---------------------------------------------------------------------------
+// Particles — camera-facing billboards, additive blending. One instance per
+// particle; the unit quad supplies the corner offsets.
+// ---------------------------------------------------------------------------
+
+struct ParticleInstance {       // matches ParticleInstanceGPU in BrawlerRenderer.mm
+    float3 pos;
+    float  size;
+    float4 color;               // rgb premultiplied by fade, a = fade
+};
+
+struct ParticleUniforms {       // matches ParticleUniformsGPU in BrawlerRenderer.mm
+    float4x4 vp;
+    float3   camRight;
+    float3   camUp;
+};
+
+struct ParticleOut {
+    float4 position [[position]];
+    float2 local;
+    float4 color;
+};
+
+vertex ParticleOut particle_vertex(VertexIn in [[stage_in]],
+                                   constant ParticleInstance *instances [[buffer(1)]],
+                                   constant ParticleUniforms &u         [[buffer(2)]],
+                                   uint iid [[instance_id]])
+{
+    ParticleInstance p = instances[iid];
+    float3 world = p.pos + (u.camRight * in.position.x + u.camUp * in.position.y) * p.size;
+    ParticleOut out;
+    out.position = u.vp * float4(world, 1.0);
+    out.local    = in.position.xy;
+    out.color    = p.color;
+    return out;
+}
+
+fragment float4 particle_fragment(ParticleOut in [[stage_in]]) {
+    float r = length(in.local) * 2.0;
+    float glow = smoothstep(1.0, 0.0, r);
+    glow *= glow;                                  // hot core, fast falloff
+    return float4(in.color.rgb * glow * in.color.a, 1.0); // additive: alpha unused
+}

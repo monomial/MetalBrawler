@@ -1,12 +1,17 @@
 #import "BrawlerRenderer.h"
 #import <simd/simd.h>
 #import <ImageIO/ImageIO.h>
+#import <QuartzCore/QuartzCore.h>
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include "Assets/CharacterLoader.h"
+#include "ParticleSim.h"
 
 typedef struct { simd_float4x4 mvp; simd_float4 color; } DrawUniforms;
+// These two must match ParticleInstance / ParticleUniforms in Brawler.metal.
+typedef struct { simd_float3 pos; float size; simd_float4 color; } ParticleInstanceGPU;
+typedef struct { simd_float4x4 vp; simd_float3 camRight; simd_float3 camUp; } ParticleUniformsGPU;
 // Layout must match SkinnedUniforms in SkinnedMesh.metal.
 typedef struct { simd_float4x4 mvp; simd_float4 color; float tintStrength; } SkinnedUniforms;
 
@@ -124,6 +129,12 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     LoadedCharacter* _enemyChar;
     float            _facingAngle[kMaxAnimEntities]; // per-entity last known facing (atan2 radians)
     NSString*        _pendingCapturePath;            // --autotest: next frame → PNG
+
+    id<MTLRenderPipelineState> _particlePipeline;    // additive billboards
+    id<MTLBuffer>              _particleVB[3];       // triple-buffered instances
+    ParticleSim                _particles;
+    uint32_t                   _burstSeed;
+    CFTimeInterval             _lastParticleTime;    // renderer-local dt for the sim
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt {
@@ -161,6 +172,34 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         pd.vertexDescriptor = vd;
         _pipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
         if (!_pipeline) { NSLog(@"Flat pipeline: %@", err); return nil; }
+    }
+
+    // Particle pipeline — instanced billboards, additive blending.
+    {
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction   = [lib newFunctionWithName:@"particle_vertex"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"particle_fragment"];
+        pd.colorAttachments[0].pixelFormat = pfmt;
+        pd.depthAttachmentPixelFormat      = MTLPixelFormatDepth32Float;
+        pd.colorAttachments[0].blendingEnabled           = YES;
+        pd.colorAttachments[0].sourceRGBBlendFactor      = MTLBlendFactorOne;
+        pd.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOne; // additive
+        pd.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorOne;
+        pd.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOne;
+        MTLVertexDescriptor *vd = [MTLVertexDescriptor new];
+        vd.attributes[0].format = MTLVertexFormatFloat3;
+        vd.attributes[0].offset = 0; vd.attributes[0].bufferIndex = 0;
+        vd.layouts[0].stride    = sizeof(simd_float3);
+        pd.vertexDescriptor = vd;
+        _particlePipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!_particlePipeline) NSLog(@"Particle pipeline: %@", err);
+
+        for (int i = 0; i < 3; i++)
+            _particleVB[i] = [device newBufferWithLength:ParticleSim::kCapacity
+                                                          * sizeof(ParticleInstanceGPU)
+                                                 options:MTLResourceStorageModeShared];
+        _burstSeed        = 0x1234567u;
+        _lastParticleTime = CACurrentMediaTime();
     }
 
     // Blob shadow pipeline — same vertex layout, alpha blending enabled.
@@ -441,6 +480,43 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         }
     }
     // -----------------------------------------------------------------------
+    // Particles — additive camera-facing billboards (hit sparks, telegraphs).
+    // Advanced with renderer-local wall-clock dt: bursts keep moving during
+    // hit-stop and pause, which reads as energy rather than freezing.
+    // -----------------------------------------------------------------------
+    {
+        CFTimeInterval now = CACurrentMediaTime();
+        float pdt = fminf((float)(now - _lastParticleTime), 0.1f);
+        _lastParticleTime = now;
+        _particles.update(pdt);
+
+        if (_particlePipeline && _particles.count > 0) {
+            ParticleInstanceGPU *dst =
+                (ParticleInstanceGPU *)_particleVB[_frameIdx].contents;
+            for (int i = 0; i < _particles.count; ++i) {
+                const ParticleSim::Particle& p = _particles.particles[i];
+                float fade = p.lifeMax > 0.f ? p.life / p.lifeMax : 0.f;
+                dst[i].pos   = (simd_float3){p.x, p.y, p.z};
+                dst[i].size  = p.size;
+                dst[i].color = (simd_float4){p.r, p.g, p.b, fade};
+            }
+
+            simd_float3 f        = simd_normalize(target - eye);
+            simd_float3 camRight = simd_normalize(simd_cross(f, (simd_float3){0, 0, 1}));
+            simd_float3 camUp    = simd_cross(camRight, f);
+            ParticleUniformsGPU pu = { vp, camRight, camUp };
+
+            [enc setRenderPipelineState:_particlePipeline];
+            [enc setDepthStencilState:_shadowDepthState]; // test, never write
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            [enc setVertexBuffer:_particleVB[_frameIdx] offset:0 atIndex:1];
+            [enc setVertexBytes:&pu length:sizeof(pu) atIndex:2];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6
+                  instanceCount:(NSUInteger)_particles.count];
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // World-anchored health bars — project above each character's head,
     // draw as 2D ortho overlay (no depth test, drawn on top of everything).
     // -----------------------------------------------------------------------
@@ -576,6 +652,16 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
 
 - (void)captureNextFrameToPath:(NSString*)path {
     _pendingCapturePath = [path copy];
+}
+
+- (void)spawnBurstAt:(simd_float3)pos
+               count:(int)count
+               speed:(float)speed
+                size:(float)size
+               color:(simd_float4)color {
+    _burstSeed = _burstSeed * 1664525u + 1013904223u;
+    _particles.spawn_burst(pos.x, pos.y, pos.z, count, speed, size,
+                           color.x, color.y, color.z, _burstSeed);
 }
 
 @end

@@ -28,4 +28,12 @@ struct LoadedCharacter;
 // the --autotest smoke mode. Requires view.framebufferOnly == NO.
 - (void)captureNextFrameToPath:(NSString*)path;
 
+// Spawn a radial particle burst (hit sparks, telegraphs, clears) at a world
+// position. Rendered as additive camera-facing billboards next frame.
+- (void)spawnBurstAt:(simd_float3)pos
+               count:(int)count
+               speed:(float)speed
+                size:(float)size
+               color:(simd_float4)color;
+
 @end

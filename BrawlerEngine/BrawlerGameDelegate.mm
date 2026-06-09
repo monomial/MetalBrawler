@@ -307,12 +307,27 @@ static const float kLoseDuration      = 3.5f;
         // The finisher (Attack2) gets its own heavier sound + haptic.
         bool hitThisFrame = false;
         _world.events().for_each(EventType::HitContact, [self, &hitThisFrame](const Event& ev) {
-            if (hitThisFrame) return;
-            hitThisFrame = true;
             uint32_t atk = ev.hitContact.attackerID;
+            uint32_t tgt = ev.hitContact.targetID;
             bool finisher = _world.has_component<AnimationComponent>(atk) &&
                             _world.get_component<AnimationComponent>(atk).currentClip
                                 == AnimClipID::Attack2;
+
+            // Spark burst at the impact point — per contact, not per frame.
+            if (_world.has_component<PositionComponent>(tgt)) {
+                const auto& p = _world.get_component<PositionComponent>(tgt);
+                if (finisher)
+                    [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 90.f}
+                                      count:26 speed:420.f size:16.f
+                                      color:(simd_float4){1.0f, 0.45f, 0.15f, 1.f}];
+                else
+                    [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 80.f}
+                                      count:14 speed:300.f size:12.f
+                                      color:(simd_float4){1.0f, 0.85f, 0.35f, 1.f}];
+            }
+
+            if (hitThisFrame) return; // sound/haptic once per frame
+            hitThisFrame = true;
             if (finisher) {
                 [_audio  playFinisherSound];
                 [_haptics playFinisherHaptic];
@@ -340,11 +355,18 @@ static const float kLoseDuration      = 3.5f;
         });
 
         _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
-            if (_world.player_tags().present(ev.entityDied.entityID)) {
+            uint32_t died = ev.entityDied.entityID;
+            if (_world.player_tags().present(died)) {
                 [_audio playHurtSound];
             } else {
                 [_audio  playDeathSound];
                 [_haptics playDeathHaptic];
+                if (_world.has_component<PositionComponent>(died)) {
+                    const auto& p = _world.get_component<PositionComponent>(died);
+                    [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 60.f}
+                                      count:30 speed:360.f size:14.f
+                                      color:(simd_float4){1.0f, 0.25f, 0.20f, 1.f}];
+                }
             }
         });
 
