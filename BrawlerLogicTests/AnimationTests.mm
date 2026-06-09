@@ -234,4 +234,20 @@ static void advance(World& w, float seconds) {
                    @"blend must fully decay after the fade window");
 }
 
+- (void)test_attackTransition_emitsAttackStarted {
+    World world;
+    EntityID e = make_animated(world);
+    world.get_component<AnimationComponent>(e).requestedClip = AnimClipID::Attack;
+
+    world.update(kFixedDt, kFixedDt); // transition happens in this tick
+
+    int seen = 0;
+    world.events().for_each(EventType::AttackStarted, [&seen, e](const Event& ev){
+        XCTAssertEqual(ev.attackStarted.entityID, e);
+        XCTAssertEqual(ev.attackStarted.clipID, (uint8_t)AnimClipID::Attack);
+        seen++;
+    });
+    XCTAssertEqual(seen, 1, @"clip start must emit exactly one AttackStarted");
+}
+
 @end

@@ -135,6 +135,7 @@ static const float kLoseDuration      = 3.5f;
             break;
         case BrawlerGamePhasePlayerSelect:
             [self resetInput]; // clear any button that triggered the title→select transition
+            [_audio playUIClickSound];
             break;
         case BrawlerGamePhasePlaying:
             [_audio startBattleMusic];
@@ -142,6 +143,7 @@ static const float kLoseDuration      = 3.5f;
             break;
         case BrawlerGamePhaseRoomClear:
             _phaseTimer = kRoomClearDuration;
+            [_audio playRoomClearSound];
             break;
         case BrawlerGamePhaseWin:
             [_audio stopMusic];
@@ -302,20 +304,48 @@ static const float kLoseDuration      = 3.5f;
 
         // Play hit sound/haptic once per frame regardless of how many enemies connected —
         // queuing one buffer per HitContact event causes sounds to pile up sequentially.
+        // The finisher (Attack2) gets its own heavier sound + haptic.
         bool hitThisFrame = false;
-        _world.events().for_each(EventType::HitContact, [self, &hitThisFrame](const Event&) {
-            if (!hitThisFrame) {
+        _world.events().for_each(EventType::HitContact, [self, &hitThisFrame](const Event& ev) {
+            if (hitThisFrame) return;
+            hitThisFrame = true;
+            uint32_t atk = ev.hitContact.attackerID;
+            bool finisher = _world.has_component<AnimationComponent>(atk) &&
+                            _world.get_component<AnimationComponent>(atk).currentClip
+                                == AnimClipID::Attack2;
+            if (finisher) {
+                [_audio  playFinisherSound];
+                [_haptics playFinisherHaptic];
+            } else {
                 [_audio  playHitSound];
                 [_haptics playHitHaptic];
-                hitThisFrame = true;
             }
         });
 
+        // Swing whoosh + light haptic when a player's punch starts (whiff or not).
+        // Player-only: four grunts swinging at once would be a wall of noise.
+        bool swingThisFrame = false;
+        _world.events().for_each(EventType::AttackStarted, [self, &swingThisFrame](const Event& ev) {
+            if (swingThisFrame) return;
+            if (!_world.player_tags().present(ev.attackStarted.entityID)) return;
+            swingThisFrame = true;
+            [_audio  playSwingSound];
+            [_haptics playAttackHaptic];
+        });
+
+        _world.events().for_each(EventType::DodgeStarted, [self](const Event& ev) {
+            if (!_world.player_tags().present(ev.dodgeStarted.entityID)) return;
+            [_audio  playDodgeSound];
+            [_haptics playDodgeHaptic];
+        });
+
         _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
-            if (_world.player_tags().present(ev.entityDied.entityID))
+            if (_world.player_tags().present(ev.entityDied.entityID)) {
                 [_audio playHurtSound];
-            else
-                [_audio playDeathSound];
+            } else {
+                [_audio  playDeathSound];
+                [_haptics playDeathHaptic];
+            }
         });
 
         _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {

@@ -72,6 +72,90 @@ static AVAudioPCMBuffer* make_death_buffer(AVAudioFormat *fmt) {
     });
 }
 
+// Quick air whoosh for a punch starting: band-limited noise with a sine sweep,
+// quiet enough to sit under the hit impact that may follow.
+static AVAudioPCMBuffer* make_swing_buffer(AVAudioFormat *fmt) {
+    return synth_buffer(fmt, 0.12, ^(float *L, float *R, int frames, double sr) {
+        float lp = 0.f;
+        for (int i = 0; i < frames; ++i) {
+            float t      = (float)i / (float)frames;
+            float tSec   = (float)i / (float)sr;
+            float attack = fminf(tSec / 0.005f, 1.f);
+            float env    = attack * sinf((float)M_PI * t);          // swell then fade
+            float noise  = ((float)rand() / (float)RAND_MAX * 2.f - 1.f);
+            lp += 0.25f * (noise - lp);                             // crude low-pass → "air"
+            float s = lp * env * 0.30f;
+            L[i] = s;
+            if (R) R[i] = s;
+        }
+    });
+}
+
+// Longer, airier swish for the dodge roll.
+static AVAudioPCMBuffer* make_dodge_buffer(AVAudioFormat *fmt) {
+    return synth_buffer(fmt, 0.22, ^(float *L, float *R, int frames, double sr) {
+        float lp = 0.f;
+        for (int i = 0; i < frames; ++i) {
+            float t      = (float)i / (float)frames;
+            float tSec   = (float)i / (float)sr;
+            float attack = fminf(tSec / 0.008f, 1.f);
+            float env    = attack * sinf((float)M_PI * powf(t, 0.7f));
+            float noise  = ((float)rand() / (float)RAND_MAX * 2.f - 1.f);
+            lp += 0.12f * (noise - lp);                             // darker than swing
+            float s = lp * env * 0.32f;
+            L[i] = s;
+            if (R) R[i] = s;
+        }
+    });
+}
+
+// Combo finisher impact: deeper and louder than the normal hit.
+static AVAudioPCMBuffer* make_finisher_buffer(AVAudioFormat *fmt) {
+    return synth_buffer(fmt, 0.26, ^(float *L, float *R, int frames, double sr) {
+        for (int i = 0; i < frames; ++i) {
+            float tSec   = (float)i / (float)sr;
+            float attack = fminf(tSec / 0.003f, 1.f);
+            float thump  = sinf(2.f * (float)M_PI * 65.f * tSec)
+                           * expf(-tSec * 18.f) * 0.75f;            // 65 Hz body slam
+            float noise  = ((float)rand() / (float)RAND_MAX * 2.f - 1.f);
+            float crack  = noise * expf(-tSec * 70.f) * 0.30f;
+            float s      = (thump + crack) * attack;
+            L[i] = s;
+            if (R) R[i] = s;
+        }
+    });
+}
+
+// Three ascending sine notes for room clear.
+static AVAudioPCMBuffer* make_room_clear_buffer(AVAudioFormat *fmt) {
+    return synth_buffer(fmt, 0.45, ^(float *L, float *R, int frames, double sr) {
+        const float notes[3] = {523.25f, 659.25f, 783.99f}; // C5 E5 G5
+        for (int i = 0; i < frames; ++i) {
+            float tSec = (float)i / (float)sr;
+            int   n    = (int)fminf(tSec / 0.15f, 2.f);
+            float nT   = tSec - n * 0.15f;
+            float env  = fminf(nT / 0.01f, 1.f) * expf(-nT * 14.f);
+            float s    = sinf(2.f * (float)M_PI * notes[n] * nT) * env * 0.30f;
+            L[i] = s;
+            if (R) R[i] = s;
+        }
+    });
+}
+
+// Tiny 1kHz tick for menu/phase advances.
+static AVAudioPCMBuffer* make_ui_click_buffer(AVAudioFormat *fmt) {
+    return synth_buffer(fmt, 0.04, ^(float *L, float *R, int frames, double sr) {
+        for (int i = 0; i < frames; ++i) {
+            float tSec   = (float)i / (float)sr;
+            float attack = fminf(tSec / 0.002f, 1.f);
+            float s = sinf(2.f * (float)M_PI * 1000.f * tSec)
+                      * expf(-tSec * 120.f) * attack * 0.25f;
+            L[i] = s;
+            if (R) R[i] = s;
+        }
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Bundle asset lookup — tries multiple extensions, returns nil if not found.
 // ---------------------------------------------------------------------------
@@ -148,6 +232,11 @@ static AVAudioPCMBuffer* loadBundleBuffer(NSString *name, AVAudioFormat *targetF
     AVAudioPCMBuffer    *_hitBuf;
     AVAudioPCMBuffer    *_hurtBuf;
     AVAudioPCMBuffer    *_deathBuf;
+    AVAudioPCMBuffer    *_swingBuf;
+    AVAudioPCMBuffer    *_dodgeBuf;
+    AVAudioPCMBuffer    *_finisherBuf;
+    AVAudioPCMBuffer    *_roomClearBuf;
+    AVAudioPCMBuffer    *_uiClickBuf;
     AVAudioPlayer       *_musicPlayer;
     float                _musicVolume;
     BOOL                 _started;
@@ -177,9 +266,14 @@ static AVAudioPCMBuffer* loadBundleBuffer(NSString *name, AVAudioFormat *targetF
     }
 
     // Load each SFX: bundle file overrides synthetic fallback.
-    _hitBuf   = loadBundleBuffer(@"sfx_hit",   fmt) ?: make_hit_buffer(fmt);
-    _hurtBuf  = loadBundleBuffer(@"sfx_hurt",  fmt) ?: make_hurt_buffer(fmt);
-    _deathBuf = loadBundleBuffer(@"sfx_death", fmt) ?: make_death_buffer(fmt);
+    _hitBuf       = loadBundleBuffer(@"sfx_hit",        fmt) ?: make_hit_buffer(fmt);
+    _hurtBuf      = loadBundleBuffer(@"sfx_hurt",       fmt) ?: make_hurt_buffer(fmt);
+    _deathBuf     = loadBundleBuffer(@"sfx_death",      fmt) ?: make_death_buffer(fmt);
+    _swingBuf     = loadBundleBuffer(@"sfx_swing",      fmt) ?: make_swing_buffer(fmt);
+    _dodgeBuf     = loadBundleBuffer(@"sfx_dodge",      fmt) ?: make_dodge_buffer(fmt);
+    _finisherBuf  = loadBundleBuffer(@"sfx_finisher",   fmt) ?: make_finisher_buffer(fmt);
+    _roomClearBuf = loadBundleBuffer(@"sfx_room_clear", fmt) ?: make_room_clear_buffer(fmt);
+    _uiClickBuf   = loadBundleBuffer(@"sfx_ui_click",   fmt) ?: make_ui_click_buffer(fmt);
 
     _started = YES;
     NSLog(@"AudioEngine: ready (sampleRate %.0f Hz)", fmt.sampleRate);
@@ -193,9 +287,14 @@ static AVAudioPCMBuffer* loadBundleBuffer(NSString *name, AVAudioFormat *targetF
     if (!_sfxNode.playing) [_sfxNode play];
 }
 
-- (void)playHitSound   { [self _playBuffer:_hitBuf];   }
-- (void)playHurtSound  { [self _playBuffer:_hurtBuf];  }
-- (void)playDeathSound { [self _playBuffer:_deathBuf]; }
+- (void)playHitSound       { [self _playBuffer:_hitBuf];       }
+- (void)playHurtSound      { [self _playBuffer:_hurtBuf];      }
+- (void)playDeathSound     { [self _playBuffer:_deathBuf];     }
+- (void)playSwingSound     { [self _playBuffer:_swingBuf];     }
+- (void)playDodgeSound     { [self _playBuffer:_dodgeBuf];     }
+- (void)playFinisherSound  { [self _playBuffer:_finisherBuf];  }
+- (void)playRoomClearSound { [self _playBuffer:_roomClearBuf]; }
+- (void)playUIClickSound   { [self _playBuffer:_uiClickBuf];   }
 
 // ---------------------------------------------------------------------------
 // Music

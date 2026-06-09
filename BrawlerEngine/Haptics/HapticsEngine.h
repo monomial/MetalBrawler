@@ -10,4 +10,16 @@
 // Sharp transient — call on CombatSystem hit contact.
 - (void)playHitHaptic;
 
+// Light tap — player's punch starts (felt even when the swing whiffs).
+- (void)playAttackHaptic;
+
+// Heavy thud + short rumble — combo finisher lands.
+- (void)playFinisherHaptic;
+
+// Soft low pulse — dodge roll starts.
+- (void)playDodgeHaptic;
+
+// Long decaying rumble — an enemy goes down.
+- (void)playDeathHaptic;
+
 @end

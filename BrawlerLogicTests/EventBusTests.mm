@@ -66,4 +66,27 @@
     });
 }
 
+- (void)test_attackStarted_payload {
+    EventBus bus;
+    bus.emit_attack_started(3, 6); // clipID 6 = Attack2
+    int seen = 0;
+    bus.for_each(EventType::AttackStarted, [&seen](const Event& e){
+        XCTAssertEqual(e.attackStarted.entityID, (uint32_t)3);
+        XCTAssertEqual(e.attackStarted.clipID,   (uint8_t)6);
+        seen++;
+    });
+    XCTAssertEqual(seen, 1);
+}
+
+- (void)test_dodgeStarted_payload {
+    EventBus bus;
+    bus.emit_dodge_started(9);
+    int seen = 0;
+    bus.for_each(EventType::DodgeStarted, [&seen](const Event& e){
+        XCTAssertEqual(e.dodgeStarted.entityID, (uint32_t)9);
+        seen++;
+    });
+    XCTAssertEqual(seen, 1);
+}
+
 @end

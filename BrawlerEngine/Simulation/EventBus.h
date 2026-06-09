@@ -8,19 +8,25 @@ enum class EventType : uint8_t {
     DamageDealt,   // entity took damage
     EntityDied,    // entity HP hit 0, queued for destroy
     HitContact,    // attack landed (triggers hit-stop + shake)
+    AttackStarted, // an Attack/Attack2 clip actually began (audio: swing whoosh)
+    DodgeStarted,  // a Dodge clip actually began (audio + haptics)
 };
 
-struct DamageDealtPayload { uint32_t targetID; int amount; };
-struct EntityDiedPayload  { uint32_t entityID; };
-struct HitContactPayload  { uint32_t attackerID; uint32_t targetID; };
+struct DamageDealtPayload   { uint32_t targetID; int amount; };
+struct EntityDiedPayload    { uint32_t entityID; };
+struct HitContactPayload    { uint32_t attackerID; uint32_t targetID; };
+struct AttackStartedPayload { uint32_t entityID; uint8_t clipID; }; // clipID = (uint8_t)AnimClipID
+struct DodgeStartedPayload  { uint32_t entityID; };
 
 // One slot in the ring buffer.
 struct Event {
     EventType type;
     union {
-        DamageDealtPayload damageDealt;
-        EntityDiedPayload  entityDied;
-        HitContactPayload  hitContact;
+        DamageDealtPayload   damageDealt;
+        EntityDiedPayload    entityDied;
+        HitContactPayload    hitContact;
+        AttackStartedPayload attackStarted;
+        DodgeStartedPayload  dodgeStarted;
     };
 };
 
@@ -62,6 +68,16 @@ struct EventBus {
     void emit_hit_contact(uint32_t attackerID, uint32_t targetID) {
         Event e{}; e.type = EventType::HitContact;
         e.hitContact = { attackerID, targetID };
+        push(e);
+    }
+    void emit_attack_started(uint32_t entityID, uint8_t clipID) {
+        Event e{}; e.type = EventType::AttackStarted;
+        e.attackStarted = { entityID, clipID };
+        push(e);
+    }
+    void emit_dodge_started(uint32_t entityID) {
+        Event e{}; e.type = EventType::DodgeStarted;
+        e.dodgeStarted = { entityID };
         push(e);
     }
 

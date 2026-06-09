@@ -39,9 +39,10 @@ static bool clip_loops(AnimClipID id) {
 // pop, short enough not to soften attack startup.
 static constexpr float kAnimBlendDuration = 0.1f;
 
-// All clip changes go through here so the cross-fade bookkeeping can't be
-// forgotten at one of the transition sites.
-static void begin_transition(AnimationComponent& anim, AnimClipID next) {
+// All clip changes go through here so the cross-fade bookkeeping and the
+// clip-start events can't be forgotten at one of the transition sites.
+static void begin_transition(World& world, EntityID id,
+                             AnimationComponent& anim, AnimClipID next) {
     anim.prevClip       = anim.currentClip;
     anim.prevClipTime   = anim.clipTime;
     anim.blendRemaining = kAnimBlendDuration;
@@ -51,6 +52,13 @@ static void begin_transition(AnimationComponent& anim, AnimClipID next) {
     anim.clipDone       = false;
     anim.looping        = clip_loops(next);
     anim.comboQueued    = false;
+
+    // AnimationSystem is the single authority on when a clip actually starts,
+    // so swing/dodge events are emitted here, not where input is read.
+    if (next == AnimClipID::Attack || next == AnimClipID::Attack2)
+        world.events().emit_attack_started(id, (uint8_t)next);
+    else if (next == AnimClipID::Dodge)
+        world.events().emit_dodge_started(id);
 }
 
 static float clip_speed_multiplier(AnimClipID id) {
@@ -88,7 +96,7 @@ void AnimationSystem_update(World& world, float gameDt) {
         if (clip_loops(anim.currentClip)) {
             // Looping clips transition immediately when any different clip is requested.
             if (anim.requestedClip != anim.currentClip) {
-                begin_transition(anim, anim.requestedClip);
+                begin_transition(world, id, anim, anim.requestedClip);
             } else if (anim.clipTime >= duration) {
                 anim.clipTime = fmodf(anim.clipTime, duration);
             }
@@ -100,13 +108,13 @@ void AnimationSystem_update(World& world, float gameDt) {
                 // Combo chain: a queued press during the Attack clip overrides
                 // whatever was requested — flow straight into the finisher.
                 if (anim.currentClip == AnimClipID::Attack && anim.comboQueued && !anim.dying) {
-                    begin_transition(anim, AnimClipID::Attack2);
+                    begin_transition(world, id, anim, AnimClipID::Attack2);
                 } else {
                     // Dying entities may only transition to Death (not back to Idle/Walk).
                     // Non-dying entities may transition to any requested clip.
                     bool canTransition = !anim.dying || anim.requestedClip == AnimClipID::Death;
                     if (canTransition && anim.requestedClip != anim.currentClip)
-                        begin_transition(anim, anim.requestedClip);
+                        begin_transition(world, id, anim, anim.requestedClip);
                 }
             }
         }

@@ -17,9 +17,16 @@
 - (void)startupInit;
 
 // Sound effects — safe to call every frame, internally rate-limited.
-- (void)playHitSound;    // punch landing on target
-- (void)playHurtSound;   // entity receiving damage but not dying
-- (void)playDeathSound;  // entity HP hits 0
+// Bundle file overrides (sfx_hit, sfx_hurt, sfx_death, sfx_swing, sfx_dodge,
+// sfx_finisher, sfx_room_clear, sfx_ui_click) beat the synthetic fallbacks.
+- (void)playHitSound;       // punch landing on target
+- (void)playHurtSound;      // entity receiving damage but not dying
+- (void)playDeathSound;     // entity HP hits 0
+- (void)playSwingSound;     // attack clip starts (whoosh, lands or not)
+- (void)playFinisherSound;  // combo finisher lands (heavier than hit)
+- (void)playDodgeSound;     // dodge roll starts
+- (void)playRoomClearSound; // all enemies down (short ascending jingle)
+- (void)playUIClickSound;   // menu/phase advance
 
 // Background music.
 - (void)startBattleMusic;
