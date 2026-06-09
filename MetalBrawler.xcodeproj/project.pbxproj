@@ -153,6 +153,8 @@
 		189A9141A8E1CF5522C84640 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		1A002302E6D7EE53F38E2D27 /* ModelIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModelIO.framework; path = System/Library/Frameworks/ModelIO.framework; sourceTree = SDKROOT; };
 		1EA7A5158194F208CB8204A0 /* RespawnSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RespawnSystem.h; sourceTree = "<group>"; };
+		1EC157B52FD8907700A880C3 /* design.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = design.md; sourceTree = "<group>"; };
+		1EC157B62FD8907700A880C3 /* ecs-vocabulary.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "ecs-vocabulary.md"; sourceTree = "<group>"; };
 		2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EventBusTests.mm; sourceTree = "<group>"; };
 		2377186BA6E74F7009AFB214 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		25D5EF275206644E9DE55572 /* AnimationTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AnimationTests.mm; sourceTree = "<group>"; };
@@ -346,6 +348,15 @@
 			path = Assets;
 			sourceTree = "<group>";
 		};
+		1EC157B72FD8907700A880C3 /* docs */ = {
+			isa = PBXGroup;
+			children = (
+				1EC157B52FD8907700A880C3 /* design.md */,
+				1EC157B62FD8907700A880C3 /* ecs-vocabulary.md */,
+			);
+			path = docs;
+			sourceTree = "<group>";
+		};
 		2CAC442BB0397260635883AC /* BrawlerEngine */ = {
 			isa = PBXGroup;
 			children = (
@@ -374,6 +385,7 @@
 		2FFF9A22AFE335CF6590E0F7 = {
 			isa = PBXGroup;
 			children = (
+				1EC157B72FD8907700A880C3 /* docs */,
 				2A7FD8B528E4D7B75E7C364B /* assets */,
 				CA32A4D36D5DE347FD638CBD /* Brawler-iOS */,
 				D0180AA65EB15F0F32AAC508 /* Brawler-macOS */,
@@ -605,8 +617,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 5B064B3242CF9581D2D7BAC2 /* Build configuration list for PBXProject "MetalBrawler" */;
 			developmentRegion = en;
@@ -895,7 +905,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests";
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/BrawlerEngine",
+					"$(SRCROOT)/BrawlerLogicTests",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1066,7 +1079,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests";
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/BrawlerEngine",
+					"$(SRCROOT)/BrawlerLogicTests",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

@@ -96,8 +96,9 @@ void World::tick(float gameDt) {
     // 7. AudioSystem (physicalDt — run even during HitStop)
     // RespawnSystem removed: room progression in BrawlerGameDelegate owns enemy spawning.
     // 8. HapticsSystem   — TODO
-    // 9. ScreenShakeSystem (physicalDt — runs even during HitStop)
-    ScreenShakeSystem_update(*this, gameDt);
+    // 9. ScreenShakeSystem (fixed physical dt — must keep decaying during HitStop,
+    //    when gameDt is 0, otherwise the shake freezes exactly when it matters most)
+    ScreenShakeSystem_update(*this, kFixedDt);
     // 9. flush
     flush();
     // 10. RenderSystem — called by the render loop after update() returns

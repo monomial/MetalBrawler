@@ -15,12 +15,14 @@ struct SkinnedOut {
     float4 position [[position]];
     float3 worldNormal;
     float2 texcoord;
-    float4 tint;     // faction color passed through
+    float4 tint;         // faction color passed through
+    float  tintStrength; // how strongly tint blends over the texture
 };
 
 struct SkinnedUniforms {
     float4x4 mvp;
-    float4   color;  // faction tint
+    float4   color;        // faction tint
+    float    tintStrength; // 0 = pure texture, 1 = pure faction color
 };
 
 vertex SkinnedOut skinned_vertex_main(
@@ -44,10 +46,11 @@ vertex SkinnedOut skinned_vertex_main(
     }
 
     SkinnedOut out;
-    out.position    = u.mvp * skPos;
-    out.worldNormal = normalize(skNrm.xyz);
-    out.texcoord    = in.texcoord;
-    out.tint        = u.color;
+    out.position     = u.mvp * skPos;
+    out.worldNormal  = normalize(skNrm.xyz);
+    out.texcoord     = in.texcoord;
+    out.tint         = u.color;
+    out.tintStrength = u.tintStrength;
     return out;
 }
 
@@ -59,8 +62,9 @@ fragment float4 skinned_fragment_main(
     // Sample character skin texture; fall back to white if texture is missing/1x1.
     float4 texColor = diffuseTex.sample(texSampler, in.texcoord);
 
-    // Very subtle faction tint — character skin texture dominates.
-    float3 base = mix(texColor.rgb, in.tint.rgb, 0.08);
+    // Faction tint blend — subtle for players (texture dominates), heavy for
+    // enemies so they read as distinct while sharing the player mesh.
+    float3 base = mix(texColor.rgb, in.tint.rgb, in.tintStrength);
 
     // Diffuse lighting with a fixed directional light.
     float3 lightDir = normalize(float3(0.5, 0.8, 1.0));

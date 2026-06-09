@@ -2,10 +2,17 @@
 #import <simd/simd.h>
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
+#include "Simulation/Systems/ScreenShakeSystem.h"
 #include "Assets/CharacterLoader.h"
 
 typedef struct { simd_float4x4 mvp; simd_float4 color; } DrawUniforms;
-typedef struct { simd_float4x4 mvp; simd_float4 color; } SkinnedUniforms;
+// Layout must match SkinnedUniforms in SkinnedMesh.metal.
+typedef struct { simd_float4x4 mvp; simd_float4 color; float tintStrength; } SkinnedUniforms;
+
+// Faction tint blend into the character texture. Enemies share the player mesh
+// for now, so they get a heavy tint to stay visually distinct.
+static const float kPlayerTintStrength = 0.08f;
+static const float kEnemyTintStrength  = 0.45f;
 
 // Auto-scale: characters should be ~150 game units tall.
 // Computed from meshHeight at runtime; this is the fallback.
@@ -258,6 +265,13 @@ static float clampf(float v, float lo, float hi) {
     simd_float3 eye = { target.x,
                         target.y - camDist * cosf(kCamPitch),
                         camDist   * sinf(kCamPitch) };
+
+    // Screen shake: offset eye and target together so the view direction is
+    // preserved and the whole frame jolts. Decays in ScreenShakeSystem.
+    simd_float2 shake = ScreenShakeSystem_offset(*world);
+    eye.x    += shake.x; eye.y    += shake.y;
+    target.x += shake.x; target.y += shake.y;
+
     simd_float4x4 vp = simd_mul(_proj, make_look_at(eye, target, (simd_float3){0,0,1}));
 
     rpd.colorAttachments[0].clearColor  = MTLClearColorMake(0.08,0.08,0.12,1);
@@ -344,6 +358,8 @@ static float clampf(float v, float lo, float hi) {
             float facing = (eid < kMaxAnimEntities) ? _facingAngle[eid] : (float)M_PI_2;
             su.mvp   = simd_mul(vp, make_char_model(pos.x, pos.y, scale, charData->meshYMin, facing));
             su.color = color;
+            su.tintStrength = (faction == FactionComponent::Enemy) ? kEnemyTintStrength
+                                                                   : kPlayerTintStrength;
             [enc setVertexBytes:&su length:sizeof(su) atIndex:2];
 
             id<MTLTexture> tex = charData->diffuseTexture ? charData->diffuseTexture : _whiteTexture;
