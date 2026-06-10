@@ -85,7 +85,10 @@ void World::flush() {
 }
 
 void World::tick(float gameDt) {
-    _events.clear(); // fresh slate each tick
+    // NOTE: events are cleared in update(), not here — a frame can run several
+    // ticks, and the delegate routes events to audio/particles/haptics once
+    // per frame after update() returns. Clearing per tick silently discarded
+    // every event except the last tick's (most hit sounds, sparks, haptics).
 
     // Systems run in declared order (see docs/ecs-vocabulary.md).
     // gameDt is 0 during HitStop — systems that use it freeze automatically.
@@ -130,6 +133,8 @@ void World::tick(float gameDt) {
 }
 
 void World::update(float physicalDt, float /*gameDt*/) {
+    _events.clear(); // fresh slate each frame — events accumulate across ticks
+
     // Accumulate wall-clock time and drain in fixed 120Hz steps.
     // Prevents hitbox tunneling and makes physics deterministic.
     _accumulator += physicalDt;

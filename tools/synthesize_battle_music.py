@@ -2,11 +2,13 @@
 """
 Generate an original looping background track for MetalBrawler.
 
-Mid-energy by design: warm pads and a legato synth melody over a light
-drum pulse and a round, quiet bass. Two deliberate constraints:
-  - little low-end energy (the old track was all kick and gritty bass), and
-  - NO short high plucked notes — sparse decaying "pings" on an ambient bed
-    read as stray sound effects, not music. Melody notes are sustained.
+Adventure flavor: string-ish pads (additive saw, chorused), a horn-ish lead
+playing a heroic dotted-rhythm melody, a root–fifth galloping bass, and a
+driving but light drum pulse. Constraints that earlier passes taught us:
+  - little low-end energy (heavy kick/bass fatigues and masks SFX),
+  - no short high plucked notes (sparse decaying "pings" over a bed read as
+    stray sound effects — sustained voices only),
+  - pure sine timbres sound "outer-spacy" — use harmonic-rich voices instead.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ import numpy as np
 
 
 SR = 44_100
-BPM = 104
+BPM = 112
 BEAT = 60.0 / BPM
 BARS = 16
 BEATS_PER_BAR = 4
@@ -36,62 +38,61 @@ def add(dst: np.ndarray, start_sec: float, clip: np.ndarray, gain: float = 1.0) 
     dst[start:end] += clip[: end - start] * gain
 
 
-def sine(freq: float, dur: float, phase: float = 0.0) -> np.ndarray:
-    t = np.arange(int(round(dur * SR))) / SR
-    return np.sin(2.0 * math.pi * freq * t + phase)
-
-
-def triangle(freq: float, dur: float) -> np.ndarray:
-    t = np.arange(int(round(dur * SR))) / SR
-    return 2.0 * np.abs(2.0 * ((freq * t) % 1.0) - 1.0) - 1.0
+def saw_voice(freq: float, dur: float, harmonics: int = 6, detune: float = 0.002) -> np.ndarray:
+    """Band-limited saw via additive synthesis, two detuned layers (chorus).
+    Reads as 'strings' in a pad, 'brass' in a lead — warm, not spacey."""
+    n = int(round(dur * SR))
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for d in (1.0 - detune, 1.0 + detune):
+        for h in range(1, harmonics + 1):
+            out += np.sin(2.0 * math.pi * freq * d * h * t) / h
+    return out / (2.0 * 1.8)
 
 
 def pad_chord(freqs: list[float], dur: float) -> np.ndarray:
-    """Warm sustained chord — sine fundamentals plus a soft octave shimmer."""
+    """String-section pad: chorused saws per note, slow swell."""
     n = int(round(dur * SR))
     t = np.arange(n) / SR
     out = np.zeros(n)
     for f in freqs:
-        vib = 1.0 + 0.0015 * np.sin(2.0 * math.pi * 0.7 * t)
-        out += np.sin(2.0 * math.pi * f * t * vib)
-        out += 0.30 * np.sin(2.0 * math.pi * f * 2.003 * t)
-    attack = np.minimum(t / 0.5, 1.0)
-    release = np.minimum((dur - t) / 0.8, 1.0)
-    return out * attack * release / (len(freqs) * 1.35)
+        out += saw_voice(f, dur, harmonics=5)
+    attack = np.minimum(t / 0.35, 1.0)
+    release = np.minimum((dur - t) / 0.5, 1.0)
+    return out * attack * release / len(freqs)
 
 
 def lead_note(freq: float, dur: float) -> np.ndarray:
-    """Legato melody voice: triangle+sine blend with slow attack and a held
-    body — deliberately NOT a pluck, so it can't read as a stray 'ping'."""
+    """Horn-ish lead: saw + reinforced fundamental, quick-but-soft attack,
+    held body with vibrato blooming late. Sustained — never a ping."""
     n = int(round(dur * SR))
     t = np.arange(n) / SR
-    vib = 1.0 + 0.004 * np.sin(2.0 * math.pi * 5.0 * t) * np.minimum(t / 0.4, 1.0)
-    body = (triangle(freq, dur) * 0.45 + np.sin(2.0 * math.pi * freq * t * vib) * 0.55)
-    attack = np.minimum(t / 0.10, 1.0)
-    release = np.minimum((dur - t) / 0.18, 1.0)
-    return np.tanh(body * 1.1) * attack * release
+    vib = 1.0 + 0.005 * np.sin(2.0 * math.pi * 5.5 * t) * np.minimum(t / 0.35, 1.0)
+    body = saw_voice(freq, dur, harmonics=7) * 0.7
+    body += np.sin(2.0 * math.pi * freq * vib * t) * 0.5
+    attack = np.minimum(t / 0.045, 1.0)
+    release = np.minimum((dur - t) / 0.12, 1.0)
+    return np.tanh(body * 1.2) * attack * release
 
 
 def soft_kick() -> np.ndarray:
-    """Round, tight thump — felt as pulse, mixed low so it never booms."""
-    dur = 0.16
+    dur = 0.15
     n = int(round(dur * SR))
     t = np.arange(n) / SR
-    freq = 150.0 * np.exp(-t * 22.0) + 55.0
+    freq = 160.0 * np.exp(-t * 24.0) + 58.0
     phase = np.cumsum(2.0 * math.pi * freq / SR)
-    return np.sin(phase) * np.minimum(t / 0.003, 1.0) * np.exp(-t / 0.05)
+    return np.sin(phase) * np.minimum(t / 0.003, 1.0) * np.exp(-t / 0.045)
 
 
-def soft_snare(seed: int) -> np.ndarray:
-    """Brushy tap, mostly midrange noise — no crack."""
-    dur = 0.14
+def snare(seed: int) -> np.ndarray:
+    dur = 0.16
     n = int(round(dur * SR))
     rng = np.random.default_rng(seed)
     noise = rng.uniform(-1, 1, n)
-    noise = noise - np.concatenate([[0.0], noise[:-1]]) * 0.6
+    noise = noise - np.concatenate([[0.0], noise[:-1]]) * 0.55
     t = np.arange(n) / SR
-    tone = np.sin(2.0 * math.pi * 190.0 * t) * np.exp(-t / 0.03) * 0.4
-    return (noise * np.exp(-t / 0.035) * 0.5 + tone) * np.minimum(t / 0.002, 1.0)
+    tone = np.sin(2.0 * math.pi * 200.0 * t) * np.exp(-t / 0.035) * 0.45
+    return (noise * np.exp(-t / 0.04) * 0.55 + tone) * np.minimum(t / 0.002, 1.0)
 
 
 def soft_hat(seed: int) -> np.ndarray:
@@ -108,59 +109,63 @@ def main() -> None:
     n = int(round(DURATION * SR))
     mono = np.zeros(n, dtype=np.float64)
 
-    # Two bars per chord: Am7 — Fmaj7 — Cmaj7 — G6, midrange voicings.
+    # One bar per chord: Am — F — C — G, the adventure staple. Midrange voicings.
     chords = [
-        [220.00, 261.63, 329.63, 392.00],   # A C E G
-        [174.61, 220.00, 261.63, 329.63],   # F A C E
-        [261.63, 329.63, 392.00, 493.88],   # C E G B
-        [196.00, 246.94, 293.66, 329.63],   # G B D E
+        [220.00, 261.63, 329.63],   # A C E
+        [174.61, 220.00, 261.63],   # F A C
+        [196.00, 261.63, 329.63],   # C/G voicing: G C E
+        [196.00, 246.94, 293.66],   # G B D
     ]
-    bass_roots = [110.00, 87.31, 130.81, 98.00]  # A2 F2 C3 G2
+    roots = [110.00, 87.31, 130.81, 98.00]    # A2 F2 C3 G2
+    fifths = [164.81, 130.81, 196.00, 146.83]  # E3 C3 G3 D3
 
-    chord_dur = 2 * BEATS_PER_BAR * BEAT
-    for i in range(BARS // 2):
-        base = i * chord_dur
-        add(mono, base, pad_chord(chords[i % len(chords)], chord_dur + 0.5), 0.26)
-
-    # Bass: quiet sine, but rhythmic now — root on each beat, octave lift on
-    # beat 3. Movement without boom.
+    bar_dur = BEATS_PER_BAR * BEAT
     for bar in range(BARS):
-        base = bar * BEATS_PER_BAR * BEAT
-        root = bass_roots[(bar // 2) % len(bass_roots)]
-        for beat in range(BEATS_PER_BAR):
-            f = root * (2.0 if beat == 2 else 1.0)
-            note_dur = BEAT * 0.85
+        base = bar * bar_dur
+        add(mono, base, pad_chord(chords[bar % 4], bar_dur + 0.3), 0.22)
+
+    # Galloping root–fifth bass: eighth notes R R 5 R R 5 R 5 — adventure drive.
+    pattern = [0, 0, 1, 0, 0, 1, 0, 1]
+    for bar in range(BARS):
+        base = bar * bar_dur
+        r, f5 = roots[bar % 4], fifths[bar % 4]
+        for step, which in enumerate(pattern):
+            freq = f5 if which else r
+            note_dur = BEAT * 0.42
             t = np.arange(int(round(note_dur * SR))) / SR
-            note = np.sin(2.0 * math.pi * f * t)
-            env = np.minimum(t / 0.02, 1.0) * np.minimum((note_dur - t) / 0.10, 1.0)
-            add(mono, base + beat * BEAT, note * env, 0.13)
+            note = np.sin(2.0 * math.pi * freq * t) + 0.3 * np.sin(2.0 * math.pi * freq * 2 * t)
+            env = np.minimum(t / 0.012, 1.0) * np.minimum((note_dur - t) / 0.06, 1.0)
+            add(mono, base + step * BEAT * 0.5, note * env, 0.125)
 
-    # Drums: gentle pulse. Kick 1 & 3, brush snare 2 & 4, off-beat hats.
-    k, s, h = soft_kick(), soft_snare(9), soft_hat(11)
+    # Drums: kick 1 & 3, snare 2 & 4 with an eighth pickup before 1, hats.
+    k, s, h = soft_kick(), snare(9), soft_hat(11)
     for bar in range(BARS):
-        base = bar * BEATS_PER_BAR * BEAT
+        base = bar * bar_dur
         add(mono, base + 0 * BEAT, k, 0.34)
-        add(mono, base + 2 * BEAT, k, 0.28)
-        add(mono, base + 1 * BEAT, s, 0.22)
-        add(mono, base + 3 * BEAT, s, 0.26)
-        for beat in range(BEATS_PER_BAR):
-            add(mono, base + (beat + 0.5) * BEAT, h, 0.12)
+        add(mono, base + 2 * BEAT, k, 0.30)
+        add(mono, base + 1 * BEAT, s, 0.26)
+        add(mono, base + 3 * BEAT, s, 0.30)
+        add(mono, base + 3.5 * BEAT, s, 0.12)          # pickup into the next bar
+        for eighth in range(8):
+            add(mono, base + eighth * BEAT * 0.5, h, 0.13 if eighth % 2 else 0.09)
 
-    # Legato melody: phrases of held notes over the chord tones, resting in
-    # bars 7–8 of each half. Sustained voice — energy without ping.
-    # (offset in beats, scale degree above A3, length in beats)
-    phrase = [(0.0, 0, 1.5), (1.5, 3, 1.0), (2.5, 5, 1.5), (4.0, 7, 2.0),
-              (6.0, 5, 1.0), (7.0, 3, 2.5), (10.0, 7, 1.5), (11.5, 8, 1.0),
-              (12.5, 7, 1.5), (14.0, 5, 3.0), (17.5, 3, 1.5), (19.0, 0, 3.0)]
+    # Heroic lead melody over two 8-bar halves; rests in bars 7–8 of each half.
+    # (offset in beats from half start, semitones above A3, length in beats)
+    phrase = [
+        (0.0, 0, 0.75), (0.75, 3, 0.25), (1.0, 5, 1.0), (2.0, 7, 1.5), (3.5, 5, 0.5),
+        (4.0, 8, 2.0), (6.0, 7, 1.0), (7.0, 5, 1.0),
+        (8.0, 3, 0.75), (8.75, 5, 0.25), (9.0, 7, 1.0), (10.0, 10, 1.5), (11.5, 8, 0.5),
+        (12.0, 7, 1.5), (13.5, 5, 0.5), (14.0, 3, 2.0),
+        (16.0, 0, 0.75), (16.75, 3, 0.25), (17.0, 5, 1.0), (18.0, 7, 1.5), (19.5, 8, 0.5),
+        (20.0, 12, 2.5), (22.5, 10, 0.75), (23.25, 8, 0.75),
+    ]
     semitone = 2.0 ** (1.0 / 12.0)
     for half in range(2):
-        half_base = half * 8 * BEATS_PER_BAR * BEAT
+        half_base = half * 8 * bar_dur
         for beat_off, semi, length in phrase:
-            if beat_off >= 6 * BEATS_PER_BAR:   # rest bars 7–8
-                continue
-            freq = 220.0 * (semitone ** semi) * (2.0 if half == 1 else 1.0) / 2.0 * 2.0
             add(mono, half_base + beat_off * BEAT,
-                lead_note(freq, length * BEAT), 0.16 if half == 0 else 0.13)
+                lead_note(220.0 * (semitone ** semi), length * BEAT),
+                0.135 if half == 0 else 0.115)
 
     # Gentle fade edges so the loop point is silent-safe.
     edge = int(0.04 * SR)
