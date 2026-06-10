@@ -9,9 +9,16 @@ import bpy, os, sys
 
 SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
-PLAYER_DIR  = os.path.join(PROJECT_DIR, "assets", "characters", "player")
+CHAR_ROOT   = os.path.join(PROJECT_DIR, "assets", "characters")
 
-CLIPS = ["idle", "walk", "attack", "attack2", "hurt", "hurt2", "death", "dodge"]
+# (directory, base mesh FBX basename, clip list). Clip order doesn't matter
+# here — the AnimClipID ordering lives in BrawlerGameDelegate._loadCharacters.
+CHARACTERS = [
+    ("player", "Ch24_nonPBR",
+     ["idle", "walk", "attack", "attack2", "hurt", "hurt2", "death", "dodge"]),
+    ("enemy", "PumpkinhulkLShaw",
+     ["idle", "walk", "attack", "attack2", "hurt", "death", "dodge"]),
+]
 
 # Incremental: skip outputs that already exist and are newer than their FBX.
 # Set BRAWLER_FORCE_CONVERT=1 to re-export everything.
@@ -57,72 +64,77 @@ def export_usdz(path, animated, with_materials=False):
     )
 
 
-# -----------------------------------------------------------------------
-# Load base character and export T-pose mesh
-# -----------------------------------------------------------------------
-clear_scene()
+def convert_character(char_dir, mesh_name, clips):
+    # -------------------------------------------------------------------
+    # Load base character and export T-pose mesh
+    # -------------------------------------------------------------------
+    clear_scene()
 
-char_fbx = os.path.join(PLAYER_DIR, "Ch24_nonPBR.fbx")
-if not os.path.exists(char_fbx):
-    print(f"ERROR: {char_fbx} not found")
-    sys.exit(1)
+    char_fbx = os.path.join(char_dir, f"{mesh_name}.fbx")
+    if not os.path.exists(char_fbx):
+        print(f"Skipping {char_dir} — {mesh_name}.fbx not found")
+        return
 
-import_fbx(char_fbx)
-char_arm = find_armature()
-if not char_arm:
-    print("ERROR: no armature found in character FBX")
-    sys.exit(1)
+    import_fbx(char_fbx)
+    char_arm = find_armature()
+    if not char_arm:
+        print(f"ERROR: no armature found in {char_fbx}")
+        sys.exit(1)
 
-print(f"Loaded: {[o.name for o in bpy.context.scene.objects]}")
+    print(f"Loaded: {[o.name for o in bpy.context.scene.objects]}")
 
-char_out = os.path.join(PLAYER_DIR, "Ch24_nonPBR.usdz")
-if up_to_date(char_fbx, char_out):
-    print(f"Base mesh up to date: {char_out}")
-else:
-    export_usdz(char_out, animated=False, with_materials=True)
-    print(f"Exported base mesh: {char_out}  ({os.path.getsize(char_out)//1024}KB)")
-
-# -----------------------------------------------------------------------
-# Export each animation clip
-# -----------------------------------------------------------------------
-for clip_name in CLIPS:
-    anim_fbx = os.path.join(PLAYER_DIR, f"{clip_name}.fbx")
-    if not os.path.exists(anim_fbx):
-        print(f"Skipping {clip_name} — {clip_name}.fbx not found")
-        continue
-    clip_out_path = os.path.join(PLAYER_DIR, f"{clip_name}.usdz")
-    if up_to_date(anim_fbx, clip_out_path):
-        print(f"Up to date: {clip_out_path}")
-        continue
-
-    import_fbx(anim_fbx)
-
-    anim_arm = find_armature(exclude=char_arm)
-    if anim_arm and anim_arm.animation_data and anim_arm.animation_data.action:
-        action = anim_arm.animation_data.action
-        if not char_arm.animation_data:
-            char_arm.animation_data_create()
-        char_arm.animation_data.action = action
-        bpy.data.objects.remove(anim_arm, do_unlink=True)
-        print(f"  {clip_name}: transferred action '{action.name}'")
+    char_out = os.path.join(char_dir, f"{mesh_name}.usdz")
+    if up_to_date(char_fbx, char_out):
+        print(f"Base mesh up to date: {char_out}")
     else:
-        if anim_arm:
+        export_usdz(char_out, animated=False, with_materials=True)
+        print(f"Exported base mesh: {char_out}  ({os.path.getsize(char_out)//1024}KB)")
+
+    # -------------------------------------------------------------------
+    # Export each animation clip
+    # -------------------------------------------------------------------
+    for clip_name in clips:
+        anim_fbx = os.path.join(char_dir, f"{clip_name}.fbx")
+        if not os.path.exists(anim_fbx):
+            print(f"Skipping {clip_name} — {clip_name}.fbx not found")
+            continue
+        clip_out = os.path.join(char_dir, f"{clip_name}.usdz")
+        if up_to_date(anim_fbx, clip_out):
+            print(f"Up to date: {clip_out}")
+            continue
+
+        import_fbx(anim_fbx)
+
+        anim_arm = find_armature(exclude=char_arm)
+        if anim_arm and anim_arm.animation_data and anim_arm.animation_data.action:
+            action = anim_arm.animation_data.action
+            if not char_arm.animation_data:
+                char_arm.animation_data_create()
+            char_arm.animation_data.action = action
             bpy.data.objects.remove(anim_arm, do_unlink=True)
-        print(f"  {clip_name}: no animation action found in {clip_name}.fbx")
+            print(f"  {clip_name}: transferred action '{action.name}'")
+        else:
+            if anim_arm:
+                bpy.data.objects.remove(anim_arm, do_unlink=True)
+            print(f"  {clip_name}: no animation action found in {clip_name}.fbx")
 
-    # Trim scene timeline to the actual action frame range
-    if char_arm.animation_data and char_arm.animation_data.action:
-        fr = char_arm.animation_data.action.frame_range
-        bpy.context.scene.frame_start = int(fr[0])
-        bpy.context.scene.frame_end   = int(fr[1])
-        print(f"  frame range: {int(fr[0])}–{int(fr[1])}")
+        # Trim scene timeline to the actual action frame range
+        if char_arm.animation_data and char_arm.animation_data.action:
+            fr = char_arm.animation_data.action.frame_range
+            bpy.context.scene.frame_start = int(fr[0])
+            bpy.context.scene.frame_end   = int(fr[1])
+            print(f"  frame range: {int(fr[0])}–{int(fr[1])}")
 
-    clip_out = os.path.join(PLAYER_DIR, f"{clip_name}.usdz")
-    bpy.context.view_layer.objects.active = char_arm
-    export_usdz(clip_out, animated=True)
-    print(f"Exported {clip_name}: {clip_out}  ({os.path.getsize(clip_out)//1024}KB)")
+        bpy.context.view_layer.objects.active = char_arm
+        export_usdz(clip_out, animated=True)
+        print(f"Exported {clip_name}: {clip_out}  ({os.path.getsize(clip_out)//1024}KB)")
 
-    if char_arm.animation_data:
-        char_arm.animation_data.action = None
+        if char_arm.animation_data:
+            char_arm.animation_data.action = None
+
+
+for name, mesh, clips in CHARACTERS:
+    print(f"\n=== {name} ===")
+    convert_character(os.path.join(CHAR_ROOT, name), mesh, clips)
 
 print("\nAll done.")

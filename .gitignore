@@ -26,3 +26,5 @@ assets/characters/player/unused/
 # Downloaded third-party audio packs — re-download from kenney.nl if needed.
 # Curated game-ready files (sfx_*.wav, music_battle.mp3) are tracked via LFS instead.
 assets/audio/kenney_impact-sounds/
+assets/characters/enemy/*.fbx
+assets/characters/enemy/unused/

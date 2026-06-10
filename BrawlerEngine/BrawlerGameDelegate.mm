@@ -226,21 +226,34 @@ struct PlayerPerks {
     return self;
 }
 
-- (void)_loadCharacters:(id<MTLDevice>)device {
+- (LoadedCharacter *)_loadCharacterIn:(NSString *)folder
+                                 mesh:(NSString *)meshName
+                               device:(id<MTLDevice>)device {
     NSString *res = [NSBundle mainBundle].resourcePath;
-    NSString *playerDir = [res stringByAppendingPathComponent:@"assets/characters/player"];
-    NSString *mesh = [playerDir stringByAppendingPathComponent:@"Ch24_nonPBR.usdz"];
+    NSString *dir = [res stringByAppendingPathComponent:
+                     [@"assets/characters" stringByAppendingPathComponent:folder]];
+    NSString *mesh = [dir stringByAppendingPathComponent:meshName];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:mesh]) return nullptr;
 
     // Order must match AnimClipID: Idle, Walk, Attack, Hurt, Death, Dodge, Attack2.
     NSMutableArray<NSString*> *clips = [NSMutableArray array];
     for (NSString *n in @[@"idle.usdz", @"walk.usdz", @"attack.usdz",
                            @"hurt.usdz", @"death.usdz", @"dodge.usdz",
                            @"attack2.usdz"])
-        [clips addObject:[playerDir stringByAppendingPathComponent:n]];
+        [clips addObject:[dir stringByAppendingPathComponent:n]];
 
-    LoadedCharacter *player = CharacterLoader_load(mesh, clips, device);
-    AnimationSystem_set_characters(player, player);
-    [_renderer setPlayerCharacter:player enemyCharacter:player];
+    return CharacterLoader_load(mesh, clips, device);
+}
+
+- (void)_loadCharacters:(id<MTLDevice>)device {
+    LoadedCharacter *player = [self _loadCharacterIn:@"player"
+                                                mesh:@"Ch24_nonPBR.usdz" device:device];
+    LoadedCharacter *enemy  = [self _loadCharacterIn:@"enemy"
+                                                mesh:@"PumpkinhulkLShaw.usdz" device:device];
+    if (!enemy) enemy = player; // enemy assets absent — fall back to tinted player
+
+    AnimationSystem_set_characters(player, enemy);
+    [_renderer setPlayerCharacter:player enemyCharacter:enemy];
 }
 
 // ---------------------------------------------------------------------------

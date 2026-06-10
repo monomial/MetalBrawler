@@ -42,7 +42,7 @@ typedef struct { simd_float4x4 mvp; simd_float4 color; float tintStrength; } Ski
 // Faction tint blend into the character texture. Enemies share the player mesh
 // for now, so they get a heavy tint to stay visually distinct.
 static const float kPlayerTintStrength = 0.08f;
-static const float kEnemyTintStrength  = 0.45f;
+static const float kEnemyTintStrength  = 0.15f; // subtle — enemies have their own model now
 
 // Auto-scale: characters should be ~150 game units tall.
 // Computed from meshHeight at runtime; this is the fallback.
