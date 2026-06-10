@@ -289,8 +289,12 @@ static const int kNumSfxNodes = 8;
 
 // Round-robin over the node pool. stop clears anything the node still holds —
 // it's at least 7 sounds old by then, so cutting it is inaudible.
-- (void)_playBuffer:(AVAudioPCMBuffer*)buf {
+- (void)_playBuffer:(AVAudioPCMBuffer*)buf name:(const char*)name {
     if (!_started || !buf) return;
+    // BRAWLER_AUDIO_LOG=1: timestamp every SFX so a mystery sound can be
+    // matched against this log — if it isn't here, it's the music.
+    static const bool sLog = getenv("BRAWLER_AUDIO_LOG") != nullptr;
+    if (sLog) NSLog(@"AudioEngine: SFX %s", name);
     AVAudioPlayerNode *node = _sfxNodes[_sfxNodeIdx];
     _sfxNodeIdx = (_sfxNodeIdx + 1) % kNumSfxNodes;
     [node stop];
@@ -298,14 +302,14 @@ static const int kNumSfxNodes = 8;
     [node play];
 }
 
-- (void)playHitSound       { [self _playBuffer:_hitBuf];       }
-- (void)playHurtSound      { [self _playBuffer:_hurtBuf];      }
-- (void)playDeathSound     { [self _playBuffer:_deathBuf];     }
-- (void)playSwingSound     { [self _playBuffer:_swingBuf];     }
-- (void)playDodgeSound     { [self _playBuffer:_dodgeBuf];     }
-- (void)playFinisherSound  { [self _playBuffer:_finisherBuf];  }
-- (void)playRoomClearSound { [self _playBuffer:_roomClearBuf]; }
-- (void)playUIClickSound   { [self _playBuffer:_uiClickBuf];   }
+- (void)playHitSound       { [self _playBuffer:_hitBuf       name:"hit"];        }
+- (void)playHurtSound      { [self _playBuffer:_hurtBuf      name:"hurt"];       }
+- (void)playDeathSound     { [self _playBuffer:_deathBuf     name:"death"];      }
+- (void)playSwingSound     { [self _playBuffer:_swingBuf     name:"swing"];      }
+- (void)playDodgeSound     { [self _playBuffer:_dodgeBuf     name:"dodge"];      }
+- (void)playFinisherSound  { [self _playBuffer:_finisherBuf  name:"finisher"];   }
+- (void)playRoomClearSound { [self _playBuffer:_roomClearBuf name:"room_clear"]; }
+- (void)playUIClickSound   { [self _playBuffer:_uiClickBuf   name:"ui_click"];   }
 
 // ---------------------------------------------------------------------------
 // Music
