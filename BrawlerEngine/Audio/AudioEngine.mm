@@ -226,9 +226,15 @@ static AVAudioPCMBuffer* loadBundleBuffer(NSString *name, AVAudioFormat *targetF
 // AudioEngine
 // ---------------------------------------------------------------------------
 
+// One AVAudioPlayerNode can't mix: scheduleBuffer queues buffers back-to-back,
+// so rapid combat SFX drift late and stale sounds dribble out after the fight.
+// A small round-robin pool plays every sound immediately and lets them overlap.
+static const int kNumSfxNodes = 8;
+
 @implementation AudioEngine {
     AVAudioEngine       *_engine;
-    AVAudioPlayerNode   *_sfxNode;      // shared low-latency SFX node
+    AVAudioPlayerNode   *_sfxNodes[kNumSfxNodes];
+    int                  _sfxNodeIdx;
     AVAudioPCMBuffer    *_hitBuf;
     AVAudioPCMBuffer    *_hurtBuf;
     AVAudioPCMBuffer    *_deathBuf;
@@ -244,20 +250,22 @@ static AVAudioPCMBuffer* loadBundleBuffer(NSString *name, AVAudioFormat *targetF
 
 - (instancetype)init {
     self = [super init];
-    _musicVolume = 0.6f;
+    _musicVolume = 0.4f; // music sits under SFX, not over them
     return self;
 }
 
 - (void)startupInit {
     if (_started) return;
 
-    _engine  = [[AVAudioEngine alloc] init];
-    _sfxNode = [[AVAudioPlayerNode alloc] init];
-    [_engine attachNode:_sfxNode];
+    _engine = [[AVAudioEngine alloc] init];
 
     AVAudioMixerNode *mixer = _engine.mainMixerNode;
     AVAudioFormat    *fmt   = [mixer outputFormatForBus:0];
-    [_engine connect:_sfxNode to:mixer format:fmt];
+    for (int i = 0; i < kNumSfxNodes; ++i) {
+        _sfxNodes[i] = [[AVAudioPlayerNode alloc] init];
+        [_engine attachNode:_sfxNodes[i]];
+        [_engine connect:_sfxNodes[i] to:mixer format:fmt];
+    }
 
     NSError *err = nil;
     if (![_engine startAndReturnError:&err]) {
@@ -279,12 +287,15 @@ static AVAudioPCMBuffer* loadBundleBuffer(NSString *name, AVAudioFormat *targetF
     NSLog(@"AudioEngine: ready (sampleRate %.0f Hz)", fmt.sampleRate);
 }
 
-// Schedules a buffer on the shared SFX node. Multiple rapid calls queue up
-// naturally — AVAudioPlayerNode handles them without clipping.
+// Round-robin over the node pool. stop clears anything the node still holds —
+// it's at least 7 sounds old by then, so cutting it is inaudible.
 - (void)_playBuffer:(AVAudioPCMBuffer*)buf {
     if (!_started || !buf) return;
-    [_sfxNode scheduleBuffer:buf completionHandler:nil];
-    if (!_sfxNode.playing) [_sfxNode play];
+    AVAudioPlayerNode *node = _sfxNodes[_sfxNodeIdx];
+    _sfxNodeIdx = (_sfxNodeIdx + 1) % kNumSfxNodes;
+    [node stop];
+    [node scheduleBuffer:buf completionHandler:nil];
+    [node play];
 }
 
 - (void)playHitSound       { [self _playBuffer:_hitBuf];       }
