@@ -12,10 +12,7 @@
     CGPoint              _moveOrigin;
     CGPoint              _moveTouchStartPos;
     NSTimeInterval       _moveTouchStartTime;
-    UILabel             *_overlayLabel;
     UIButton            *_pauseButton;
-    UIButton            *_onePlayerButton;
-    UIButton            *_twoPlayersButton;
     UIView              *_damageFlashView;
 }
 
@@ -34,16 +31,6 @@
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.bounds.size];
     _mtkView.delegate = _delegate;
 
-    _overlayLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
-    _overlayLabel.numberOfLines    = 0;
-    _overlayLabel.textAlignment    = NSTextAlignmentCenter;
-    _overlayLabel.textColor        = [UIColor whiteColor];
-    _overlayLabel.font             = [UIFont boldSystemFontOfSize:48];
-    _overlayLabel.backgroundColor  = [UIColor colorWithWhite:0 alpha:0.72];
-    _overlayLabel.hidden           = YES;
-    _overlayLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [self.view addSubview:_overlayLabel];
-
     // Pause button — top-right corner, hidden until game starts.
     _pauseButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [_pauseButton setTitle:@"⏸" forState:UIControlStateNormal];
@@ -53,36 +40,6 @@
     _pauseButton.hidden = YES;
     [_pauseButton addTarget:self action:@selector(_pauseTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_pauseButton];
-
-    // Player-select buttons — shown only during player-select phase.
-    CGFloat bw = self.view.bounds.size.width * 0.38f;
-    CGFloat bh = 80.f;
-    CGFloat cy = self.view.bounds.size.height * 0.55f;
-    CGFloat cx = self.view.bounds.size.width  * 0.5f;
-
-    _onePlayerButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [_onePlayerButton setTitle:@"1 PLAYER" forState:UIControlStateNormal];
-    _onePlayerButton.titleLabel.font = [UIFont boldSystemFontOfSize:28];
-    _onePlayerButton.backgroundColor = [UIColor colorWithWhite:0.15 alpha:0.9];
-    [_onePlayerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    _onePlayerButton.layer.cornerRadius = 12;
-    _onePlayerButton.frame = CGRectMake(cx - bw - 12, cy, bw, bh);
-    _onePlayerButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
-    _onePlayerButton.hidden = YES;
-    [_onePlayerButton addTarget:self action:@selector(_onePlayerTapped) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:_onePlayerButton];
-
-    _twoPlayersButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [_twoPlayersButton setTitle:@"2 PLAYERS" forState:UIControlStateNormal];
-    _twoPlayersButton.titleLabel.font = [UIFont boldSystemFontOfSize:28];
-    _twoPlayersButton.backgroundColor = [UIColor colorWithWhite:0.15 alpha:0.9];
-    [_twoPlayersButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    _twoPlayersButton.layer.cornerRadius = 12;
-    _twoPlayersButton.frame = CGRectMake(cx + 12, cy, bw, bh);
-    _twoPlayersButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin;
-    _twoPlayersButton.hidden = YES;
-    [_twoPlayersButton addTarget:self action:@selector(_twoPlayersTapped) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:_twoPlayersButton];
 
     // Red edge flash when the player takes a hit.
     _damageFlashView = [[UIView alloc] initWithFrame:self.view.bounds];
@@ -119,74 +76,12 @@
     _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
         GameViewController *vc = weakSelf;
         if (!vc) return;
-        switch (phase) {
-            case BrawlerGamePhaseTitle:
-                vc->_overlayLabel.text      = [NSString stringWithFormat:@"%@\nTap to start",
-                    kBrawlerStringTitle];
-                vc->_overlayLabel.hidden    = NO;
-                vc->_pauseButton.hidden     = YES;
-                vc->_onePlayerButton.hidden = YES;
-                vc->_twoPlayersButton.hidden = YES; break;
-            case BrawlerGamePhasePlayerSelect:
-                vc->_overlayLabel.text      = kBrawlerStringSelectPlayers;
-                vc->_overlayLabel.hidden    = NO;
-                vc->_pauseButton.hidden     = YES;
-                [vc->_onePlayerButton  setTitle:@"1 PLAYER"  forState:UIControlStateNormal];
-                [vc->_twoPlayersButton setTitle:@"2 PLAYERS" forState:UIControlStateNormal];
-                vc->_onePlayerButton.hidden  = NO;
-                vc->_twoPlayersButton.hidden = NO; break;
-            case BrawlerGamePhasePlaying:
-                vc->_overlayLabel.hidden     = YES;
-                vc->_pauseButton.hidden      = NO;
-                vc->_onePlayerButton.hidden  = YES;
-                vc->_twoPlayersButton.hidden = YES; break;
-            case BrawlerGamePhaseRoomClear:
-                vc->_overlayLabel.text   = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
-                vc->_overlayLabel.hidden = NO; break;
-            case BrawlerGamePhaseWin:
-                vc->_overlayLabel.text      = kBrawlerStringWin;
-                vc->_overlayLabel.hidden    = NO;
-                vc->_pauseButton.hidden     = YES;
-                vc->_onePlayerButton.hidden = YES;
-                vc->_twoPlayersButton.hidden = YES; break;
-            case BrawlerGamePhaseLose:
-                vc->_overlayLabel.text      = kBrawlerStringGameOver;
-                vc->_overlayLabel.hidden    = NO;
-                vc->_pauseButton.hidden     = YES;
-                vc->_onePlayerButton.hidden = YES;
-                vc->_twoPlayersButton.hidden = YES; break;
-            case BrawlerGamePhasePaused:
-                vc->_overlayLabel.text   = [NSString stringWithFormat:@"%@\n%@",
-                    kBrawlerStringPaused, kBrawlerStringPausedResume];
-                vc->_overlayLabel.hidden = NO;
-                vc->_pauseButton.hidden  = NO; break;
-            case BrawlerGamePhaseUpgrade:
-                // Reuse the two select buttons as perk choices.
-                vc->_overlayLabel.text   = @"CHOOSE UPGRADE";
-                vc->_overlayLabel.hidden = NO;
-                vc->_pauseButton.hidden  = YES;
-                [vc->_onePlayerButton  setTitle:[vc->_delegate upgradeChoiceLabel:0]
-                                       forState:UIControlStateNormal];
-                [vc->_twoPlayersButton setTitle:[vc->_delegate upgradeChoiceLabel:1]
-                                       forState:UIControlStateNormal];
-                vc->_onePlayerButton.hidden  = NO;
-                vc->_twoPlayersButton.hidden = NO; break;
-        }
+        vc->_pauseButton.hidden = (phase != BrawlerGamePhasePlaying &&
+                                   phase != BrawlerGamePhasePaused);
     };
-
-    // Show title screen immediately.
-    _delegate.onPhaseChanged(BrawlerGamePhaseTitle, 1, 3);
 }
 
 - (void)_pauseTapped      { [_delegate triggerPause]; }
-- (void)_onePlayerTapped  {
-    if (_delegate.gamePhase == BrawlerGamePhaseUpgrade) [_delegate chooseUpgrade:0];
-    else [_delegate startGameWithPlayers:1];
-}
-- (void)_twoPlayersTapped {
-    if (_delegate.gamePhase == BrawlerGamePhaseUpgrade) [_delegate chooseUpgrade:1];
-    else [_delegate startGameWithPlayers:2];
-}
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
 - (void)resumeRendering { _mtkView.paused = NO; }
@@ -194,9 +89,22 @@
 // First finger = virtual joystick. Any subsequent finger = attack tap.
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     for (UITouch *t in touches) {
+        CGPoint loc = [t locationInView:_mtkView];
+        if (_delegate.gamePhase == BrawlerGamePhaseTitle) {
+            [_delegate triggerAttack];
+            return;
+        }
+        if (_delegate.gamePhase == BrawlerGamePhasePlayerSelect) {
+            [_delegate startGameWithPlayers:(loc.x < _mtkView.bounds.size.width * 0.5 ? 1 : 2)];
+            return;
+        }
+        if (_delegate.gamePhase == BrawlerGamePhaseUpgrade) {
+            [_delegate chooseUpgrade:(loc.x < _mtkView.bounds.size.width * 0.5 ? 0 : 1)];
+            return;
+        }
         if (!_moveTouchRef) {
             _moveTouchRef        = t;
-            _moveOrigin          = [t locationInView:_mtkView];
+            _moveOrigin          = loc;
             _moveTouchStartPos   = _moveOrigin;
             _moveTouchStartTime  = event.timestamp;
         } else {

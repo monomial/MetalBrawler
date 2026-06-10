@@ -60,6 +60,9 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 - (NSString *)upgradeChoiceLabel:(int)index;
 - (void)chooseUpgrade:(int)index;
 
+// 0-based player index currently choosing an upgrade, or -1 outside Upgrade.
+- (int)currentUpgradePlayerIndex;
+
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.
 - (void)resetInput;

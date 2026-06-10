@@ -28,6 +28,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
+      - sdk: CoreText.framework
       - sdk: ImageIO.framework
       - sdk: GameController.framework
       - sdk: QuartzCore.framework
@@ -61,6 +62,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
+      - sdk: CoreText.framework
       - sdk: ImageIO.framework
       - sdk: GameController.framework
       - sdk: QuartzCore.framework
@@ -95,6 +97,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
       - sdk: CoreGraphics.framework
+      - sdk: CoreText.framework
       - sdk: ImageIO.framework
       - sdk: GameController.framework
       - sdk: QuartzCore.framework
@@ -124,6 +127,7 @@ targets:
       - sdk: Cocoa.framework
       - sdk: AVFoundation.framework
       - sdk: CoreHaptics.framework
+      - sdk: CoreText.framework
       - sdk: QuartzCore.framework
     settings:
       base:

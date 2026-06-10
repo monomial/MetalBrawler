@@ -12,9 +12,8 @@ static const int kMaxPlayers = 4;
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
     GCController        *_assignedControllers[kMaxPlayers];
-    UILabel             *_overlayLabel;
-    UILabel             *_subtitleLabel;  // "Connect a gamepad" or pause hint
     UIView              *_damageFlashView;
+    BOOL                 _left, _right, _up, _down, _attack, _dodge;
 }
 
 - (void)viewDidLoad {
@@ -32,30 +31,6 @@ static const int kMaxPlayers = 4;
                                                 pixelFormat:_mtkView.colorPixelFormat];
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.drawableSize];
     _mtkView.delegate = _delegate;
-
-    // Primary overlay — title / phase messages, centered.
-    _overlayLabel = [[UILabel alloc] initWithFrame:self.view.bounds];
-    _overlayLabel.numberOfLines       = 0;
-    _overlayLabel.textAlignment       = NSTextAlignmentCenter;
-    _overlayLabel.textColor           = [UIColor whiteColor];
-    _overlayLabel.font                = [UIFont boldSystemFontOfSize:72];
-    _overlayLabel.backgroundColor     = [UIColor colorWithWhite:0 alpha:0.72];
-    _overlayLabel.hidden              = YES;
-    _overlayLabel.autoresizingMask    = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [self.view addSubview:_overlayLabel];
-
-    // Subtitle label — controller prompt / pause hint, bottom-center.
-    CGRect bounds = self.view.bounds;
-    _subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, bounds.size.height - 120,
-                                                               bounds.size.width, 80)];
-    _subtitleLabel.numberOfLines   = 1;
-    _subtitleLabel.textAlignment   = NSTextAlignmentCenter;
-    _subtitleLabel.textColor       = [UIColor colorWithWhite:1 alpha:0.75];
-    _subtitleLabel.font            = [UIFont systemFontOfSize:36];
-    _subtitleLabel.backgroundColor = [UIColor clearColor];
-    _subtitleLabel.hidden          = YES;
-    _subtitleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
-    [self.view addSubview:_subtitleLabel];
 
     // Red edge flash when the player takes a hit.
     _damageFlashView = [[UIView alloc] initWithFrame:self.view.bounds];
@@ -89,12 +64,6 @@ static const int kMaxPlayers = 4;
                          completion:nil];
     };
 
-    _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
-        GameViewController *vc = weakSelf;
-        if (!vc) return;
-        [vc _updateOverlayForPhase:phase room:room lives:lives];
-    };
-
     [[NSNotificationCenter defaultCenter]
         addObserver:self
            selector:@selector(_controllerConnected:)
@@ -107,8 +76,6 @@ static const int kMaxPlayers = 4;
              object:nil];
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 
-    // Show title screen immediately.
-    [self _updateOverlayForPhase:BrawlerGamePhaseTitle room:1 lives:3];
 }
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
@@ -120,76 +87,97 @@ static const int kMaxPlayers = 4;
     _delegate = nil;
 }
 
-// Returns YES if at least one extended gamepad is connected.
-- (BOOL)_hasGamepad {
-    for (GCController *ctrl in [GCController controllers])
-        if (ctrl.extendedGamepad) return YES;
-    return NO;
-}
-
-- (void)_updateOverlayForPhase:(BrawlerGamePhase)phase room:(int)room lives:(int)lives {
-    switch (phase) {
-        case BrawlerGamePhaseTitle:
-            _overlayLabel.text   = kBrawlerStringTitle;
-            _overlayLabel.hidden = NO;
-            _subtitleLabel.text  = [self _hasGamepad]
-                                   ? @"Press A to start"
-                                   : kBrawlerStringNoController;
-            _subtitleLabel.hidden = NO;
-            break;
-        case BrawlerGamePhasePlayerSelect:
-            _overlayLabel.text    = @"SELECT PLAYERS\n[A]  1 Player\n[B]  2 Players";
-            _overlayLabel.hidden  = NO;
-            _subtitleLabel.hidden = YES;
-            break;
-        case BrawlerGamePhasePlaying:
-            _overlayLabel.hidden  = YES;
-            _subtitleLabel.hidden = YES;
-            break;
-        case BrawlerGamePhaseRoomClear:
-            _overlayLabel.text   = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
-            _overlayLabel.hidden = NO;
-            _subtitleLabel.hidden = YES;
-            break;
-        case BrawlerGamePhaseWin:
-            _overlayLabel.text   = kBrawlerStringWin;
-            _overlayLabel.hidden = NO;
-            _subtitleLabel.hidden = YES;
-            break;
-        case BrawlerGamePhaseLose:
-            _overlayLabel.text   = kBrawlerStringGameOver;
-            _overlayLabel.hidden = NO;
-            _subtitleLabel.hidden = YES;
-            break;
-        case BrawlerGamePhasePaused:
-            _overlayLabel.text   = kBrawlerStringPaused;
-            _overlayLabel.hidden = NO;
-            _subtitleLabel.text  = kBrawlerStringPausedResume;
-            _subtitleLabel.hidden = NO;
-            break;
-        case BrawlerGamePhaseUpgrade:
-            _overlayLabel.text   = @"CHOOSE UPGRADE";
-            _overlayLabel.hidden = NO;
-            _subtitleLabel.text  = [NSString stringWithFormat:@"[A]  %@      [X]  %@",
-                                    [_delegate upgradeChoiceLabel:0],
-                                    [_delegate upgradeChoiceLabel:1]];
-            _subtitleLabel.hidden = NO;
-            break;
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Controller management
 // ---------------------------------------------------------------------------
 
+- (BOOL)canBecomeFirstResponder { return YES; }
+
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    [self becomeFirstResponder];
+}
+
+- (void)_feedKeyboardInput {
+    float mx = (_right ? 1.f : 0.f) - (_left ? 1.f : 0.f);
+    float my = (_up    ? 1.f : 0.f) - (_down ? 1.f : 0.f);
+    InputState s = { mx, my, (bool)_attack, (bool)_dodge, false };
+    [_delegate setInputState:s forPlayer:0];
+}
+
+- (BOOL)_handleKeyboardPress:(UIPress *)press began:(BOOL)began {
+    if (!press.key) return NO;
+
+    UIKeyboardHIDUsage keyCode = press.key.keyCode;
+    if (began && _delegate.gamePhase == BrawlerGamePhaseTitle) {
+        [_delegate triggerAttack];
+        return YES;
+    }
+
+    switch (keyCode) {
+        case UIKeyboardHIDUsageKeyboardA:
+        case UIKeyboardHIDUsageKeyboardLeftArrow:
+            _left = began;
+            break;
+        case UIKeyboardHIDUsageKeyboardD:
+        case UIKeyboardHIDUsageKeyboardRightArrow:
+            _right = began;
+            break;
+        case UIKeyboardHIDUsageKeyboardW:
+        case UIKeyboardHIDUsageKeyboardUpArrow:
+            _up = began;
+            break;
+        case UIKeyboardHIDUsageKeyboardS:
+        case UIKeyboardHIDUsageKeyboardDownArrow:
+            _down = began;
+            break;
+        case UIKeyboardHIDUsageKeyboardSpacebar:
+            _attack = began;
+            break;
+        case UIKeyboardHIDUsageKeyboardQ:
+            _dodge = began;
+            break;
+        case UIKeyboardHIDUsageKeyboardEscape:
+            if (began) [_delegate triggerPause];
+            return YES;
+        case UIKeyboardHIDUsageKeyboard1:
+            if (began) [_delegate startGameWithPlayers:1];
+            return YES;
+        case UIKeyboardHIDUsageKeyboard2:
+            if (began) [_delegate startGameWithPlayers:2];
+            return YES;
+        default:
+            return NO;
+    }
+
+    [self _feedKeyboardInput];
+    return YES;
+}
+
+- (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event {
+    BOOL handled = NO;
+    for (UIPress *press in presses)
+        handled = [self _handleKeyboardPress:press began:YES] || handled;
+    if (!handled) [super pressesBegan:presses withEvent:event];
+}
+
+- (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event {
+    BOOL handled = NO;
+    for (UIPress *press in presses)
+        handled = [self _handleKeyboardPress:press began:NO] || handled;
+    if (!handled) [super pressesEnded:presses withEvent:event];
+}
+
+- (void)pressesCancelled:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event {
+    BOOL handled = NO;
+    for (UIPress *press in presses)
+        handled = [self _handleKeyboardPress:press began:NO] || handled;
+    if (!handled) [super pressesCancelled:presses withEvent:event];
+}
+
 - (void)_controllerConnected:(NSNotification *)note {
     GCController *ctrl = note.object;
     if (!ctrl) return;
-
-    // Refresh title subtitle now that a gamepad may be available.
-    BrawlerGamePhase ph = _delegate.gamePhase;
-    if (ph == BrawlerGamePhaseTitle || ph == BrawlerGamePhasePlayerSelect)
-        [self _updateOverlayForPhase:ph room:1 lives:3];
 
     int slot = -1;
     for (int i = 0; i < kMaxPlayers; ++i) {
@@ -210,9 +198,6 @@ static const int kMaxPlayers = 4;
             break;
         }
     }
-    // If we're on the title screen and lost the last gamepad, update the message.
-    if (_delegate.gamePhase == BrawlerGamePhaseTitle)
-        [self _updateOverlayForPhase:BrawlerGamePhaseTitle room:1 lives:3];
 }
 
 - (void)_wireController:(GCController *)ctrl toSlot:(int)slot {

@@ -2,6 +2,7 @@
 #import <simd/simd.h>
 #import <ImageIO/ImageIO.h>
 #import <QuartzCore/QuartzCore.h>
+#import <CoreText/CoreText.h>
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
@@ -9,6 +10,7 @@
 #include "ParticleSim.h"
 
 typedef struct { simd_float4x4 mvp; simd_float4 color; } DrawUniforms;
+typedef struct { simd_float4x4 mvp; } TextureUniforms;
 // These two must match ParticleInstance / ParticleUniforms in Brawler.metal.
 typedef struct { simd_float3 pos; float size; simd_float4 color; } ParticleInstanceGPU;
 typedef struct { simd_float4x4 vp; simd_float3 camRight; simd_float3 camUp; } ParticleUniformsGPU;
@@ -145,10 +147,18 @@ static float clampf(float v, float lo, float hi) {
 
 static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
                      NSUInteger bpr, NSString *path);
+static void drawCenteredLine(CGContextRef ctx, NSString *text, CGFloat centerX, CGFloat baselineY,
+                             CGFloat maxWidth, CGFloat fontSize, CGFloat minFontSize,
+                             CGColorRef color);
+static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW, CGFloat drawableH,
+                                         NSString *title, NSString *subtitle,
+                                         NSString *choiceA, NSString *choiceB,
+                                         CGSize *outSize);
 
 @implementation BrawlerRenderer {
     id<MTLRenderPipelineState> _pipeline;        // flat-color quads
     id<MTLRenderPipelineState> _floorPipeline;   // grid floor
+    id<MTLRenderPipelineState> _texturePipeline; // textured 2D overlays
     id<MTLRenderPipelineState> _shadowPipeline;  // alpha-blended blob shadows
     id<MTLRenderPipelineState> _skinnedPipeline; // skinned meshes
     id<MTLDepthStencilState>   _depthState;
@@ -180,6 +190,16 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     MTLPixelFormat             _pixelFormat;
     float                      _hitBlur;     // 0..1, decays fast
     float                      _damageFlash; // 0..1, decays slower
+
+    BOOL                       _overlayVisible;
+    BOOL                       _overlayDirty;
+    NSString                  *_overlayTitle;
+    NSString                  *_overlaySubtitle;
+    NSString                  *_overlayChoiceA;
+    NSString                  *_overlayChoiceB;
+    id<MTLTexture>             _overlayTexture;
+    CGSize                     _overlayTextureSize;
+    CGSize                     _overlayDrawableSize;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt {
@@ -246,6 +266,27 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         pd.vertexDescriptor = vd;
         _floorPipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
         if (!_floorPipeline) NSLog(@"Floor pipeline: %@", err);
+    }
+
+    // Textured overlay pipeline — alpha-blended CoreGraphics panel texture.
+    {
+        MTLRenderPipelineDescriptor *pd = [MTLRenderPipelineDescriptor new];
+        pd.vertexFunction   = [lib newFunctionWithName:@"texture_vertex"];
+        pd.fragmentFunction = [lib newFunctionWithName:@"texture_fragment"];
+        pd.colorAttachments[0].pixelFormat = pfmt;
+        pd.depthAttachmentPixelFormat      = MTLPixelFormatDepth32Float;
+        pd.colorAttachments[0].blendingEnabled             = YES;
+        pd.colorAttachments[0].sourceRGBBlendFactor        = MTLBlendFactorSourceAlpha;
+        pd.colorAttachments[0].destinationRGBBlendFactor   = MTLBlendFactorOneMinusSourceAlpha;
+        pd.colorAttachments[0].sourceAlphaBlendFactor      = MTLBlendFactorSourceAlpha;
+        pd.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+        MTLVertexDescriptor *vd = [MTLVertexDescriptor new];
+        vd.attributes[0].format = MTLVertexFormatFloat3;
+        vd.attributes[0].offset = 0; vd.attributes[0].bufferIndex = 0;
+        vd.layouts[0].stride    = sizeof(simd_float3);
+        pd.vertexDescriptor = vd;
+        _texturePipeline = [device newRenderPipelineStateWithDescriptor:pd error:&err];
+        if (!_texturePipeline) NSLog(@"Texture pipeline: %@", err);
     }
 
     // Particle pipeline — instanced billboards, additive blending.
@@ -363,6 +404,28 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     return self;
 }
 
+- (void)setOverlayVisible:(BOOL)visible
+                    title:(NSString*)title
+                 subtitle:(NSString*)subtitle
+                  choiceA:(NSString*)choiceA
+                  choiceB:(NSString*)choiceB {
+    title = title ?: @"";
+    subtitle = subtitle ?: @"";
+    choiceA = choiceA ?: @"";
+    choiceB = choiceB ?: @"";
+    BOOL changed = _overlayVisible != visible ||
+                   ![_overlayTitle isEqualToString:title] ||
+                   ![_overlaySubtitle isEqualToString:subtitle] ||
+                   ![_overlayChoiceA isEqualToString:choiceA] ||
+                   ![_overlayChoiceB isEqualToString:choiceB];
+    _overlayVisible = visible;
+    _overlayTitle = [title copy];
+    _overlaySubtitle = [subtitle copy];
+    _overlayChoiceA = [choiceA copy];
+    _overlayChoiceB = [choiceB copy];
+    if (changed) _overlayDirty = YES;
+}
+
 - (void)setPlayerCharacter:(LoadedCharacter*)player enemyCharacter:(LoadedCharacter*)enemy {
     _playerChar = player;
     _enemyChar  = enemy;
@@ -422,6 +485,12 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         _sceneColor.height != view.currentDrawable.texture.height)
         [self updateDrawableSize:CGSizeMake(view.currentDrawable.texture.width,
                                             view.currentDrawable.texture.height)];
+    CGSize drawableSize = CGSizeMake(view.currentDrawable.texture.width,
+                                     view.currentDrawable.texture.height);
+    if (!CGSizeEqualToSize(drawableSize, _overlayDrawableSize)) {
+        _overlayDrawableSize = drawableSize;
+        _overlayDirty = YES;
+    }
 
     // Multi-player camera: track centroid of all alive players.
     // Zoom out proportionally to player spread so everyone stays in frame.
@@ -783,6 +852,40 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
         }
     }
 
+    // Shared phase/menu overlay — generated as a CoreGraphics texture and
+    // drawn inside the Metal frame so the visual smoke harness captures it.
+    if (_overlayVisible && _texturePipeline) {
+        if (_overlayDirty || !_overlayTexture) {
+            _overlayTexture = makeOverlayTexture(view.device,
+                                                (CGFloat)view.currentDrawable.texture.width,
+                                                (CGFloat)view.currentDrawable.texture.height,
+                                                _overlayTitle, _overlaySubtitle,
+                                                _overlayChoiceA, _overlayChoiceB,
+                                                &_overlayTextureSize);
+            _overlayDirty = NO;
+        }
+        if (_overlayTexture) {
+            CGSize ds = view.drawableSize;
+            float W = (float)ds.width, H = (float)ds.height;
+            simd_float4x4 ortho = matrix_identity_float4x4;
+            ortho.columns[0].x =  2.f / W;
+            ortho.columns[1].y = -2.f / H;
+            ortho.columns[3]   = (simd_float4){-1.f, 1.f, 0.f, 1.f};
+
+            float panelW = (float)_overlayTextureSize.width;
+            float panelH = (float)_overlayTextureSize.height;
+            TextureUniforms tu;
+            tu.mvp = simd_mul(ortho, make_model_rect(W * 0.5f, H * 0.54f, 0.f, panelW, panelH));
+            [enc setRenderPipelineState:_texturePipeline];
+            [enc setDepthStencilState:_noDepthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+            [enc setFragmentTexture:_overlayTexture atIndex:0];
+            [enc setFragmentSamplerState:_linearSampler atIndex:0];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
+    }
+
     [enc endEncoding];
 
     // --autotest screenshot: blit the drawable into a CPU-readable buffer and
@@ -816,12 +919,113 @@ static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
     [cmd presentDrawable:view.currentDrawable];
 }
 
+static void drawCenteredLine(CGContextRef ctx, NSString *text, CGFloat centerX, CGFloat baselineY,
+                             CGFloat maxWidth, CGFloat fontSize, CGFloat minFontSize,
+                             CGColorRef color) {
+    if (text.length == 0) return;
+    CGFloat size = fontSize;
+    CTFontRef font = NULL;
+    CFAttributedStringRef attr = NULL;
+    CTLineRef line = NULL;
+
+    while (size >= minFontSize) {
+        if (line) CFRelease(line);
+        if (attr) CFRelease(attr);
+        if (font) CFRelease(font);
+        font = CTFontCreateWithName(CFSTR("HelveticaNeue-Bold"), size, NULL);
+        NSDictionary *attrs = @{
+            (__bridge id)kCTFontAttributeName: (__bridge id)font,
+            (__bridge id)kCTForegroundColorAttributeName: (__bridge id)color,
+        };
+        attr = CFAttributedStringCreate(kCFAllocatorDefault, (__bridge CFStringRef)text,
+                                        (__bridge CFDictionaryRef)attrs);
+        line = CTLineCreateWithAttributedString(attr);
+        double width = CTLineGetTypographicBounds(line, NULL, NULL, NULL);
+        if (width <= maxWidth || size <= minFontSize) break;
+        size -= 2.f;
+    }
+
+    double width = CTLineGetTypographicBounds(line, NULL, NULL, NULL);
+    CGContextSetTextPosition(ctx, centerX - (CGFloat)width * 0.5f, baselineY);
+    CTLineDraw(line, ctx);
+
+    if (line) CFRelease(line);
+    if (attr) CFRelease(attr);
+    if (font) CFRelease(font);
+}
+
+static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW, CGFloat drawableH,
+                                         NSString *title, NSString *subtitle,
+                                         NSString *choiceA, NSString *choiceB,
+                                         CGSize *outSize) {
+    BOOL hasChoices = choiceA.length > 0 || choiceB.length > 0;
+    CGFloat panelW = hasChoices ? 980.f : 760.f;
+    CGFloat panelH = hasChoices ? 340.f : 260.f;
+    panelW = MIN(panelW, drawableW - 64.f);
+    panelH = MIN(panelH, drawableH - 64.f);
+    panelW = MAX(panelW, 360.f);
+    panelH = MAX(panelH, 170.f);
+
+    NSUInteger w = (NSUInteger)ceil(panelW);
+    NSUInteger h = (NSUInteger)ceil(panelH);
+    NSUInteger bpr = w * 4;
+    NSMutableData *pixels = [NSMutableData dataWithLength:bpr * h];
+
+    CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+    CGBitmapInfo bitmapInfo = (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big;
+    CGContextRef ctx = CGBitmapContextCreate(pixels.mutableBytes, w, h, 8, bpr, cs, bitmapInfo);
+    if (!ctx) {
+        CGColorSpaceRelease(cs);
+        return nil;
+    }
+
+    CGContextSetRGBFillColor(ctx, 0.0, 0.0, 0.0, 0.74);
+    CGContextFillRect(ctx, CGRectMake(0, 0, w, h));
+    CGContextSetRGBStrokeColor(ctx, 1.0, 1.0, 1.0, 0.10);
+    CGContextSetLineWidth(ctx, 2.0);
+    CGContextStrokeRect(ctx, CGRectMake(1, 1, w - 2, h - 2));
+
+    CGColorRef white = CGColorCreateGenericRGB(1, 1, 1, 1);
+    CGFloat maxTextW = panelW - 96.f;
+    CGFloat titleSize = hasChoices ? 58.f : 64.f;
+    CGFloat choiceSize = 46.f;
+    CGFloat subtitleSize = 40.f;
+
+    drawCenteredLine(ctx, title, panelW * 0.5f, panelH * 0.70f, maxTextW,
+                     titleSize, 34.f, white);
+    if (subtitle.length > 0)
+        drawCenteredLine(ctx, subtitle, panelW * 0.5f, panelH * 0.38f,
+                         maxTextW, subtitleSize, 26.f, white);
+    if (hasChoices) {
+        drawCenteredLine(ctx, choiceA, panelW * 0.5f, panelH * 0.40f,
+                         maxTextW, choiceSize, 28.f, white);
+        drawCenteredLine(ctx, choiceB, panelW * 0.5f, panelH * 0.22f,
+                         maxTextW, choiceSize, 28.f, white);
+    }
+    CGColorRelease(white);
+    CGContextRelease(ctx);
+    CGColorSpaceRelease(cs);
+
+    MTLTextureDescriptor *td = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                                                                  width:w
+                                                                                 height:h
+                                                                              mipmapped:NO];
+    td.usage = MTLTextureUsageShaderRead;
+    id<MTLTexture> tex = [device newTextureWithDescriptor:td];
+    [tex replaceRegion:MTLRegionMake2D(0, 0, w, h)
+           mipmapLevel:0
+             withBytes:pixels.bytes
+           bytesPerRow:bpr];
+    if (outSize) *outSize = CGSizeMake(w, h);
+    return tex;
+}
+
 // Write a BGRA8 staging buffer as a PNG. Runs on the Metal completion thread.
 static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
                      NSUInteger bpr, NSString *path) {
     CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
-    CGContextRef ctx = CGBitmapContextCreate(staging.contents, w, h, 8, bpr, cs,
-        kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Little); // BGRA, ignore alpha
+    CGBitmapInfo bitmapInfo = (CGBitmapInfo)kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Little;
+    CGContextRef ctx = CGBitmapContextCreate(staging.contents, w, h, 8, bpr, cs, bitmapInfo); // BGRA, ignore alpha
     CGImageRef img = ctx ? CGBitmapContextCreateImage(ctx) : NULL;
     if (img) {
         NSURL *url = [NSURL fileURLWithPath:path];

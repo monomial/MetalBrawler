@@ -11,7 +11,6 @@
     MTKView             *_mtkView;
     BrawlerGameDelegate *_delegate;
     BrawlerAutoTest     *_autoTest;
-    NSTextField         *_overlayField;
     NSView              *_damageFlashView;
     BOOL _left, _right, _up, _down, _attack;
 }
@@ -32,21 +31,6 @@
                                                 pixelFormat:_mtkView.colorPixelFormat];
     [_delegate mtkView:_mtkView drawableSizeWillChange:_mtkView.drawableSize];
     _mtkView.delegate = _delegate;
-
-    // Phase overlay — centered NSTextField with transparent background.
-    _overlayField = [[NSTextField alloc] initWithFrame:NSMakeRect(180, 260, 600, 200)];
-    _overlayField.editable          = NO;
-    _overlayField.selectable        = NO;
-    _overlayField.bordered          = NO;
-    _overlayField.bezeled           = NO;
-    _overlayField.drawsBackground   = YES;
-    _overlayField.backgroundColor   = [NSColor colorWithWhite:0 alpha:0.72];
-    _overlayField.textColor         = [NSColor whiteColor];
-    _overlayField.alignment         = NSTextAlignmentCenter;
-    _overlayField.font              = [NSFont boldSystemFontOfSize:48];
-    _overlayField.maximumNumberOfLines = 3;
-    _overlayField.hidden            = YES;
-    [self.view addSubview:_overlayField];
 
     // Red flash when the player takes a hit.
     _damageFlashView = [[NSView alloc] initWithFrame:self.view.bounds];
@@ -85,44 +69,6 @@
         [vc->_damageFlashView.layer addAnimation:fade forKey:@"damageFlash"];
         vc->_damageFlashView.layer.opacity = 0.f;
     };
-
-    _delegate.onPhaseChanged = ^(BrawlerGamePhase phase, int room, int lives) {
-        GameViewController *vc = weakSelf;
-        if (!vc) return;
-        switch (phase) {
-            case BrawlerGamePhaseTitle:
-                vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\nPress any key to start",
-                    kBrawlerStringTitle];
-                vc->_overlayField.hidden = NO; break;
-            case BrawlerGamePhasePlayerSelect:
-                vc->_overlayField.stringValue = @"SELECT PLAYERS\n[1]  1 Player\n[2]  2 Players";
-                vc->_overlayField.hidden = NO; break;
-            case BrawlerGamePhasePlaying:
-                vc->_overlayField.hidden = YES; break;
-            case BrawlerGamePhaseRoomClear:
-                vc->_overlayField.stringValue = [NSString stringWithFormat:kBrawlerStringRoomClearFmt, room];
-                vc->_overlayField.hidden = NO; break;
-            case BrawlerGamePhaseWin:
-                vc->_overlayField.stringValue = kBrawlerStringWin;
-                vc->_overlayField.hidden = NO; break;
-            case BrawlerGamePhaseLose:
-                vc->_overlayField.stringValue = kBrawlerStringGameOver;
-                vc->_overlayField.hidden = NO; break;
-            case BrawlerGamePhasePaused:
-                vc->_overlayField.stringValue = [NSString stringWithFormat:@"%@\n%@",
-                    kBrawlerStringPaused, kBrawlerStringPausedResume];
-                vc->_overlayField.hidden = NO; break;
-            case BrawlerGamePhaseUpgrade:
-                vc->_overlayField.stringValue = [NSString stringWithFormat:
-                    @"CHOOSE UPGRADE\n[Space]  %@\n[Q]  %@",
-                    [vc->_delegate upgradeChoiceLabel:0],
-                    [vc->_delegate upgradeChoiceLabel:1]];
-                vc->_overlayField.hidden = NO; break;
-        }
-    };
-
-    // Show title screen immediately (delegate starts in Title phase).
-    _delegate.onPhaseChanged(BrawlerGamePhaseTitle, 1, 3);
 
     // P1: keyboard — use a local event monitor so key events are captured regardless
     // of which view is first responder (avoids NSTextField stealing focus).

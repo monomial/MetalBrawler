@@ -1,5 +1,6 @@
 #import "BrawlerGameDelegate.h"
 #import <MetalKit/MetalKit.h>
+#import "BrawlerStrings.h"
 #include "Simulation/World.h"
 #include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/AnimationSystem.h"
@@ -70,6 +71,7 @@ static const int kNumMiddleRooms = 5;
 static const int kMiddlePerRun   = 4;                  // middle rooms per run
 static const int kNumRooms       = kMiddlePerRun + 2;  // intro + middles + boss
 static const int kStartingLives  = 3;
+static const int kMaxPlayers     = 4;
 
 // Phase timers (seconds).
 static const float kRoomClearDuration = 2.0f;
@@ -79,8 +81,9 @@ static const float kUpgradeGrace      = 0.35f; // ignore held buttons right afte
 
 // ---------------------------------------------------------------------------
 // Perk pool — two distinct picks are offered between rooms; the chosen perk
-// folds into run-level PlayerPerks and is re-applied to players at each spawn
-// (the World is rebuilt per room, so entities can't carry run state).
+// folds into that player's run-level PlayerPerks and is re-applied at each
+// spawn (the World is rebuilt per room, so entities can't carry run state).
+// Lives are team-level because lives are currently shared by the run.
 // ---------------------------------------------------------------------------
 typedef NS_ENUM(int, BrawlerPerk) {
     BrawlerPerkDamage = 0,
@@ -94,7 +97,7 @@ static NSString *const kPerkLabels[BrawlerPerkCount] = {
     @"+1 Punch Damage",
     @"+20% Move Speed",
     @"+3 Max Health",
-    @"+1 Life",
+    @"+1 Team Life",
 };
 
 struct PlayerPerks {
@@ -123,8 +126,9 @@ struct PlayerPerks {
     int                  _currentRoom;  // 0-indexed internally
     int                  _lives;
 
-    PlayerPerks          _perks;            // run-level, reset each new run
-    int                  _upgradeChoice[2]; // BrawlerPerk indices on offer
+    PlayerPerks          _perks[kMaxPlayers]; // per-player run-level, reset each run
+    int                  _upgradePlayerIndex; // active picker during Upgrade, -1 otherwise
+    int                  _upgradeChoice[2];   // BrawlerPerk indices on offer
     int                  _middleOrder[kNumMiddleRooms]; // seeded shuffle per run
 }
 
@@ -133,6 +137,56 @@ struct PlayerPerks {
 - (BrawlerGamePhase)gamePhase    { return _phase; }
 - (int)currentRoom               { return _currentRoom + 1; } // 1-indexed for UI
 - (int)livesRemaining            { return _lives; }
+- (int)currentUpgradePlayerIndex { return (_phase == BrawlerGamePhaseUpgrade) ? _upgradePlayerIndex : -1; }
+
+- (void)_refreshOverlay {
+    switch (_phase) {
+        case BrawlerGamePhaseTitle:
+            [_renderer setOverlayVisible:YES
+                                   title:kBrawlerStringTitle
+                                subtitle:kBrawlerStringPressToStart
+                                 choiceA:nil choiceB:nil];
+            break;
+        case BrawlerGamePhasePlayerSelect:
+            [_renderer setOverlayVisible:YES
+                                   title:kBrawlerStringSelectPlayers
+                                subtitle:nil
+                                 choiceA:@"Attack  1 Player"
+                                 choiceB:@"Dodge   2 Players"];
+            break;
+        case BrawlerGamePhasePlaying:
+            [_renderer setOverlayVisible:NO title:nil subtitle:nil choiceA:nil choiceB:nil];
+            break;
+        case BrawlerGamePhaseRoomClear:
+            [_renderer setOverlayVisible:YES
+                                   title:[NSString stringWithFormat:kBrawlerStringRoomClearFmt, _currentRoom + 1]
+                                subtitle:nil choiceA:nil choiceB:nil];
+            break;
+        case BrawlerGamePhaseWin:
+            [_renderer setOverlayVisible:YES
+                                   title:kBrawlerStringWin
+                                subtitle:nil choiceA:nil choiceB:nil];
+            break;
+        case BrawlerGamePhaseLose:
+            [_renderer setOverlayVisible:YES
+                                   title:kBrawlerStringGameOver
+                                subtitle:nil choiceA:nil choiceB:nil];
+            break;
+        case BrawlerGamePhasePaused:
+            [_renderer setOverlayVisible:YES
+                                   title:kBrawlerStringPaused
+                                subtitle:kBrawlerStringPausedResume
+                                 choiceA:nil choiceB:nil];
+            break;
+        case BrawlerGamePhaseUpgrade:
+            [_renderer setOverlayVisible:YES
+                                   title:[NSString stringWithFormat:@"P%d CHOOSE UPGRADE", _upgradePlayerIndex + 1]
+                                subtitle:nil
+                                 choiceA:[NSString stringWithFormat:@"Attack  %@", [self upgradeChoiceLabel:0]]
+                                 choiceB:[NSString stringWithFormat:@"Dodge   %@", [self upgradeChoiceLabel:1]]];
+            break;
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Init
@@ -154,6 +208,7 @@ struct PlayerPerks {
     [self _loadCharacters:device];
     _numPlayers = 1; // default; overridden at player-select
     _phase = BrawlerGamePhaseTitle;
+    [self _refreshOverlay];
 
     return self;
 }
@@ -229,12 +284,15 @@ struct PlayerPerks {
     }
     if (self.onPhaseChanged)
         self.onPhaseChanged(newPhase, _currentRoom + 1, _lives);
+    [self _refreshOverlay];
 }
 
 - (void)_startNewRun {
     _currentRoom = 0;
     _lives       = kStartingLives;
-    _perks       = PlayerPerks{};
+    for (int i = 0; i < kMaxPlayers; ++i)
+        _perks[i] = PlayerPerks{};
+    _upgradePlayerIndex = -1;
 
     // Seeded Fisher-Yates over the middle-room pool: rooms 2..N-1 differ per
     // run (the run plays kMiddlePerRun of kNumMiddleRooms), deterministic when
@@ -275,16 +333,32 @@ struct PlayerPerks {
 - (void)chooseUpgrade:(int)index {
     if (_phase != BrawlerGamePhaseUpgrade) return;
     if (index < 0 || index > 1) return;
+    if (_upgradePlayerIndex < 0 || _upgradePlayerIndex >= _numPlayers) return;
 
+    PlayerPerks& perks = _perks[_upgradePlayerIndex];
     switch ((BrawlerPerk)_upgradeChoice[index]) {
-        case BrawlerPerkDamage: _perks.bonusDamage += 1;   break;
-        case BrawlerPerkSpeed:  _perks.speedMult   += 0.2f; break;
-        case BrawlerPerkMaxHP:  _perks.bonusMaxHP  += 3;   break;
+        case BrawlerPerkDamage: perks.bonusDamage += 1;    break;
+        case BrawlerPerkSpeed:  perks.speedMult   += 0.2f; break;
+        case BrawlerPerkMaxHP:  perks.bonusMaxHP  += 3;    break;
         case BrawlerPerkLife:   _lives += 1;               break;
         case BrawlerPerkCount:  break;
     }
     [_audio playUIClickSound];
 
+    // Multiplayer: each active player gets their own fresh, deterministic
+    // upgrade offer before the next room starts.
+    if (_upgradePlayerIndex + 1 < _numPlayers) {
+        _upgradePlayerIndex += 1;
+        [self _rollUpgradeChoices];
+        [self resetInput];
+        _phaseTimer = kUpgradeGrace;
+        if (self.onPhaseChanged)
+            self.onPhaseChanged(BrawlerGamePhaseUpgrade, _currentRoom + 1, _lives);
+        [self _refreshOverlay];
+        return;
+    }
+
+    _upgradePlayerIndex = -1;
     _currentRoom += 1;
     [self _loadRoom];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
@@ -303,8 +377,14 @@ struct PlayerPerks {
 }
 
 - (void)_spawnPlayers {
-    if (_numPlayers >= 1) [self _spawnPlayer:0 at:(_numPlayers == 1 ? 0 : -150) y:-100];
-    if (_numPlayers >= 2) [self _spawnPlayer:1 at:150 y:-100];
+    static const float kSpawnX[kMaxPlayers] = { -180.f, 180.f, -60.f, 60.f };
+    static const float kSpawnY[kMaxPlayers] = { -120.f, -120.f, -220.f, -220.f };
+    if (_numPlayers == 1) {
+        [self _spawnPlayer:0 at:0 y:-120];
+        return;
+    }
+    for (int i = 0; i < _numPlayers && i < kMaxPlayers; ++i)
+        [self _spawnPlayer:(uint8_t)i at:kSpawnX[i] y:kSpawnY[i]];
 }
 
 - (void)_spawnPlayer:(uint8_t)index at:(float)x y:(float)y {
@@ -313,14 +393,15 @@ struct PlayerPerks {
     _world.add_component<PositionComponent>(e)  = {x, y, 0};
     _world.add_component<VelocityComponent>(e)  = {0, 0, 0};
     _world.add_component<FactionComponent>(e).type = FactionComponent::Player;
-    int maxHP = 10 + _perks.bonusMaxHP;
+    const PlayerPerks& perks = _perks[index];
+    int maxHP = 10 + perks.bonusMaxHP;
     _world.add_component<HealthComponent>(e)    = {maxHP, maxHP};
     _world.add_component<DamageCooldownComponent>(e).remaining = 0.f;
     _world.add_component<AnimationComponent>(e);
     _world.add_component<FacingComponent>(e);
     auto& stats = _world.add_component<StatsComponent>(e);
-    stats.damageBonus = _perks.bonusDamage;
-    stats.speedMult   = _perks.speedMult;
+    stats.damageBonus = perks.bonusDamage;
+    stats.speedMult   = perks.speedMult;
 }
 
 - (void)_spawnEnemiesForCurrentRoom {
@@ -381,7 +462,7 @@ struct PlayerPerks {
 - (void)setInputState:(InputState)state                  { _world.set_input(state, 0); }
 - (InputState)currentInputState                          { return _world.current_input(0); }
 - (void)startGameWithPlayers:(int)playerCount {
-    _numPlayers = MAX(1, MIN(2, playerCount));
+    _numPlayers = MAX(1, MIN(kMaxPlayers, playerCount));
     [self _startNewRun];
 }
 
@@ -600,7 +681,8 @@ struct PlayerPerks {
                 if (_currentRoom + 1 >= kNumRooms) {
                     [self _transitionToPhase:BrawlerGamePhaseWin];
                 } else {
-                    // Pick a perk before the next room (chooseUpgrade: advances).
+                    // Each active player picks a perk before the next room.
+                    _upgradePlayerIndex = 0;
                     [self _rollUpgradeChoices];
                     [self _transitionToPhase:BrawlerGamePhaseUpgrade];
                 }

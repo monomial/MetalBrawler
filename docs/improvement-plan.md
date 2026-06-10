@@ -63,7 +63,7 @@ Honest limits of automation: hit-stop strength, haptic feel, and audio mix still
 
 ## Phase 5 — Roguelike layer
 
-23. **Perk choice between rooms (M/L)** — run-level `PlayerPerks {bonusDamage, speedMult, bonusMaxHP}` in `BrawlerGameDelegate` (world rebuilt per room), applied at spawn via new `StatsComponent` consumed by CombatSystem (damage) and InputSystem (speed). New `BrawlerGamePhaseUpgrade` between RoomClear and next room: 3 random perks (seeded PRNG → scenario-testable), chosen via the PlayerSelect overlay pattern in all 3 platform GameViewControllers (the bulk of the effort). V1: P1 picks, applies to all. Stat-math tests through Combat/Input + scenario case.
+23. **Perk choice between rooms (M/L)** — per-player run-level `PlayerPerks {bonusDamage, speedMult, bonusMaxHP}` in `BrawlerGameDelegate` (world rebuilt per room), applied at spawn via new `StatsComponent` consumed by CombatSystem (damage) and InputSystem (speed). `BrawlerGamePhaseUpgrade` appears between RoomClear and next room; each active player gets a sequential two-choice perk offer using seeded PRNG, while `+1 Team Life` remains shared because run lives are shared. Chosen via the PlayerSelect overlay pattern in all 3 platform GameViewControllers. Stat-math tests through Combat/Input + scenario cases.
 24. **More rooms + variation (S after #19)** — 7–8 rooms mixing archetypes, shuffle middle rooms per run (seeded), boss last, per-room palette via #17. Watch spawn-slot capacity (6) and the 64-entity skinning cap.
 
 ---

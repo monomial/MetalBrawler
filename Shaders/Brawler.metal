@@ -29,6 +29,33 @@ fragment float4 fragment_main(VertexOut in [[stage_in]]) {
 }
 
 // ---------------------------------------------------------------------------
+// Textured 2D overlay — CoreGraphics-generated phase/menu panels.
+// ---------------------------------------------------------------------------
+
+struct TextureUniforms {
+    float4x4 mvp;
+};
+
+struct TextureOut {
+    float4 position [[position]];
+    float2 uv;
+};
+
+vertex TextureOut texture_vertex(VertexIn in [[stage_in]],
+                                 constant TextureUniforms& u [[buffer(1)]]) {
+    TextureOut out;
+    out.position = u.mvp * float4(in.position, 1.0);
+    out.uv = float2(in.position.x + 0.5, in.position.y + 0.5);
+    return out;
+}
+
+fragment float4 texture_fragment(TextureOut in [[stage_in]],
+                                 texture2d<float> tex [[texture(0)]],
+                                 sampler s [[sampler(0)]]) {
+    return tex.sample(s, in.uv);
+}
+
+// ---------------------------------------------------------------------------
 // Floor — flat base color with subtle grid lines in world space, plus a soft
 // radial darkening toward the room edges.
 // ---------------------------------------------------------------------------

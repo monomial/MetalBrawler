@@ -196,6 +196,52 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     XCTAssertEqual(d.currentRoom, 2, @"choice advances to the next room");
 }
 
+- (void)test_twoPlayers_eachGetsOwnUpgradeChoiceBeforeNextRoom {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:1337];
+    d.autoPilotEnabled = YES;
+
+    [d startGameWithPlayers:2];
+    BOOL reached = advanceUntilPhase(d, BrawlerGamePhaseUpgrade, 120.f);
+    XCTAssertTrue(reached, @"room clear must lead to P1 upgrade");
+    XCTAssertEqual(d.currentRoom, 1);
+    XCTAssertEqual([d currentUpgradePlayerIndex], 0);
+
+    NSString *p1A = [d upgradeChoiceLabel:0];
+    NSString *p1B = [d upgradeChoiceLabel:1];
+    XCTAssertNotEqualObjects(p1A, @"");
+    XCTAssertNotEqualObjects(p1B, @"");
+
+    [d chooseUpgrade:0];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhaseUpgrade,
+                   @"P1 choice should hand upgrade selection to P2, not advance the room");
+    XCTAssertEqual(d.currentRoom, 1);
+    XCTAssertEqual([d currentUpgradePlayerIndex], 1);
+    XCTAssertNotEqualObjects([d upgradeChoiceLabel:0], @"");
+    XCTAssertNotEqualObjects([d upgradeChoiceLabel:1], @"");
+
+    [d chooseUpgrade:1];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+    XCTAssertEqual(d.currentRoom, 2, @"next room starts only after every active player picks");
+}
+
+- (void)test_fourPlayers_getFourSequentialUpgradeTurns {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:2026];
+    d.autoPilotEnabled = YES;
+
+    [d startGameWithPlayers:4];
+    BOOL reached = advanceUntilPhase(d, BrawlerGamePhaseUpgrade, 120.f);
+    XCTAssertTrue(reached, @"4P room clear must lead to upgrade phase");
+
+    for (int p = 0; p < 4; ++p) {
+        XCTAssertEqual(d.gamePhase, BrawlerGamePhaseUpgrade);
+        XCTAssertEqual([d currentUpgradePlayerIndex], p);
+        [d chooseUpgrade:p % 2];
+    }
+
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+    XCTAssertEqual(d.currentRoom, 2);
+}
+
 // --- Determinism -------------------------------------------------------------
 
 - (void)test_sameSeed_identicalPhaseTranscript {

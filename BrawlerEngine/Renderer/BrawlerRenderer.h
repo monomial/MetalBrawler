@@ -22,6 +22,14 @@ struct LoadedCharacter;
 // 0-based room number — selects the room color palette. Set at room load.
 @property (nonatomic) int roomIndex;
 
+// Shared phase overlay rendered into the Metal drawable, so macOS/iOS/tvOS
+// present the same text and the smoke harness can capture it.
+- (void)setOverlayVisible:(BOOL)visible
+                    title:(NSString*)title
+                 subtitle:(NSString*)subtitle
+                  choiceA:(NSString*)choiceA
+                  choiceB:(NSString*)choiceB;
+
 // Call once per frame after World::update(). Encodes draw calls into cmd.
 - (void)drawWorld:(World*)world
             inView:(MTKView*)view
