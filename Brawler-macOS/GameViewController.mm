@@ -75,7 +75,12 @@
     __weak GameViewController *weakSelfKbd = self;
     [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent*(NSEvent *event) {
         GameViewController *vc = weakSelfKbd;
-        if (!vc || event.isARepeat) return event;
+        if (!vc) return event;
+        // Repeats must be consumed too: a returned key event walks the
+        // responder chain, finds no handler, and macOS plays the alert beep —
+        // an intermittent "ping" whenever a movement key is held past the
+        // key-repeat delay.
+        if (event.isARepeat) return nil;
         [vc keyDown:event];
         return nil; // consume — prevents system beep for unhandled keys
     }];
