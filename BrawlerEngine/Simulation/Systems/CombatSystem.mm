@@ -35,9 +35,12 @@ static const AttackWindow kAttackWindows[(int)AnimClipID::Count] = {
 };
 
 // Finisher feel: the combo's second hit freezes longer and shakes harder.
+// Shake is tiered by what the hit means to the player: dealt hits are a small
+// bump (felt, not seen), finishers punctuate, and taking damage is loudest.
 static constexpr int   kFinisherHitStopTicks = 7;
-static constexpr float kHitShake             = 18.f;
+static constexpr float kHitShake             = 7.f;
 static constexpr float kFinisherShake        = 30.f;
+static constexpr float kPlayerHitShake       = 22.f;
 
 void CombatSystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // frozen during HitStop
@@ -77,6 +80,7 @@ void CombatSystem_update(World& world, float gameDt) {
         }
 
         bool hitAnything = false;
+        bool hitPlayer   = false;
 
         for (EntityID targetID = 0; targetID < count; ++targetID) {
             if (targetID == attackerID) continue;
@@ -108,6 +112,7 @@ void CombatSystem_update(World& world, float gameDt) {
             HealthComponent& hp = world.get_component<HealthComponent>(targetID);
             hp.current -= damage;
             hitAnything = true;
+            hitPlayer  |= world.has_component<PlayerTagComponent>(targetID);
 
             world.events().emit_hit_contact(attackerID, targetID);
             world.events().emit_damage(targetID, damage);
@@ -159,7 +164,9 @@ void CombatSystem_update(World& world, float gameDt) {
             atkAnim.hitApplied = true;
             bool finisher = (atkAnim.currentClip == AnimClipID::Attack2);
             world.trigger_hit_stop(finisher ? kFinisherHitStopTicks : kHitStopTicks);
-            ScreenShakeSystem_trigger(world, finisher ? kFinisherShake : kHitShake);
+            float shake = hitPlayer ? kPlayerHitShake
+                        : finisher  ? kFinisherShake : kHitShake;
+            ScreenShakeSystem_trigger(world, shake);
         }
     }
 }

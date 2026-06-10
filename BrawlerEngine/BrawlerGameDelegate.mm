@@ -540,26 +540,28 @@ struct PlayerPerks {
                                 == AnimClipID::Attack2;
 
             // Spark burst at the impact point — per contact, not per frame.
+            // Kept light and cartoony (kid-friendly): a few gold sparks, no gore.
             if (_world.has_component<PositionComponent>(tgt)) {
                 const auto& p = _world.get_component<PositionComponent>(tgt);
                 if (finisher)
                     [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 90.f}
-                                      count:26 speed:420.f size:16.f
+                                      count:12 speed:420.f size:14.f
                                       color:(simd_float4){1.0f, 0.45f, 0.15f, 1.f}];
                 else
                     [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 80.f}
-                                      count:14 speed:300.f size:12.f
+                                      count:6 speed:300.f size:10.f
                                       color:(simd_float4){1.0f, 0.85f, 0.35f, 1.f}];
             }
 
             if (hitThisFrame) return; // sound/haptic/blur once per frame
             hitThisFrame = true;
             [_renderer triggerHitBlur:finisher ? 1.f : 0.45f];
+            // No impact thud on regular hits — the swing whoosh (AttackStarted)
+            // carries the punch; only the finisher gets an audible accent.
             if (finisher) {
                 [_audio  playFinisherSound];
                 [_haptics playFinisherHaptic];
             } else {
-                [_audio  playHitSound];
                 [_haptics playHitHaptic];
             }
         });
@@ -610,11 +612,12 @@ struct PlayerPerks {
             } else {
                 [_audio  playDeathSound];
                 [_haptics playDeathHaptic];
+                // Soft golden "poof" — deliberately not red (kid-friendly).
                 if (_world.has_component<PositionComponent>(died)) {
                     const auto& p = _world.get_component<PositionComponent>(died);
                     [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 60.f}
-                                      count:30 speed:360.f size:14.f
-                                      color:(simd_float4){1.0f, 0.25f, 0.20f, 1.f}];
+                                      count:10 speed:280.f size:12.f
+                                      color:(simd_float4){1.0f, 0.85f, 0.50f, 1.f}];
                 }
             }
         });
