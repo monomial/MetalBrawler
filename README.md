@@ -39,7 +39,7 @@ open MetalBrawler.xcodeproj    # build the Brawler-macOS / -iOS / -tvOS scheme
 | Esc | Pause |
 | 1 / 2 | Start 1- or 2-player game |
 
-Player 2 uses the first connected game controller. iOS uses touch controls; tvOS uses the Siri Remote or a controller.
+Player 2 uses the first connected game controller. iOS uses touch controls; tvOS requires a full game controller per player (the Siri Remote doesn't provide enough control and isn't supported).
 
 ## Testing
 
