@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen
+
+      - name: Run logic + scenario tests
+        run: |
+          xcodebuild -project MetalBrawler.xcodeproj \
+                     -scheme BrawlerLogicTests \
+                     -destination 'platform=macOS' \
+                     test | tail -50
+
+      - name: Build macOS app
+        run: |
+          xcodebuild -project MetalBrawler.xcodeproj \
+                     -scheme Brawler-macOS \
+                     -destination 'platform=macOS' \
+                     CODE_SIGNING_ALLOWED=NO build -quiet
+
+      - name: Build iOS app
+        run: |
+          xcodebuild -project MetalBrawler.xcodeproj \
+                     -scheme Brawler-iOS \
+                     -destination 'generic/platform=iOS Simulator' \
+                     CODE_SIGNING_ALLOWED=NO build -quiet
+
+      - name: Build tvOS app
+        run: |
+          xcodebuild -project MetalBrawler.xcodeproj \
+                     -scheme Brawler-tvOS \
+                     -destination 'generic/platform=tvOS Simulator' \
+                     CODE_SIGNING_ALLOWED=NO build -quiet
