@@ -86,10 +86,25 @@ static EntityID firstEnemy(World& world) {
     return kInvalidEntity;
 }
 
+static EntityID firstMarker(World& world) {
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (world.spawn_markers().present(id))
+            return id;
+    }
+    return kInvalidEntity;
+}
+
 static EntityID firstBoss(World& world) {
     for (EntityID id = 0; id < world.entity_count(); ++id)
         if (world.boss_tags().present(id)) return id;
     return kInvalidEntity;
+}
+
+static EntityID addObstacle(World& world, float x, float y, float halfW, float halfH) {
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {x, y, 0.f};
+    world.add_component<ObstacleComponent>(e) = {halfW, halfH};
+    return e;
 }
 
 static void markEnemyDeadForWave(World& world, EntityID id) {
@@ -151,6 +166,49 @@ static void setPlayerAttacking(World& world, EntityID player) {
     XCTAssertEqual(world.get_component<EnemyArchetypeComponent>(enemy).type,
                    (uint8_t)EnemyArchetype::Rusher);
     XCTAssertTrue(world.has_component<SpawnAnimComponent>(enemy));
+}
+
+- (void)test_spawnInsideObstacleMovesMarkerAndEnemyOutsideInflatedAABB {
+    World world;
+    addObstacle(world, 20.f, 300.f, 30.f, 20.f);
+    PendingSpawn spawns[] = {{(uint8_t)EnemyArchetype::Grunt, 0, 20.f, 300.f}};
+    addController(world, spawns, 1, 1);
+
+    advance(world, kInitialWaveDelay + 0.1f);
+    EntityID marker = firstMarker(world);
+    XCTAssertNotEqual(marker, kInvalidEntity);
+    PositionComponent markerPos = world.get_component<PositionComponent>(marker);
+    XCTAssertEqualWithAccuracy(markerPos.x, 20.f, 0.001f);
+    XCTAssertEqualWithAccuracy(markerPos.y, 360.f, 0.001f);
+
+    advance(world, kMarkerTelegraph + 0.1f);
+    EntityID enemy = firstEnemy(world);
+    XCTAssertNotEqual(enemy, kInvalidEntity);
+    const PositionComponent& enemyPos = world.get_component<PositionComponent>(enemy);
+    XCTAssertEqualWithAccuracy(enemyPos.x, markerPos.x, 0.001f);
+    XCTAssertEqualWithAccuracy(enemyPos.y, markerPos.y, 0.001f);
+    XCTAssertGreaterThanOrEqual(enemyPos.y, 300.f + 20.f + 40.f);
+}
+
+- (void)test_clearSpawnPositionIsUnchanged {
+    World world;
+    addObstacle(world, 20.f, 300.f, 30.f, 20.f);
+    PendingSpawn spawns[] = {{(uint8_t)EnemyArchetype::Grunt, 0, 120.f, 300.f}};
+    addController(world, spawns, 1, 1);
+
+    advance(world, kInitialWaveDelay + 0.1f);
+    EntityID marker = firstMarker(world);
+    XCTAssertNotEqual(marker, kInvalidEntity);
+    PositionComponent markerPos = world.get_component<PositionComponent>(marker);
+    XCTAssertEqualWithAccuracy(markerPos.x, 120.f, 0.001f);
+    XCTAssertEqualWithAccuracy(markerPos.y, 300.f, 0.001f);
+
+    advance(world, kMarkerTelegraph + 0.1f);
+    EntityID enemy = firstEnemy(world);
+    XCTAssertNotEqual(enemy, kInvalidEntity);
+    const PositionComponent& enemyPos = world.get_component<PositionComponent>(enemy);
+    XCTAssertEqualWithAccuracy(enemyPos.x, 120.f, 0.001f);
+    XCTAssertEqualWithAccuracy(enemyPos.y, 300.f, 0.001f);
 }
 
 - (void)test_waveOneWaitsForWaveZeroDeathAndInterWaveDelay {

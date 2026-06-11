@@ -60,7 +60,7 @@ static const EnemySpawn kMidHeavyEscort[] = {
 static const EnemySpawn kMidMixed[] = {
     {EnemyArchetype::Rusher, 0, -250, 380},
     {EnemyArchetype::Rusher, 0,  250, 380},
-    {EnemyArchetype::Heavy,  1,    0, 300},
+    {EnemyArchetype::Heavy,  1, -150, 300}, // clear of the (0,320) pillar
     {EnemyArchetype::Grunt,  1,    0, 150},
 };
 static const EnemySpawn kMidTwinHeavies[] = {

@@ -1,6 +1,9 @@
 #include "WaveSystem.h"
 #include "Simulation/Systems/EnemyFactory.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
+#include <math.h>
+
+static constexpr float kSpawnObstacleRadius = 40.f;
 
 uint8_t WaveSystem_spawn_style(uint8_t archetype) {
     return (archetype == (uint8_t)EnemyArchetype::Heavy ||
@@ -52,7 +55,58 @@ static int marker_count(World& world) {
     return count;
 }
 
+static float clampf(float v, float lo, float hi) {
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+static void nudge_spawn_out_of_obstacles(World& world, float& x, float& y) {
+    for (EntityID oid = 0; oid < world.entity_count(); ++oid) {
+        if (!world.obstacles().present(oid)) continue;
+        if (!world.has_component<PositionComponent>(oid)) continue;
+
+        const PositionComponent& opos = world.get_component<PositionComponent>(oid);
+        const ObstacleComponent& obs = world.get_component<ObstacleComponent>(oid);
+        float minX = opos.x - obs.halfW;
+        float maxX = opos.x + obs.halfW;
+        float minY = opos.y - obs.halfH;
+        float maxY = opos.y + obs.halfH;
+        float cx = clampf(x, minX, maxX);
+        float cy = clampf(y, minY, maxY);
+        float dx = x - cx;
+        float dy = y - cy;
+        float d2 = dx * dx + dy * dy;
+        float r2 = kSpawnObstacleRadius * kSpawnObstacleRadius;
+        if (d2 >= r2) continue;
+
+        if (d2 > 1e-6f) {
+            float d = sqrtf(d2);
+            x = cx + (dx / d) * kSpawnObstacleRadius;
+            y = cy + (dy / d) * kSpawnObstacleRadius;
+            continue;
+        }
+
+        float fromCenterX = x - opos.x;
+        float fromCenterY = y - opos.y;
+        if (fabsf(fromCenterX) <= 1e-6f && fabsf(fromCenterY) <= 1e-6f) {
+            x = opos.x;
+            y = opos.y + obs.halfH + kSpawnObstacleRadius;
+            continue;
+        }
+
+        float inflatedHalfW = obs.halfW + kSpawnObstacleRadius;
+        float inflatedHalfH = obs.halfH + kSpawnObstacleRadius;
+        float scaleX = (fabsf(fromCenterX) > 1e-6f) ? inflatedHalfW / fabsf(fromCenterX) : INFINITY;
+        float scaleY = (fabsf(fromCenterY) > 1e-6f) ? inflatedHalfH / fabsf(fromCenterY) : INFINITY;
+        float scale = fminf(scaleX, scaleY);
+        x = opos.x + fromCenterX * scale;
+        y = opos.y + fromCenterY * scale;
+    }
+}
+
 static void spawn_marker(World& world, uint8_t archetype, float x, float y) {
+    nudge_spawn_out_of_obstacles(world, x, y);
     EntityID marker = world.defer_create();
     world.add_component<PositionComponent>(marker) = {x, y, 0.f};
     SpawnMarkerComponent& sm = world.add_component<SpawnMarkerComponent>(marker);
@@ -211,4 +265,3 @@ void WaveSystem_force_done(World& world) {
             world.defer_destroy(id);
     }
 }
-
