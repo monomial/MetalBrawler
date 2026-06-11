@@ -160,4 +160,75 @@ static EntityID spawnEnemy(World& world, float x, float y) {
                                @"heavy takes 30%% knockback per the archetype table");
 }
 
+- (void)test_enemyInRangeReadyCooldownStartsWindupBeforeAttackClip {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID enemy = spawnEnemy(world, 50, 0);
+    world.add_component<AnimationComponent>(enemy);
+    world.add_component<EnemyAttackCooldownComponent>(enemy) = {0.f, 0.f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    const auto& cd = world.get_component<EnemyAttackCooldownComponent>(enemy);
+    XCTAssertGreaterThan(cd.windup, 0.f);
+    XCTAssertEqual(world.get_component<AnimationComponent>(enemy).currentClip,
+                   AnimClipID::Idle);
+    XCTAssertEqual(world.get_component<AnimationComponent>(enemy).requestedClip,
+                   AnimClipID::Idle);
+}
+
+- (void)test_enemyStandsStillDuringWindup {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID enemy = spawnEnemy(world, 50, 0);
+    world.add_component<AnimationComponent>(enemy);
+    world.add_component<EnemyAttackCooldownComponent>(enemy) = {1.5f, 0.2f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    VelocityComponent vel = world.get_component<VelocityComponent>(enemy);
+    XCTAssertEqualWithAccuracy(vel.vx, 0.f, kEps);
+    XCTAssertEqualWithAccuracy(vel.vy, 0.f, kEps);
+}
+
+- (void)test_enemyRequestsAttackAfterWindup {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID enemy = spawnEnemy(world, 50, 0);
+    world.add_component<AnimationComponent>(enemy);
+    world.add_component<EnemyAttackCooldownComponent>(enemy) = {1.5f, 0.35f};
+
+    for (int i = 0; i < 42; ++i) world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<EnemyAttackCooldownComponent>(enemy).windup, 0.f);
+    XCTAssertEqual(world.get_component<AnimationComponent>(enemy).requestedClip,
+                   AnimClipID::Attack);
+    XCTAssertEqual(world.get_component<AnimationComponent>(enemy).currentClip,
+                   AnimClipID::Attack);
+}
+
+- (void)test_enemyAttackCooldownStillEnforcedBetweenAttacks {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID enemy = spawnEnemy(world, 50, 0);
+    auto& anim = world.add_component<AnimationComponent>(enemy);
+    auto& cd = world.add_component<EnemyAttackCooldownComponent>(enemy);
+    cd.remaining = 0.f;
+    cd.windup = 0.f;
+
+    world.update(kFixedDt, kFixedDt);
+    XCTAssertGreaterThan(cd.windup, 0.f);
+    XCTAssertGreaterThan(cd.remaining, 0.f);
+
+    cd.windup = 0.f;
+    anim.requestedClip = AnimClipID::Idle;
+    anim.currentClip = AnimClipID::Idle;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(cd.windup, 0.f);
+    XCTAssertEqual(anim.requestedClip, AnimClipID::Idle);
+    XCTAssertGreaterThan(cd.remaining, 0.f);
+}
+
 @end

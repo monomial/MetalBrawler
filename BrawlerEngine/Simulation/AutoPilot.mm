@@ -25,6 +25,24 @@ InputState AutoPilot_input(World& world, int playerIndex) {
 
     const PositionComponent& myPos = world.get_component<PositionComponent>(me);
 
+    if (world.has_component<SpecialMeterComponent>(me) &&
+        world.get_component<SpecialMeterComponent>(me).charge >= 1.f) {
+        int nearby = 0;
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (!world.has_component<FactionComponent>(id)) continue;
+            if (world.get_component<FactionComponent>(id).type != FactionComponent::Enemy) continue;
+            if (!world.has_component<PositionComponent>(id)) continue;
+            if (world.has_component<AnimationComponent>(id) &&
+                world.get_component<AnimationComponent>(id).dying) continue;
+            const PositionComponent& p = world.get_component<PositionComponent>(id);
+            float dx = p.x - myPos.x, dy = p.y - myPos.y;
+            if (dx * dx + dy * dy <= 220.f * 220.f)
+                ++nearby;
+        }
+        if (nearby >= 2)
+            in.special = true;
+    }
+
     // Nearest living enemy.
     bool  found  = false;
     float bestD2 = 0.f, bdx = 0.f, bdy = 0.f;

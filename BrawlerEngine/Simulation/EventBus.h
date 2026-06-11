@@ -11,6 +11,8 @@ enum class EventType : uint8_t {
     AttackStarted, // an Attack/Attack2 clip actually began (audio: swing whoosh)
     DodgeStarted,  // a Dodge clip actually began (audio + haptics)
     BossTelegraph, // boss is winding up a charge (audio + warning particles)
+    SpecialUsed,   // player spent a full special meter
+    PickupCollected, // player collected a health pickup
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -19,6 +21,8 @@ struct HitContactPayload    { uint32_t attackerID; uint32_t targetID; };
 struct AttackStartedPayload { uint32_t entityID; uint8_t clipID; }; // clipID = (uint8_t)AnimClipID
 struct DodgeStartedPayload  { uint32_t entityID; };
 struct BossTelegraphPayload { uint32_t entityID; };
+struct SpecialUsedPayload   { uint32_t entityID; };
+struct PickupCollectedPayload { uint32_t playerID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -30,6 +34,8 @@ struct Event {
         AttackStartedPayload attackStarted;
         DodgeStartedPayload  dodgeStarted;
         BossTelegraphPayload bossTelegraph;
+        SpecialUsedPayload   specialUsed;
+        PickupCollectedPayload pickupCollected;
     };
 };
 
@@ -86,6 +92,16 @@ struct EventBus {
     void emit_boss_telegraph(uint32_t entityID) {
         Event e{}; e.type = EventType::BossTelegraph;
         e.bossTelegraph = { entityID };
+        push(e);
+    }
+    void emit_special_used(uint32_t entityID) {
+        Event e{}; e.type = EventType::SpecialUsed;
+        e.specialUsed = { entityID };
+        push(e);
+    }
+    void emit_pickup_collected(uint32_t playerID) {
+        Event e{}; e.type = EventType::PickupCollected;
+        e.pickupCollected = { playerID };
         push(e);
     }
 

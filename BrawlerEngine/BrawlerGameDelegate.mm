@@ -119,6 +119,7 @@ struct PlayerPerks {
     BOOL                 _attackPulse;
     BOOL                 _dodgePulse;
     BOOL                 _pausePulse;
+    BOOL                 _specialPulse;
     int                  _numPlayers; // 1 or 2; set at player-select, remembered between runs
 
     BrawlerGamePhase     _phase;
@@ -412,6 +413,7 @@ struct PlayerPerks {
     _world.add_component<DamageCooldownComponent>(e).remaining = 0.f;
     _world.add_component<AnimationComponent>(e);
     _world.add_component<FacingComponent>(e);
+    _world.add_component<SpecialMeterComponent>(e);
     auto& stats = _world.add_component<StatsComponent>(e);
     stats.damageBonus = perks.bonusDamage;
     stats.speedMult   = perks.speedMult;
@@ -483,6 +485,7 @@ struct PlayerPerks {
 
 - (void)triggerAttack                                    { _attackPulse = YES; }
 - (void)triggerDodge                                     { _dodgePulse  = YES; }
+- (void)triggerSpecial                                   { _specialPulse = YES; }
 - (void)triggerPause                                     { _pausePulse  = YES; }
 
 - (void)resetInput {
@@ -491,6 +494,7 @@ struct PlayerPerks {
     _attackPulse = NO;
     _dodgePulse  = NO;
     _pausePulse  = NO;
+    _specialPulse = NO;
 }
 
 // ---------------------------------------------------------------------------
@@ -512,11 +516,12 @@ struct PlayerPerks {
     }
 
     // Single-frame pulses (touch tap / flick / pause).
-    BOOL anyActionPulse = _attackPulse || _dodgePulse || _pausePulse;
-    if (_attackPulse || _dodgePulse) {
+    BOOL anyActionPulse = _attackPulse || _dodgePulse || _pausePulse || _specialPulse;
+    if (_attackPulse || _dodgePulse || _specialPulse) {
         InputState s = _world.current_input(0);
         if (_attackPulse) s.attack = true;
         if (_dodgePulse)  s.dodge  = true;
+        if (_specialPulse) s.special = true;
         _world.set_input(s, 0);
     }
 
@@ -583,6 +588,19 @@ struct PlayerPerks {
             [_haptics playDodgeHaptic];
         });
 
+        _world.events().for_each(EventType::SpecialUsed, [self](const Event& ev) {
+            uint32_t pid = ev.specialUsed.entityID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 110.f}
+                                  count:36 speed:520.f size:16.f
+                                  color:(simd_float4){1.0f, 0.8f, 0.2f, 1.f}];
+            }
+            [_renderer triggerHitBlur:1.f];
+            [_audio playFinisherSound];
+            [_haptics playFinisherHaptic];
+        });
+
         // Ember trail on every lava snake (a few particles per frame).
         for (EntityID id = 0; id < _world.entity_count(); ++id) {
             if (!_world.hazards().present(id)) continue;
@@ -620,6 +638,17 @@ struct PlayerPerks {
                                       color:(simd_float4){1.0f, 0.85f, 0.50f, 1.f}];
                 }
             }
+        });
+
+        _world.events().for_each(EventType::PickupCollected, [self](const Event& ev) {
+            uint32_t pid = ev.pickupCollected.playerID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 70.f}
+                                  count:10 speed:200.f size:10.f
+                                  color:(simd_float4){1.0f, 0.5f, 0.6f, 1.f}];
+            }
+            [_audio playRoomClearSound];
         });
 
         _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {

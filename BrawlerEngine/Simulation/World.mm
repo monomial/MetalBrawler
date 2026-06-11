@@ -10,6 +10,8 @@
 #include "Systems/KnockbackSystem.h"
 #include "Systems/BossSystem.h"
 #include "Systems/HazardSystem.h"
+#include "Systems/SpecialSystem.h"
+#include "Systems/PickupSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -33,6 +35,8 @@ template<> ComponentStorage<BossChargeComponent>&         World::_pool() { retur
 template<> ComponentStorage<StatsComponent>&              World::_pool() { return _stats; }
 template<> ComponentStorage<HazardComponent>&             World::_pool() { return _hazards; }
 template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
+template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { return _specialMeters; }
+template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
 
 // ----
 
@@ -80,6 +84,8 @@ void World::flush() {
         _stats.remove(id);
         _hazards.remove(id);
         _paths.remove(id);
+        _specialMeters.remove(id);
+        _heartPickups.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -110,10 +116,14 @@ void World::tick(float gameDt) {
     PhysicsSystem_update(*this, gameDt);
     // 2.5. WallCollisionSystem — clamp entities to room bounds
     WallCollisionSystem_update(*this, gameDt);
+    // 2.75. SpecialSystem — spends player meter on a radial slam before normal combat.
+    SpecialSystem_update(*this, gameDt);
     // 3. CombatSystem — handles both player→enemy and enemy→player attack hitboxes.
     //    ContactDamageSystem removed: enemies now deal damage through Attack animations,
     //    not passive proximity. Code kept in ContactDamageSystem.mm for hazard reuse later.
     CombatSystem_update(*this, gameDt);
+    // 3.5. PickupSystem — lifetime + collection after combat can create hearts.
+    PickupSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
     // 5. AnimationSystem — advances clip time, samples bone matrices when assets loaded
     AnimationSystem_update(*this, gameDt);

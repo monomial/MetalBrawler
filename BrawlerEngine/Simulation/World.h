@@ -114,6 +114,8 @@ public:
     ComponentStorage<StatsComponent>&              stats()            { return _stats; }
     ComponentStorage<HazardComponent>&             hazards()          { return _hazards; }
     ComponentStorage<PathFollowComponent>&         paths()            { return _paths; }
+    ComponentStorage<SpecialMeterComponent>&       special_meters()   { return _specialMeters; }
+    ComponentStorage<HeartPickupComponent>&        heart_pickups()    { return _heartPickups; }
 
 private:
     void flush();
@@ -150,6 +152,8 @@ private:
     ComponentStorage<StatsComponent>              _stats;
     ComponentStorage<HazardComponent>             _hazards;
     ComponentStorage<PathFollowComponent>         _paths;
+    ComponentStorage<SpecialMeterComponent>       _specialMeters;
+    ComponentStorage<HeartPickupComponent>        _heartPickups;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -184,3 +188,5 @@ template<> ComponentStorage<BossChargeComponent>&         World::_pool<BossCharg
 template<> ComponentStorage<StatsComponent>&              World::_pool<StatsComponent>();
 template<> ComponentStorage<HazardComponent>&             World::_pool<HazardComponent>();
 template<> ComponentStorage<PathFollowComponent>&         World::_pool<PathFollowComponent>();
+template<> ComponentStorage<SpecialMeterComponent>&       World::_pool<SpecialMeterComponent>();
+template<> ComponentStorage<HeartPickupComponent>&        World::_pool<HeartPickupComponent>();

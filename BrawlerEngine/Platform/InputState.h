@@ -10,4 +10,5 @@ struct InputState {
     bool  attack;
     bool  dodge;
     bool  pause;
+    bool  special;
 };

@@ -101,7 +101,7 @@ static const int kMaxPlayers = 4;
 - (void)_feedKeyboardInput {
     float mx = (_right ? 1.f : 0.f) - (_left ? 1.f : 0.f);
     float my = (_up    ? 1.f : 0.f) - (_down ? 1.f : 0.f);
-    InputState s = { mx, my, (bool)_attack, (bool)_dodge, false };
+    InputState s = { mx, my, (bool)_attack, (bool)_dodge, false, false };
     [_delegate setInputState:s forPlayer:0];
 }
 
@@ -223,6 +223,13 @@ static const int kMaxPlayers = 4;
             if (!vc) return;
             InputState s = [vc->_delegate currentInputStateForPlayer:slot];
             s.dodge = pressed;
+            [vc->_delegate setInputState:s forPlayer:slot];
+        };
+        ext.buttonX.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+            GameViewController *vc = weakSelf;
+            if (!vc) return;
+            InputState s = [vc->_delegate currentInputStateForPlayer:slot];
+            s.special = pressed;
             [vc->_delegate setInputState:s forPlayer:slot];
         };
         // Options button (☰) = pause/resume. Safe to intercept; no system behavior on tvOS.

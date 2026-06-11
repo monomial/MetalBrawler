@@ -647,6 +647,21 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
             continue;
         }
 
+        // Heart pickups: pulsing rose-pink quad, no mesh.
+        if (world->heart_pickups().present(eid)) {
+            float pulse = 1.0f + 0.15f * sinf((float)CACurrentMediaTime() * 8.f + (float)eid);
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp   = simd_mul(vp, make_model_rect(pos.x, pos.y, 16.f,
+                                                   26.f * pulse, 26.f * pulse));
+            u.color = (simd_float4){1.0f, 0.35f, 0.5f, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            continue;
+        }
+
         simd_float4 color = {1,1,1,1};
         FactionComponent::Type faction = FactionComponent::Player;
         if (world->has_component<FactionComponent>(eid)) {
@@ -696,6 +711,16 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
             su.color = color;
             su.tintStrength = (faction == FactionComponent::Enemy) ? kEnemyTintStrength
                                                                    : kPlayerTintStrength;
+            if (faction == FactionComponent::Enemy &&
+                world->has_component<EnemyAttackCooldownComponent>(eid) &&
+                world->get_component<EnemyAttackCooldownComponent>(eid).windup > 0.f) {
+                float flash = 0.15f + 0.5f * (0.5f + 0.5f *
+                              sinf(world->get_component<EnemyAttackCooldownComponent>(eid).windup * 40.f));
+                su.color.x = su.color.x + (1.f - su.color.x) * flash;
+                su.color.y = su.color.y + (1.f - su.color.y) * flash;
+                su.color.z = su.color.z + (1.f - su.color.z) * flash;
+                su.tintStrength = flash;
+            }
             [enc setVertexBytes:&su length:sizeof(su) atIndex:2];
 
             id<MTLTexture> tex = charData->diffuseTexture ? charData->diffuseTexture : _whiteTexture;
@@ -794,6 +819,7 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
         static const float kBarW     = 80.f;  // pixels
         static const float kBarH     = 10.f;  // pixels
         static const float kBarGap   = 8.f;   // pixels above projected head
+        static const float kSpecialBarH = 5.f; // pixels
 
         for (EntityID id = 0; id < world->entity_count(); ++id) {
             if (!world->has_component<HealthComponent>(id)) continue;
@@ -832,6 +858,27 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                                                           scrY, 0.f, fw, kBarH));
                 [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
                 [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            }
+
+            if (world->player_tags().present(id) &&
+                world->has_component<SpecialMeterComponent>(id)) {
+                float meterY = scrY + kBarH + kSpecialBarH;
+                u.color = {0.08f, 0.08f, 0.10f, 1.f};
+                u.mvp   = simd_mul(ortho, make_model_rect(scrX, meterY, 0.f, kBarW, kSpecialBarH));
+                [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+                float mfill = world->get_component<SpecialMeterComponent>(id).charge;
+                if (mfill < 0.f) mfill = 0.f;
+                if (mfill > 1.f) mfill = 1.f;
+                float mw = kBarW * mfill;
+                if (mw > 1.f) {
+                    u.color = (simd_float4){1.0f, 0.8f, 0.2f, 1.f};
+                    u.mvp   = simd_mul(ortho, make_model_rect(scrX - kBarW * 0.5f + mw * 0.5f,
+                                                              meterY, 0.f, mw, kSpecialBarH));
+                    [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                    [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+                }
             }
         }
 

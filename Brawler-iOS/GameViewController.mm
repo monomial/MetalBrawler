@@ -1,5 +1,6 @@
 #import "GameViewController.h"
 #import <MetalKit/MetalKit.h>
+#import <GameController/GameController.h>
 #import "BrawlerGameDelegate.h"
 #import "BrawlerStrings.h"
 #include "Platform/InputState.h"
@@ -79,6 +80,13 @@
         vc->_pauseButton.hidden = (phase != BrawlerGamePhasePlaying &&
                                    phase != BrawlerGamePhasePaused);
     };
+
+    [[NSNotificationCenter defaultCenter]
+        addObserver:self
+           selector:@selector(_controllerConnected:)
+               name:GCControllerDidConnectNotification
+             object:nil];
+    [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 }
 
 - (void)_pauseTapped      { [_delegate triggerPause]; }
@@ -127,7 +135,7 @@
         mx =  (dx / len) * scale;
         my = -(dy / len) * scale; // screen Y is inverted vs game Y
     }
-    [_delegate setInputState:{mx, my, false, false, false}];
+        [_delegate setInputState:{mx, my, false, false, false}];
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -146,6 +154,20 @@
             [_delegate setInputState:{0, 0, false, false, false}];
         }
     }
+}
+
+- (void)_controllerConnected:(NSNotification *)note {
+    GCController *ctrl = note.object;
+    if (!ctrl.extendedGamepad) return;
+    __weak GameViewController *weakSelf = self;
+    GCExtendedGamepad *ext = ctrl.extendedGamepad;
+    ext.buttonX.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        InputState s = [vc->_delegate currentInputStateForPlayer:0];
+        s.special = pressed;
+        [vc->_delegate setInputState:s forPlayer:0];
+    };
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {

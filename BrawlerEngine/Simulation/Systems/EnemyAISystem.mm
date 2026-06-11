@@ -8,6 +8,7 @@
 static constexpr float kEnemySpeed          = 150.0f; // units per second
 static constexpr float kStopRadius          = 110.0f; // stop chasing within this distance
 static constexpr float kEnemyAttackCooldown = 2.0f;   // seconds between attack initiations
+static constexpr float kEnemyAttackWindup   = 0.35f;  // committed warning before punch
 
 void EnemyAISystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // HitStop — enemies freeze
@@ -71,11 +72,20 @@ void EnemyAISystem_update(World& world, float gameDt) {
             facing.dy = dy / dist;
         }
 
-        // Tick down attack cooldown.
+        bool windupFinished = false;
+
+        // Tick down attack cooldown and any committed wind-up.
         if (world.has_component<EnemyAttackCooldownComponent>(id)) {
             auto& cd = world.get_component<EnemyAttackCooldownComponent>(id);
             cd.remaining -= gameDt;
             if (cd.remaining < 0.f) cd.remaining = 0.f;
+            if (cd.windup > 0.f) {
+                cd.windup -= gameDt;
+                if (cd.windup <= 0.f) {
+                    cd.windup = 0.f;
+                    windupFinished = true;
+                }
+            }
         }
 
         if (!world.has_component<VelocityComponent>(id))
@@ -84,7 +94,13 @@ void EnemyAISystem_update(World& world, float gameDt) {
         VelocityComponent& vel = world.get_component<VelocityComponent>(id);
         bool moving;
 
-        if (dist <= stopRadius) {
+        bool windingUp = world.has_component<EnemyAttackCooldownComponent>(id) &&
+                         world.get_component<EnemyAttackCooldownComponent>(id).windup > 0.f;
+
+        if (windingUp) {
+            vel = {0.f, 0.f, 0.f};
+            moving = false;
+        } else if (dist <= stopRadius) {
             vel = {0.f, 0.f, 0.f};
             moving = false;
         } else {
@@ -101,10 +117,12 @@ void EnemyAISystem_update(World& world, float gameDt) {
         // so it's safe to call every tick — the request is just queued.
         AnimClipID nextClip = moving ? AnimClipID::Walk : AnimClipID::Idle;
 
-        if (!moving && world.has_component<EnemyAttackCooldownComponent>(id)) {
+        if (windupFinished) {
+            nextClip = AnimClipID::Attack;
+        } else if (!moving && world.has_component<EnemyAttackCooldownComponent>(id)) {
             auto& cd = world.get_component<EnemyAttackCooldownComponent>(id);
-            if (cd.remaining <= 0.f) {
-                nextClip = AnimClipID::Attack;
+            if (cd.windup <= 0.f && cd.remaining <= 0.f) {
+                cd.windup = kEnemyAttackWindup;
                 cd.remaining = cooldown;
             }
         }

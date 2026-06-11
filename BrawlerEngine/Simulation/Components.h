@@ -103,6 +103,7 @@ struct DamageCooldownComponent {
 // each tick; when it reaches 0 the enemy may begin a new Attack clip.
 struct EnemyAttackCooldownComponent {
     float remaining = 0.f; // seconds until next attack is allowed (0 = ready)
+    float windup    = 0.f; // seconds left before the committed Attack clip starts
 };
 
 // Marks a boss enemy. CombatSystem uses this to suppress most hurt reactions.
@@ -118,6 +119,10 @@ struct HazardComponent {
     float radius   = 70.f;
     int   damage   = 1;
     float lifetime = 6.f; // seconds until despawn
+};
+
+struct HeartPickupComponent {
+    float lifetime = 8.f;
 };
 
 // Looping waypoint path. HazardSystem moves the entity along the closed
@@ -145,6 +150,10 @@ struct BossChargeComponent {
 struct StatsComponent {
     int   damageBonus = 0;   // added to attack damage
     float speedMult   = 1.f; // multiplies move speed
+};
+
+struct SpecialMeterComponent {
+    float charge = 0.f; // 0..1 radial slam meter
 };
 
 // Shove applied to an entity that just took a hit. KnockbackSystem owns the

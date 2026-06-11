@@ -2,9 +2,9 @@
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/CombatHelpers.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
-#include <stdlib.h>
 
 static constexpr float kAttackRange    = 130.0f;
 static constexpr int   kHitStopTicks   = 4;      // ~33ms freeze on hit
@@ -12,9 +12,6 @@ static constexpr int   kHitStopTicks   = 4;      // ~33ms freeze on hit
 static constexpr float kPunchArcCosine = 0.342f; // cos(70°)
 // Knockback shove on hit: enemies fly back from the attacker and decelerate
 // linearly. Bosses barely budge; players are exempt (stay mobile, TMNT-style).
-static constexpr float kKnockbackSpeed     = 480.0f;
-static constexpr float kKnockbackDuration  = 0.18f;
-static constexpr float kBossKnockbackScale = 0.25f;
 
 // Active-frame window for each clip: the fraction of clip duration where the
 // hitbox is live, and the damage dealt on contact. Zero damage = not an attack.
@@ -114,6 +111,13 @@ void CombatSystem_update(World& world, float gameDt) {
             hitAnything = true;
             hitPlayer  |= world.has_component<PlayerTagComponent>(targetID);
 
+            if (world.has_component<PlayerTagComponent>(attackerID) &&
+                world.has_component<SpecialMeterComponent>(attackerID)) {
+                SpecialMeterComponent& meter = world.get_component<SpecialMeterComponent>(attackerID);
+                meter.charge += 0.15f;
+                if (meter.charge > 1.f) meter.charge = 1.f;
+            }
+
             world.events().emit_hit_contact(attackerID, targetID);
             world.events().emit_damage(targetID, damage);
 
@@ -122,34 +126,21 @@ void CombatSystem_update(World& world, float gameDt) {
             bool tgtIsPlayer = world.has_component<PlayerTagComponent>(targetID);
             if (!tgtIsPlayer && dist > 0.001f && hp.current > 0) {
                 float scale = world.has_component<BossTagComponent>(targetID)
-                            ? kBossKnockbackScale : 1.f;
+                            ? kCombatBossKnockbackScale : 1.f;
                 if (world.has_component<EnemyArchetypeComponent>(targetID))
                     scale = enemy_archetype_def(
                         world.get_component<EnemyArchetypeComponent>(targetID).type).knockbackScale;
                 KnockbackComponent& kb = world.has_component<KnockbackComponent>(targetID)
                     ? world.get_component<KnockbackComponent>(targetID)
                     : world.add_component<KnockbackComponent>(targetID);
-                kb.velX     = (dx / dist) * kKnockbackSpeed * scale;
-                kb.velY     = (dy / dist) * kKnockbackSpeed * scale;
+                kb.velX     = (dx / dist) * kCombatKnockbackSpeed * scale;
+                kb.velY     = (dy / dist) * kCombatKnockbackSpeed * scale;
                 kb.elapsed  = 0.f;
-                kb.duration = kKnockbackDuration;
+                kb.duration = kCombatKnockbackDuration;
             }
 
             if (hp.current <= 0) {
-                world.events().emit_died(targetID);
-                if (world.has_component<AnimationComponent>(targetID)) {
-                    world.get_component<AnimationComponent>(targetID).dying = true;
-                    AnimationSystem_request_clip(world, targetID, AnimClipID::Death);
-                } else {
-                    world.defer_destroy(targetID);
-                }
-                // Zero velocity so the entity doesn't slide during its death animation.
-                // EnemyAISystem skips dying entities, but the velocity it set this tick
-                // would otherwise persist and keep moving the body.
-                if (world.has_component<VelocityComponent>(targetID)) {
-                    VelocityComponent& vel = world.get_component<VelocityComponent>(targetID);
-                    vel.vx = vel.vy = vel.vz = 0.f;
-                }
+                Combat_apply_death(world, targetID);
             } else if (world.has_component<AnimationComponent>(targetID)) {
                 // Players stay mobile when hit (no stun) — TMNT-style.
                 // Enemies react unless they're a boss; bosses react ~10% of the time.

@@ -12,7 +12,7 @@
     BrawlerGameDelegate *_delegate;
     BrawlerAutoTest     *_autoTest;
     NSView              *_damageFlashView;
-    BOOL _left, _right, _up, _down, _attack;
+    BOOL _left, _right, _up, _down, _attack, _special;
 }
 
 - (void)loadView {
@@ -115,9 +115,10 @@
 - (void)_feedKeyboardInput {
     float mx = (_right ? 1.f : 0.f) - (_left ? 1.f : 0.f);
     float my = (_up    ? 1.f : 0.f) - (_down ? 1.f : 0.f);
-    InputState s = { mx, my, (bool)_attack, false, false };
+    InputState s = { mx, my, (bool)_attack, false, false, (bool)_special };
     [_delegate setInputState:s forPlayer:0];
     _attack = NO;
+    _special = NO;
 }
 
 - (void)keyDown:(NSEvent *)event {
@@ -132,6 +133,7 @@
         case 2:   _right  = YES; break; // D
         case 13:  _up     = YES; break; // W
         case 1:   _down   = YES; break; // S
+        case 14:  _special = YES; break;                       // E      — special
         case 123: _left   = YES; break; // ←
         case 124: _right  = YES; break; // →
         case 126: _up     = YES; break; // ↑
@@ -182,6 +184,13 @@
         if (!vc) return;
         InputState s = [vc->_delegate currentInputStateForPlayer:1];
         s.attack = pressed;
+        [vc->_delegate setInputState:s forPlayer:1];
+    };
+    ext.buttonX.valueChangedHandler = ^(GCControllerButtonInput *btn, float val, BOOL pressed) {
+        GameViewController *vc = weakSelf;
+        if (!vc) return;
+        InputState s = [vc->_delegate currentInputStateForPlayer:1];
+        s.special = pressed;
         [vc->_delegate setInputState:s forPlayer:1];
     };
 }

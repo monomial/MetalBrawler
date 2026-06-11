@@ -49,6 +49,9 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 // Fire a one-frame dodge pulse (touch flick, single press). Same pattern as triggerAttack.
 - (void)triggerDodge;
 
+// Fire a one-frame special pulse.
+- (void)triggerSpecial;
+
 // Fire a one-frame pause/resume pulse.
 - (void)triggerPause;
 
