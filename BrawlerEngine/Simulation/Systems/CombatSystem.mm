@@ -51,6 +51,7 @@ void CombatSystem_update(World& world, float gameDt) {
         if (!world.has_component<AnimationComponent>(attackerID)) continue;
         if (!world.has_component<FactionComponent>(attackerID)) continue;
         if (!world.has_component<PositionComponent>(attackerID)) continue;
+        if (world.has_component<SpawnAnimComponent>(attackerID)) continue;
 
         AnimationComponent& atkAnim = world.get_component<AnimationComponent>(attackerID);
         if (atkAnim.dying) continue;
@@ -87,6 +88,7 @@ void CombatSystem_update(World& world, float gameDt) {
             if (world.get_component<FactionComponent>(targetID).type != tgtFaction) continue;
             if (!world.has_component<PositionComponent>(targetID)) continue;
             if (!world.has_component<HealthComponent>(targetID)) continue;
+            if (world.has_component<SpawnAnimComponent>(targetID)) continue;
             if (world.has_component<DownedComponent>(targetID)) continue;
             if (world.has_component<AnimationComponent>(targetID) &&
                 world.get_component<AnimationComponent>(targetID).dying) continue;

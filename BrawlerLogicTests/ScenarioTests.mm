@@ -69,8 +69,8 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 240.f);
-    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 240 sim-seconds (ended in phase %ld, room %d, lives %d)",
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 300.f);
+    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 300 sim-seconds (ended in phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
     XCTAssertEqual(d.currentRoom, 6, @"a full run is intro + 4 middle rooms + boss");
 
@@ -91,7 +91,7 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     [d startGameWithPlayers:2];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 240.f);
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 300.f);
     XCTAssertTrue(won, @"2P AutoPilot failed to win (phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
 }
@@ -105,7 +105,7 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     [d startGameWithPlayers:1];
     XCTAssertEqual(d.livesRemaining, 3);
 
-    BOOL lost = advanceUntilPhase(d, BrawlerGamePhaseLose, 240.f);
+    BOOL lost = advanceUntilPhase(d, BrawlerGamePhaseLose, 300.f);
     XCTAssertTrue(lost, @"Idle player never reached the Lose phase (phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
     XCTAssertEqual(d.livesRemaining, 0);

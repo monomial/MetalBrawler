@@ -4,17 +4,19 @@
 #include "Simulation/World.h"
 #include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/WaveSystem.h"
 #include "Assets/CharacterLoader.h"
 #import "Renderer/BrawlerRenderer.h"
 #import "Haptics/HapticsEngine.h"
 #import "Audio/AudioEngine.h"
 
 // ---------------------------------------------------------------------------
-// Room definitions — spawn lists of {archetype, x, y}. HP/speed/scale come
+// Room definitions — spawn lists of {archetype, wave, x, y}. HP/speed/scale come
 // from the archetype table (Simulation/EnemyArchetypes.h).
 // ---------------------------------------------------------------------------
 struct EnemySpawn {
     EnemyArchetype type;
+    uint8_t wave;
     float x, y;
 };
 
@@ -33,36 +35,45 @@ struct RoomDef {
 // Run structure: fixed intro room, then kMiddlePerRun of the middle pool in a
 // seeded-shuffled order, boss last.
 static const EnemySpawn kIntroSpawns[] = {
-    {EnemyArchetype::Grunt,     0, 350},
-    {EnemyArchetype::Grunt,  -200, 250},
+    {EnemyArchetype::Grunt,  0,    0, 350},
+    {EnemyArchetype::Grunt,  1, -200, 250},
+    {EnemyArchetype::Grunt,  1,  200, 250},
 };
 static const EnemySpawn kMidGruntsRusher[] = {
-    {EnemyArchetype::Grunt,  -200, 250},
-    {EnemyArchetype::Grunt,   200, 250},
-    {EnemyArchetype::Rusher,    0, 400},
+    {EnemyArchetype::Grunt,  0, -200, 250},
+    {EnemyArchetype::Grunt,  0,  200, 250},
+    {EnemyArchetype::Grunt,  1, -160, 390},
+    {EnemyArchetype::Rusher, 1,  160, 390},
 };
 static const EnemySpawn kMidRusherPack[] = {
-    {EnemyArchetype::Rusher, -250, 380},
-    {EnemyArchetype::Rusher,  250, 380},
-    {EnemyArchetype::Rusher,    0, 450},
+    {EnemyArchetype::Rusher, 0, -250, 380},
+    {EnemyArchetype::Rusher, 0,  250, 380},
+    {EnemyArchetype::Rusher, 1, -160, 450},
+    {EnemyArchetype::Rusher, 1,  160, 450},
 };
 static const EnemySpawn kMidHeavyEscort[] = {
-    {EnemyArchetype::Heavy,     0, 300},
-    {EnemyArchetype::Grunt,  -250, 400},
-    {EnemyArchetype::Grunt,   250, 400},
+    {EnemyArchetype::Grunt,  0, -250, 400},
+    {EnemyArchetype::Grunt,  0,  250, 400},
+    {EnemyArchetype::Heavy,  1,    0, 300},
+    {EnemyArchetype::Grunt,  1,    0, 450},
 };
 static const EnemySpawn kMidMixed[] = {
-    {EnemyArchetype::Rusher, -250, 380},
-    {EnemyArchetype::Rusher,  250, 380},
-    {EnemyArchetype::Heavy,     0, 300},
-    {EnemyArchetype::Grunt,     0, 150},
+    {EnemyArchetype::Rusher, 0, -250, 380},
+    {EnemyArchetype::Rusher, 0,  250, 380},
+    {EnemyArchetype::Heavy,  1,    0, 300},
+    {EnemyArchetype::Grunt,  1,    0, 150},
 };
 static const EnemySpawn kMidTwinHeavies[] = {
-    {EnemyArchetype::Heavy,  -180, 320},
-    {EnemyArchetype::Heavy,   180, 320},
+    {EnemyArchetype::Heavy,  0, -180, 320},
+    {EnemyArchetype::Heavy,  1,  120, 320},
+    {EnemyArchetype::Rusher, 1, -260, 400},
 };
 static const EnemySpawn kBossSpawns[] = {
-    {EnemyArchetype::Boss,      0, 350},
+    {EnemyArchetype::Boss,   0,    0, 350},
+};
+static const EnemySpawn kBossReinforcements[] = {
+    {EnemyArchetype::Grunt,  0, -260, 330},
+    {EnemyArchetype::Rusher, 0,  260, 330},
 };
 static const ObstacleSpawn kHeavyEscortObstacles[] = {
     {-300.f, 150.f, 30.f, 30.f},
@@ -72,14 +83,14 @@ static const ObstacleSpawn kMixedObstacles[] = {
     {0.f, 320.f, 35.f, 35.f},
 };
 
-static const RoomDef kIntroRoom = {kIntroSpawns, 2, nullptr, 0};
+static const RoomDef kIntroRoom = {kIntroSpawns, 3, nullptr, 0};
 static const RoomDef kBossRoom  = {kBossSpawns, 1, nullptr, 0};
 static const RoomDef kMiddleRooms[] = {
-    {kMidGruntsRusher, 3, nullptr, 0},
-    {kMidRusherPack,   3, nullptr, 0},
-    {kMidHeavyEscort,  3, kHeavyEscortObstacles, 2},
+    {kMidGruntsRusher, 4, nullptr, 0},
+    {kMidRusherPack,   4, nullptr, 0},
+    {kMidHeavyEscort,  4, kHeavyEscortObstacles, 2},
     {kMidMixed,        4, kMixedObstacles, 1},
-    {kMidTwinHeavies,  2, nullptr, 0},
+    {kMidTwinHeavies,  3, nullptr, 0},
 };
 static const int kNumMiddleRooms = 5;
 static const int kMiddlePerRun   = 4;                  // middle rooms per run
@@ -458,7 +469,7 @@ struct RunStats {
     _world.set_seed(self.rngSeedOverride ? self.rngSeedOverride : arc4random());
     [self resetInput];
     [self _spawnPlayers];
-    [self _spawnEnemiesForCurrentRoom];
+    [self _spawnWaveControllerForCurrentRoom];
     [self _spawnObstaclesForCurrentRoom];
     _renderer.livesRemaining = _lives;
     _renderer.totalRooms = kNumRooms;
@@ -501,24 +512,27 @@ struct RunStats {
     stats.secondWinds = perks.secondWinds;
 }
 
-- (void)_spawnEnemiesForCurrentRoom {
+- (void)_spawnWaveControllerForCurrentRoom {
     const RoomDef& room = [self _currentRoomDef];
+    EntityID controller = _world.defer_create();
+    WaveControllerComponent& wave = _world.add_component<WaveControllerComponent>(controller);
+    wave.spawnCount = room.count;
+    wave.waveCount = 0;
+    wave.currentWave = 0;
+    wave.timer = kInitialWaveDelay;
+    wave.phase = WavePhaseInitialDelay;
+    wave.bossMode = (_currentRoom >= kNumRooms - 1);
     for (int i = 0; i < room.count; ++i) {
         const EnemySpawn& spawn = room.spawns[i];
-        const EnemyArchetypeDef& def = enemy_archetype_def((uint8_t)spawn.type);
-
-        EntityID e = _world.defer_create();
-        _world.add_component<PositionComponent>(e)  = {spawn.x, spawn.y, 0};
-        _world.add_component<VelocityComponent>(e)  = {0, 0, 0};
-        _world.add_component<FactionComponent>(e).type = FactionComponent::Enemy;
-        _world.add_component<HealthComponent>(e)    = {def.maxHP, def.maxHP};
-        _world.add_component<AnimationComponent>(e);
-        _world.add_component<FacingComponent>(e);
-        _world.add_component<EnemyAttackCooldownComponent>(e);
-        _world.add_component<EnemyArchetypeComponent>(e).type = (uint8_t)spawn.type;
-        if (spawn.type == EnemyArchetype::Boss) {
-            _world.add_component<BossTagComponent>(e);
-            _world.add_component<BossChargeComponent>(e); // charge attack state machine
+        wave.spawns[i] = {(uint8_t)spawn.type, spawn.wave, spawn.x, spawn.y};
+        if ((int)spawn.wave + 1 > wave.waveCount)
+            wave.waveCount = (int)spawn.wave + 1;
+    }
+    if (wave.bossMode) {
+        wave.reinforceCount = (int)(sizeof(kBossReinforcements) / sizeof(kBossReinforcements[0]));
+        for (int i = 0; i < wave.reinforceCount; ++i) {
+            const EnemySpawn& spawn = kBossReinforcements[i];
+            wave.reinforcements[i] = {(uint8_t)spawn.type, spawn.wave, spawn.x, spawn.y};
         }
     }
 }
@@ -539,6 +553,8 @@ struct RunStats {
 // mid-animation); waiting for removal means the room-clear message only
 // appears after the last enemy has fully collapsed.
 - (BOOL)_allEnemiesDefeated {
+    if (!WaveSystem_room_finished(_world))
+        return NO;
     for (EntityID id = 0; id < _world.entity_count(); ++id) {
         if (!_world.has_component<FactionComponent>(id)) continue;
         if (_world.get_component<FactionComponent>(id).type == FactionComponent::Enemy)
@@ -707,6 +723,33 @@ struct RunStats {
                               count:1 speed:90.f size:9.f
                               color:(simd_float4){1.0f, 0.5f, 0.12f, 1.f}];
         }
+
+        // Spawn markers glow on the floor before enemies arrive.
+        for (EntityID id = 0; id < _world.entity_count(); ++id) {
+            if (!_world.spawn_markers().present(id)) continue;
+            if (!_world.has_component<PositionComponent>(id)) continue;
+            const auto& p = _world.get_component<PositionComponent>(id);
+            [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 18.f}
+                              count:1 speed:80.f size:8.f
+                              color:(simd_float4){1.0f, 0.58f, 0.16f, 1.f}];
+        }
+
+        _world.events().for_each(EventType::WaveStarted, [self](const Event& ev) {
+            (void)ev;
+            [_audio playUIClickSound];
+        });
+
+        _world.events().for_each(EventType::SpawnLanded, [self](const Event& ev) {
+            uint32_t eid = ev.spawnLanded.entityID;
+            if (_world.has_component<PositionComponent>(eid)) {
+                const auto& p = _world.get_component<PositionComponent>(eid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 30.f}
+                                  count:14 speed:230.f size:13.f
+                                  color:(simd_float4){0.72f, 0.68f, 0.62f, 1.f}];
+            }
+            if (ev.spawnLanded.style == SpawnStyleSkyDrop)
+                [_audio playDodgeSound];
+        });
 
         // Boss winding up a charge: warning burst + an audible cue.
         _world.events().for_each(EventType::BossTelegraph, [self](const Event& ev) {

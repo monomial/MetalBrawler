@@ -5,7 +5,7 @@
 static const float    kTickInterval   = 0.1f;   // driver poll rate
 static const float    kBeatDelay      = 0.8f;   // settle time before acting on a phase
 static const float    kRoomShotDelay  = 1.2f;   // into a room → mid-combat screenshot
-static const double   kRunTimeout     = 240.0;  // wall-clock seconds before exit(1)
+static const double   kRunTimeout     = 300.0;  // wall-clock seconds before exit(1)
 static const double   kExitGrace      = 1.5;    // let async PNG writes finish
 
 @implementation BrawlerAutoTest {
@@ -101,7 +101,13 @@ static const double   kExitGrace      = 1.5;    // let async PNG writes finish
             break;
         }
         case BrawlerGamePhasePlaying: {
-            if (inPhase > kRoomShotDelay)
+            // Wave lifecycle beats: markers telegraph ~1.5–2.5s in, spawn
+            // animations ~2.5–3.1s, real combat after that.
+            if (inPhase > 2.0f)
+                [self _shoot:[NSString stringWithFormat:@"room%d-telegraph", room]];
+            if (inPhase > 2.8f)
+                [self _shoot:[NSString stringWithFormat:@"room%d-spawn", room]];
+            if (inPhase > 5.5f)
                 [self _shoot:[NSString stringWithFormat:@"room%d-combat", room]];
             break;
         }

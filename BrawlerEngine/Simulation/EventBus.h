@@ -17,6 +17,8 @@ enum class EventType : uint8_t {
     SecondWindUsed, // player consumed a Second Wind save instead of dying
     PlayerDowned,  // multiplayer player entered revive state
     PlayerRevived, // player was revived by a teammate
+    WaveStarted,   // spawn markers appeared for a wave
+    SpawnLanded,   // spawn animation completed
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -31,6 +33,8 @@ struct PickupCollectedPayload { uint32_t playerID; };
 struct SecondWindUsedPayload { uint32_t playerID; };
 struct PlayerDownedPayload  { uint32_t playerID; };
 struct PlayerRevivedPayload { uint32_t playerID; };
+struct WaveStartedPayload   { uint8_t waveIndex; };
+struct SpawnLandedPayload   { uint32_t entityID; uint8_t style; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -48,6 +52,8 @@ struct Event {
         SecondWindUsedPayload secondWindUsed;
         PlayerDownedPayload  playerDowned;
         PlayerRevivedPayload playerRevived;
+        WaveStartedPayload   waveStarted;
+        SpawnLandedPayload   spawnLanded;
     };
 };
 
@@ -134,6 +140,16 @@ struct EventBus {
     void emit_player_revived(uint32_t playerID) {
         Event e{}; e.type = EventType::PlayerRevived;
         e.playerRevived = { playerID };
+        push(e);
+    }
+    void emit_wave_started(uint8_t waveIndex) {
+        Event e{}; e.type = EventType::WaveStarted;
+        e.waveStarted = { waveIndex };
+        push(e);
+    }
+    void emit_spawn_landed(uint32_t entityID, uint8_t style) {
+        Event e{}; e.type = EventType::SpawnLanded;
+        e.spawnLanded = { entityID, style };
         push(e);
     }
 

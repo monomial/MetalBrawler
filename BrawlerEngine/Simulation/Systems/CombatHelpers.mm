@@ -1,5 +1,6 @@
 #include "CombatHelpers.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/WaveSystem.h"
 
 void Combat_spawn_heart_drop_if_needed(World& world, EntityID victimID) {
     if (!world.has_component<FactionComponent>(victimID)) return;
@@ -45,7 +46,18 @@ static bool has_living_teammate(World& world, EntityID victimID) {
     return false;
 }
 
-void Combat_apply_death(World& world, EntityID victimID) {
+static bool is_living_enemy_for_sweep(World& world, EntityID id) {
+    if (!world.has_component<FactionComponent>(id)) return false;
+    if (world.get_component<FactionComponent>(id).type != FactionComponent::Enemy) return false;
+    if (!world.has_component<HealthComponent>(id)) return false;
+    if (world.get_component<HealthComponent>(id).current <= 0) return false;
+    if (world.has_component<AnimationComponent>(id) &&
+        world.get_component<AnimationComponent>(id).dying) return false;
+    return true;
+}
+
+static void Combat_apply_death_internal(World& world, EntityID victimID,
+                                        bool allowHeartDrop, bool allowBossSweep) {
     if (world.player_tags().present(victimID) &&
         !world.has_component<DownedComponent>(victimID) &&
         has_living_teammate(world, victimID)) {
@@ -73,7 +85,8 @@ void Combat_apply_death(World& world, EntityID victimID) {
     }
 
     world.events().emit_died(victimID);
-    Combat_spawn_heart_drop_if_needed(world, victimID);
+    if (allowHeartDrop)
+        Combat_spawn_heart_drop_if_needed(world, victimID);
 
     if (world.has_component<AnimationComponent>(victimID)) {
         world.get_component<AnimationComponent>(victimID).dying = true;
@@ -86,4 +99,18 @@ void Combat_apply_death(World& world, EntityID victimID) {
         VelocityComponent& vel = world.get_component<VelocityComponent>(victimID);
         vel.vx = vel.vy = vel.vz = 0.f;
     }
+
+    if (allowBossSweep && world.has_component<BossTagComponent>(victimID)) {
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (id == victimID) continue;
+            if (!is_living_enemy_for_sweep(world, id)) continue;
+            world.get_component<HealthComponent>(id).current = 0;
+            Combat_apply_death_internal(world, id, false, false);
+        }
+        WaveSystem_force_done(world);
+    }
+}
+
+void Combat_apply_death(World& world, EntityID victimID) {
+    Combat_apply_death_internal(world, victimID, true, true);
 }

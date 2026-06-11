@@ -130,6 +130,36 @@ struct HeartPickupComponent {
     float lifetime = 8.f;
 };
 
+struct PendingSpawn {
+    uint8_t archetype = 0;
+    uint8_t wave = 0;
+    float x = 0.f;
+    float y = 0.f;
+};
+
+struct WaveControllerComponent {
+    PendingSpawn spawns[16] = {};
+    int spawnCount = 0;
+    int waveCount = 0;
+    int currentWave = 0;
+    float timer = 0.f;
+    uint8_t phase = 0; // 0 InitialDelay, 1 Telegraph, 2 Fighting, 3 Done
+    bool bossMode = false;
+    PendingSpawn reinforcements[8] = {};
+    int reinforceCount = 0;
+};
+
+struct SpawnMarkerComponent {
+    uint8_t archetype = 0;
+    float countdown = 0.f;
+    uint8_t style = 0; // 0 ground-rise, 1 sky-drop
+};
+
+struct SpawnAnimComponent {
+    float progress = 0.f; // 0..1 over kSpawnAnimDuration
+    uint8_t style = 0;   // 0 ground-rise, 1 sky-drop
+};
+
 struct ObstacleComponent {
     float halfW = 30.f;
     float halfH = 30.f;

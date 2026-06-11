@@ -57,6 +57,7 @@ void BossSystem_update(World& world, float gameDt) {
     for (EntityID id = 0; id < world.entity_count(); ++id) {
         if (!world.has_component<BossChargeComponent>(id)) continue;
         if (!world.has_component<PositionComponent>(id)) continue;
+        if (world.has_component<SpawnAnimComponent>(id)) continue;
         if (world.has_component<AnimationComponent>(id) &&
             world.get_component<AnimationComponent>(id).dying) continue;
 

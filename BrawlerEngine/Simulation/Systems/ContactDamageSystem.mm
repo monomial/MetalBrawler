@@ -39,6 +39,7 @@ void ContactDamageSystem_update(World& world, float gameDt) {
         if (!world.has_component<FactionComponent>(id)) continue;
         if (world.get_component<FactionComponent>(id).type != FactionComponent::Enemy) continue;
         if (!world.has_component<PositionComponent>(id)) continue;
+        if (world.has_component<SpawnAnimComponent>(id)) continue;
         if (world.has_component<AnimationComponent>(id) &&
             world.get_component<AnimationComponent>(id).dying) continue; // dying enemies don't deal damage
 

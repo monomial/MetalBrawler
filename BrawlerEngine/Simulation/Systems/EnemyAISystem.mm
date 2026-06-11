@@ -36,6 +36,11 @@ void EnemyAISystem_update(World& world, float gameDt) {
         if (!factions.present(id)) continue;
         if (factions.get(id).type != FactionComponent::Enemy) continue;
         if (!world.has_component<PositionComponent>(id)) continue;
+        if (world.has_component<SpawnAnimComponent>(id)) {
+            if (world.has_component<VelocityComponent>(id))
+                world.get_component<VelocityComponent>(id) = {0.f, 0.f, 0.f};
+            continue;
+        }
         if (world.has_component<AnimationComponent>(id) &&
             world.get_component<AnimationComponent>(id).dying) continue;
 

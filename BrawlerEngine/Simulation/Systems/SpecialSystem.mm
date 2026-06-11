@@ -48,6 +48,7 @@ void SpecialSystem_update(World& world, float gameDt) {
             if (world.get_component<FactionComponent>(targetID).type != FactionComponent::Enemy) continue;
             if (!world.has_component<PositionComponent>(targetID)) continue;
             if (!world.has_component<HealthComponent>(targetID)) continue;
+            if (world.has_component<SpawnAnimComponent>(targetID)) continue;
             if (world.has_component<AnimationComponent>(targetID) &&
                 world.get_component<AnimationComponent>(targetID).dying) continue;
 

@@ -6,6 +6,7 @@
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
+#include "Simulation/Systems/WaveSystem.h"
 #include "Assets/CharacterLoader.h"
 #include "ParticleSim.h"
 
@@ -54,7 +55,8 @@ static const float kTargetCharHeight = 150.0f;
 // facingAngle: atan2(vy,vx) of movement direction. Default facing (no rotation) is -Y
 //              (toward camera); offset of +π/2 aligns atan2 with the character's front.
 // Rx(+90°) rotates the FBX/USDZ Y-up character to the game's Z-up convention.
-static simd_float4x4 make_char_model(float x, float y, float scale, float yMin, float facingAngle) {
+static simd_float4x4 make_char_model(float x, float y, float scale, float yMin,
+                                     float facingAngle, float zOffset) {
     simd_float4x4 Rx = matrix_identity_float4x4;
     Rx.columns[1] = (simd_float4){ 0.f,  0.f, 1.f, 0.f};
     Rx.columns[2] = (simd_float4){ 0.f, -1.f, 0.f, 0.f};
@@ -70,7 +72,7 @@ static simd_float4x4 make_char_model(float x, float y, float scale, float yMin, 
     simd_float4x4 S = matrix_identity_float4x4;
     S.columns[0].x = scale; S.columns[1].y = scale; S.columns[2].z = scale;
     simd_float4x4 T = matrix_identity_float4x4;
-    T.columns[3] = (simd_float4){x, y, 0.f, 1.f};
+    T.columns[3] = (simd_float4){x, y, zOffset, 1.f};
     return simd_mul(T, simd_mul(S, simd_mul(Rz, simd_mul(Rx, Tfoot))));
 }
 
@@ -701,6 +703,35 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             continue;
         }
 
+        // Spawn markers: pulsing warm floor quad, plus a light pillar for sky drops.
+        if (world->spawn_markers().present(eid)) {
+            const auto& sm = world->get_component<SpawnMarkerComponent>(eid);
+            float pulse = 1.0f + 0.2f * sinf((float)CACurrentMediaTime() * 8.f + (float)eid);
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 2.f,
+                                                 72.f * pulse, 72.f * pulse));
+            u.color = (simd_float4){1.0f, 0.54f, 0.12f, 0.82f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 2.2f,
+                                                 42.f * pulse, 42.f * pulse));
+            u.color = (simd_float4){0.18f, 0.10f, 0.05f, 0.72f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+            if (sm.style == SpawnStyleSkyDrop) {
+                u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y, 18.f, 220.f, true));
+                u.color = (simd_float4){1.0f, 0.72f, 0.24f, 0.38f};
+                [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            }
+            continue;
+        }
+
         // Heart pickups: pulsing rose-pink quad, no mesh.
         if (world->heart_pickups().present(eid)) {
             float pulse = 1.0f + 0.15f * sinf((float)CACurrentMediaTime() * 8.f + (float)eid);
@@ -761,7 +792,19 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             [enc setVertexBuffer:_boneBuf[_frameIdx] offset:boneOffset atIndex:1];
             SkinnedUniforms su;
             float facing = (eid < kMaxAnimEntities) ? _facingAngle[eid] : (float)M_PI_2;
-            su.mvp   = simd_mul(vp, make_char_model(pos.x, pos.y, scale, charData->meshYMin, facing));
+            float zOffset = 0.f;
+            if (world->has_component<SpawnAnimComponent>(eid)) {
+                const auto& spawn = world->get_component<SpawnAnimComponent>(eid);
+                float t = clampf(spawn.progress, 0.f, 1.f);
+                if (spawn.style == SpawnStyleGroundRise) {
+                    float eased = 1.f - (1.f - t) * (1.f - t);
+                    zOffset = -kTargetCharHeight * scale * (1.f - eased);
+                } else {
+                    zOffset = 600.f * (1.f - t * t);
+                }
+            }
+            su.mvp   = simd_mul(vp, make_char_model(pos.x, pos.y, scale,
+                                                    charData->meshYMin, facing, zOffset));
             su.color = color;
             su.tintStrength = (faction == FactionComponent::Enemy) ? kEnemyTintStrength
                                                                    : kPlayerTintStrength;

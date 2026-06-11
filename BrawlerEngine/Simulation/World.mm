@@ -12,6 +12,7 @@
 #include "Systems/HazardSystem.h"
 #include "Systems/SpecialSystem.h"
 #include "Systems/PickupSystem.h"
+#include "Systems/WaveSystem.h"
 #include "Systems/ReviveSystem.h"
 #include <cassert>
 
@@ -39,6 +40,9 @@ template<> ComponentStorage<HazardComponent>&             World::_pool() { retur
 template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { return _specialMeters; }
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
+template<> ComponentStorage<WaveControllerComponent>&     World::_pool() { return _waveControllers; }
+template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool() { return _spawnMarkers; }
+template<> ComponentStorage<SpawnAnimComponent>&          World::_pool() { return _spawnAnims; }
 template<> ComponentStorage<ObstacleComponent>&           World::_pool() { return _obstacles; }
 
 // ----
@@ -90,6 +94,9 @@ void World::flush() {
         _paths.remove(id);
         _specialMeters.remove(id);
         _heartPickups.remove(id);
+        _waveControllers.remove(id);
+        _spawnMarkers.remove(id);
+        _spawnAnims.remove(id);
         _obstacles.remove(id);
     }
     _deferredDestroyCount = 0;
@@ -129,6 +136,8 @@ void World::tick(float gameDt) {
     CombatSystem_update(*this, gameDt);
     // 3.5. PickupSystem — lifetime + collection after combat can create hearts.
     PickupSystem_update(*this, gameDt);
+    // 3.55. WaveSystem — room enemy waves after pickups, before animation.
+    WaveSystem_update(*this, gameDt);
     // 3.6. ReviveSystem — multiplayer teammates revive downed players after pickups.
     ReviveSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
