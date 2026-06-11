@@ -5,6 +5,12 @@
 
 static constexpr float kCharacterRadius = 40.f;
 
+static float clampf(float v, float lo, float hi) {
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
 void WallCollisionSystem_update(World& world, float gameDt) {
     if (gameDt == 0.f) return; // frozen during HitStop
 
@@ -38,20 +44,42 @@ void WallCollisionSystem_update(World& world, float gameDt) {
 
             const PositionComponent& opos = world.get_component<PositionComponent>(oid);
             const ObstacleComponent& obs = world.get_component<ObstacleComponent>(oid);
-            float inflatedHalfW = obs.halfW + kCharacterRadius;
-            float inflatedHalfH = obs.halfH + kCharacterRadius;
-            float dx = pos.x - opos.x;
-            float dy = pos.y - opos.y;
-            float overlapX = inflatedHalfW - fabsf(dx);
-            float overlapY = inflatedHalfH - fabsf(dy);
-            if (overlapX <= 0.f || overlapY <= 0.f) continue;
+            float minX = opos.x - obs.halfW;
+            float maxX = opos.x + obs.halfW;
+            float minY = opos.y - obs.halfH;
+            float maxY = opos.y + obs.halfH;
+            float cx = clampf(pos.x, minX, maxX);
+            float cy = clampf(pos.y, minY, maxY);
+            float dx = pos.x - cx;
+            float dy = pos.y - cy;
+            float d2 = dx * dx + dy * dy;
+            float r2 = kCharacterRadius * kCharacterRadius;
+            if (d2 >= r2) continue;
 
-            if (overlapX < overlapY) {
-                pos.x += (dx >= 0.f) ? overlapX : -overlapX;
-                vel.vx = 0.f;
+            if (d2 > 1e-6f) {
+                float d = sqrtf(d2);
+                float push = kCharacterRadius - d;
+                pos.x += (dx / d) * push;
+                pos.y += (dy / d) * push;
+
+                if (fabsf(dx) > 1e-6f && fabsf(dy) <= 1e-6f) vel.vx = 0.f;
+                if (fabsf(dy) > 1e-6f && fabsf(dx) <= 1e-6f) vel.vy = 0.f;
             } else {
-                pos.y += (dy >= 0.f) ? overlapY : -overlapY;
-                vel.vy = 0.f;
+                float inflatedHalfW = obs.halfW + kCharacterRadius;
+                float inflatedHalfH = obs.halfH + kCharacterRadius;
+                float centerDx = pos.x - opos.x;
+                float centerDy = pos.y - opos.y;
+                float overlapX = inflatedHalfW - fabsf(centerDx);
+                float overlapY = inflatedHalfH - fabsf(centerDy);
+                if (overlapX <= 0.f || overlapY <= 0.f) continue;
+
+                if (overlapX < overlapY) {
+                    pos.x += (centerDx >= 0.f) ? overlapX : -overlapX;
+                    vel.vx = 0.f;
+                } else {
+                    pos.y += (centerDy >= 0.f) ? overlapY : -overlapY;
+                    vel.vy = 0.f;
+                }
             }
         }
     }
