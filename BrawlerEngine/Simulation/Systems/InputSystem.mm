@@ -16,9 +16,10 @@ void InputSystem_update(World& world) {
 
         const PlayerTagComponent& tag = world.get_component<PlayerTagComponent>(id);
 
-        // Ignore input while dying.
-        if (world.has_component<AnimationComponent>(id) &&
-            world.get_component<AnimationComponent>(id).dying) {
+        // Ignore input while downed or dying.
+        if (world.has_component<DownedComponent>(id) ||
+            (world.has_component<AnimationComponent>(id) &&
+             world.get_component<AnimationComponent>(id).dying)) {
             if (world.has_component<VelocityComponent>(id)) {
                 VelocityComponent& vel = world.get_component<VelocityComponent>(id);
                 vel.vx = vel.vy = vel.vz = 0.0f;

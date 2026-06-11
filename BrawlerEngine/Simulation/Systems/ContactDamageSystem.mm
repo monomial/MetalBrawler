@@ -19,6 +19,7 @@ void ContactDamageSystem_update(World& world, float gameDt) {
     if (playerID == kInvalidEntity) return;
     if (!world.has_component<PositionComponent>(playerID)) return;
     if (!world.has_component<HealthComponent>(playerID)) return;
+    if (world.has_component<DownedComponent>(playerID)) return;
     // Don't damage an already-dying player.
     if (world.has_component<AnimationComponent>(playerID) &&
         world.get_component<AnimationComponent>(playerID).dying) return;

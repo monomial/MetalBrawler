@@ -100,6 +100,7 @@ public:
     ComponentStorage<PositionComponent>& positions()   { return _positions; }
     ComponentStorage<VelocityComponent>& velocities()  { return _velocities; }
     ComponentStorage<HealthComponent>&   healths()     { return _healths; }
+    ComponentStorage<DownedComponent>&   downed()      { return _downed; }
     ComponentStorage<FactionComponent>&  factions()    { return _factions; }
     ComponentStorage<PlayerTagComponent>&      player_tags()      { return _playerTags; }
     ComponentStorage<DamageCooldownComponent>& damage_cooldowns() { return _damageCooldowns; }
@@ -139,6 +140,7 @@ private:
     ComponentStorage<PositionComponent>  _positions;
     ComponentStorage<VelocityComponent>  _velocities;
     ComponentStorage<HealthComponent>    _healths;
+    ComponentStorage<DownedComponent>    _downed;
     ComponentStorage<FactionComponent>   _factions;
     ComponentStorage<PlayerTagComponent>      _playerTags;
     ComponentStorage<DamageCooldownComponent> _damageCooldowns;
@@ -176,6 +178,7 @@ void World::remove_component(EntityID id) { _pool<T>().remove(id); }
 template<> ComponentStorage<PositionComponent>&  World::_pool<PositionComponent>();
 template<> ComponentStorage<VelocityComponent>&  World::_pool<VelocityComponent>();
 template<> ComponentStorage<HealthComponent>&    World::_pool<HealthComponent>();
+template<> ComponentStorage<DownedComponent>&    World::_pool<DownedComponent>();
 template<> ComponentStorage<FactionComponent>&   World::_pool<FactionComponent>();
 template<> ComponentStorage<PlayerTagComponent>&      World::_pool<PlayerTagComponent>();
 template<> ComponentStorage<DamageCooldownComponent>& World::_pool<DamageCooldownComponent>();

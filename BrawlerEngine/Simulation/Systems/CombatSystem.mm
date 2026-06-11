@@ -29,6 +29,7 @@ static const AttackWindow kAttackWindows[(int)AnimClipID::Count] = {
     {0.f,   0.f,   0},  // Death   — no hitbox
     {0.f,   0.f,   0},  // Dodge   — no hitbox
     {0.30f, 0.60f, 2},  // Attack2 — combo finisher, double damage
+    {0.f,   0.f,   0},  // Run     — no hitbox
 };
 
 // Finisher feel: the combo's second hit freezes longer and shakes harder.
@@ -53,6 +54,7 @@ void CombatSystem_update(World& world, float gameDt) {
 
         AnimationComponent& atkAnim = world.get_component<AnimationComponent>(attackerID);
         if (atkAnim.dying) continue;
+        if (world.has_component<DownedComponent>(attackerID)) continue;
 
         const AttackWindow& win = kAttackWindows[(int)atkAnim.currentClip];
         if (win.damage == 0) continue;
@@ -85,6 +87,7 @@ void CombatSystem_update(World& world, float gameDt) {
             if (world.get_component<FactionComponent>(targetID).type != tgtFaction) continue;
             if (!world.has_component<PositionComponent>(targetID)) continue;
             if (!world.has_component<HealthComponent>(targetID)) continue;
+            if (world.has_component<DownedComponent>(targetID)) continue;
             if (world.has_component<AnimationComponent>(targetID) &&
                 world.get_component<AnimationComponent>(targetID).dying) continue;
             if (world.has_component<DodgeComponent>(targetID)) continue; // invincible during dodge

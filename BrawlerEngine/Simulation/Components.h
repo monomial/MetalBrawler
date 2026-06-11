@@ -23,6 +23,10 @@ struct HealthComponent {
     int max;
 };
 
+struct DownedComponent {
+    float reviveProgress = 0.f;
+};
+
 // Which side this entity is on — used by AI and CombatSystem.
 struct FactionComponent {
     enum Type : uint8_t { Player = 0, Enemy = 1 } type;
@@ -62,6 +66,7 @@ enum class AnimClipID : uint8_t {
     Death   = 4,
     Dodge   = 5,
     Attack2 = 6, // combo finisher — chained from Attack via comboQueued
+    Run     = 7,
     Count
 };
 

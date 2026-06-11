@@ -21,6 +21,7 @@ static const float kClipDurationFallback[(int)AnimClipID::Count] = {
     4.50f, // Death   — one-shot
     2.40f, // Dodge   — one-shot (72 frames @ 30fps)
     1.03f, // Attack2 — one-shot combo finisher (31 frames @ 30fps)
+    0.80f, // Run     — looping
 };
 
 static float clip_duration(const LoadedCharacter* charData, AnimClipID id) {
@@ -32,7 +33,7 @@ static float clip_duration(const LoadedCharacter* charData, AnimClipID id) {
 }
 
 static bool clip_loops(AnimClipID id) {
-    return id == AnimClipID::Idle || id == AnimClipID::Walk;
+    return id == AnimClipID::Idle || id == AnimClipID::Walk || id == AnimClipID::Run;
 }
 
 // Cross-fade length for every clip transition. Long enough to kill the visual
@@ -69,6 +70,7 @@ static float clip_speed_multiplier(World& world, EntityID entity, AnimClipID id)
         case AnimClipID::Hurt:    mult = 2.0f; break;
         case AnimClipID::Dodge:   mult = 2.0f; break;
         case AnimClipID::Death:   mult = 2.0f; break;
+        case AnimClipID::Run:     mult = 1.0f; break;
         default:                  mult = 1.0f; break;
     }
     if (id == AnimClipID::Dodge &&

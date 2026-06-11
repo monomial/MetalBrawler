@@ -17,7 +17,7 @@ CHARACTERS = [
     ("player", "Ch24_nonPBR",
      ["idle", "walk", "attack", "attack2", "hurt", "hurt2", "death", "dodge"]),
     ("enemy", "PumpkinhulkLShaw",
-     ["idle", "walk", "attack", "attack2", "hurt", "death", "dodge"]),
+     ["idle", "walk", "attack", "attack2", "hurt", "death", "dodge", "run"]),
 ]
 
 # Incremental: skip outputs that already exist and are newer than their FBX.

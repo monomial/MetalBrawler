@@ -1,5 +1,6 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
+#include "Simulation/Systems/AnimationSystem.h"
 
 static constexpr float kFixedDt  = 1.0f / 120.0f;
 static constexpr float kEps      = 1e-3f;
@@ -131,6 +132,32 @@ static EntityID spawnEnemy(World& world, float x, float y) {
     float gruntX  = world.get_component<PositionComponent>(grunt).x;
     float rusherX = world.get_component<PositionComponent>(rusher).x;
     XCTAssertLessThan(rusherX, gruntX, @"rusher (260 u/s) must outrun grunt (150 u/s)");
+}
+
+- (void)test_movingRusherRequestsRunClip {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID rusher = spawnEnemy(world, 400, 0);
+    world.add_component<AnimationComponent>(rusher);
+    world.add_component<EnemyArchetypeComponent>(rusher).type = (uint8_t)EnemyArchetype::Rusher;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<AnimationComponent>(rusher).requestedClip, AnimClipID::Run);
+    XCTAssertEqual(world.get_component<AnimationComponent>(rusher).currentClip, AnimClipID::Run);
+}
+
+- (void)test_movingGruntRequestsWalkClip {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID grunt = spawnEnemy(world, 400, 0);
+    world.add_component<AnimationComponent>(grunt);
+    world.add_component<EnemyArchetypeComponent>(grunt).type = (uint8_t)EnemyArchetype::Grunt;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<AnimationComponent>(grunt).requestedClip, AnimClipID::Walk);
+    XCTAssertEqual(world.get_component<AnimationComponent>(grunt).currentClip, AnimClipID::Walk);
 }
 
 - (void)test_heavy_barelyKnockedBack {

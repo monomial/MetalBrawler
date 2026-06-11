@@ -30,7 +30,48 @@ bool Combat_try_second_wind(World& world, EntityID victimID) {
     return true;
 }
 
+static bool has_living_teammate(World& world, EntityID victimID) {
+    uint32_t count = world.entity_count();
+    for (EntityID id = 0; id < count; ++id) {
+        if (id == victimID) continue;
+        if (!world.player_tags().present(id)) continue;
+        if (world.has_component<DownedComponent>(id)) continue;
+        if (!world.has_component<HealthComponent>(id)) continue;
+        if (world.get_component<HealthComponent>(id).current <= 0) continue;
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) continue;
+        return true;
+    }
+    return false;
+}
+
 void Combat_apply_death(World& world, EntityID victimID) {
+    if (world.player_tags().present(victimID) &&
+        !world.has_component<DownedComponent>(victimID) &&
+        has_living_teammate(world, victimID)) {
+        world.add_component<DownedComponent>(victimID).reviveProgress = 0.f;
+        if (world.has_component<HealthComponent>(victimID))
+            world.get_component<HealthComponent>(victimID).current = 0;
+        if (world.has_component<AnimationComponent>(victimID)) {
+            AnimationComponent& anim = world.get_component<AnimationComponent>(victimID);
+            anim.dying = false;
+            anim.currentClip = AnimClipID::Death;
+            anim.requestedClip = AnimClipID::Death;
+            anim.clipTime = 0.f;
+            anim.looping = false;
+            anim.clipDone = false;
+            anim.hitApplied = true;
+            anim.comboQueued = false;
+            AnimationSystem_request_clip(world, victimID, AnimClipID::Death);
+        }
+        if (world.has_component<VelocityComponent>(victimID)) {
+            VelocityComponent& vel = world.get_component<VelocityComponent>(victimID);
+            vel.vx = vel.vy = vel.vz = 0.f;
+        }
+        world.events().emit_player_downed(victimID);
+        return;
+    }
+
     world.events().emit_died(victimID);
     Combat_spawn_heart_drop_if_needed(world, victimID);
 

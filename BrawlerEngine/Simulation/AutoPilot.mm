@@ -27,6 +27,7 @@ InputState AutoPilot_input(World& world, int playerIndex) {
         }
     }
     if (me == kInvalidEntity || !world.has_component<PositionComponent>(me)) return in;
+    if (world.has_component<DownedComponent>(me)) return in;
     if (world.has_component<AnimationComponent>(me) &&
         world.get_component<AnimationComponent>(me).dying) return in;
 
@@ -67,6 +68,28 @@ InputState AutoPilot_input(World& world, int playerIndex) {
             bestD2 = d2; bdx = dx; bdy = dy; found = true;
         }
     }
+    EntityID downedMate = kInvalidEntity;
+    float downedD2 = 0.f, ddx = 0.f, ddy = 0.f;
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (id == me) continue;
+        if (!world.player_tags().present(id)) continue;
+        if (!world.has_component<DownedComponent>(id)) continue;
+        if (!world.has_component<PositionComponent>(id)) continue;
+        const PositionComponent& p = world.get_component<PositionComponent>(id);
+        float dx = p.x - myPos.x, dy = p.y - myPos.y;
+        float d2 = dx * dx + dy * dy;
+        if (downedMate == kInvalidEntity || d2 < downedD2) {
+            downedMate = id; downedD2 = d2; ddx = dx; ddy = dy;
+        }
+    }
+
+    if (downedMate != kInvalidEntity && (!found || bestD2 > 150.f * 150.f)) {
+        float d = sqrtf(downedD2);
+        in.moveX = (d > 0.001f) ? ddx / d : 0.f;
+        in.moveY = (d > 0.001f) ? ddy / d : 0.f;
+        return in;
+    }
+
     if (!found) return in; // room clearing — stand still
 
     float dist = sqrtf(bestD2);

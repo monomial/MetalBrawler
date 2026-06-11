@@ -22,6 +22,7 @@ void EnemyAISystem_update(World& world, float gameDt) {
         for (EntityID id = 0; id < count && playerCount < 4; ++id) {
             if (!tags.present(id)) continue;
             if (!world.has_component<PositionComponent>(id)) continue;
+            if (world.has_component<DownedComponent>(id)) continue;
             if (world.has_component<AnimationComponent>(id) &&
                 world.get_component<AnimationComponent>(id).dying) continue;
             playerPositions[playerCount++] = world.get_component<PositionComponent>(id);
@@ -44,7 +45,9 @@ void EnemyAISystem_update(World& world, float gameDt) {
         float moveSpeed  = kEnemySpeed;
         float stopRadius = kStopRadius;
         float cooldown   = kEnemyAttackCooldown;
+        bool isRusher = false;
         if (world.has_component<EnemyArchetypeComponent>(id)) {
+            isRusher = world.get_component<EnemyArchetypeComponent>(id).type == (uint8_t)EnemyArchetype::Rusher;
             const EnemyArchetypeDef& def =
                 enemy_archetype_def(world.get_component<EnemyArchetypeComponent>(id).type);
             moveSpeed  = def.moveSpeed;
@@ -115,7 +118,8 @@ void EnemyAISystem_update(World& world, float gameDt) {
         // Determine what animation to request.
         // Non-looping clips (Attack, Hurt) play through fully before this takes effect,
         // so it's safe to call every tick — the request is just queued.
-        AnimClipID nextClip = moving ? AnimClipID::Walk : AnimClipID::Idle;
+        AnimClipID nextClip = moving ? (isRusher ? AnimClipID::Run : AnimClipID::Walk)
+                                     : AnimClipID::Idle;
 
         if (windupFinished) {
             nextClip = AnimClipID::Attack;

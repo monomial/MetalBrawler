@@ -15,6 +15,8 @@ enum class EventType : uint8_t {
     SpecialUsed,   // player spent a full special meter
     PickupCollected, // player collected a health pickup
     SecondWindUsed, // player consumed a Second Wind save instead of dying
+    PlayerDowned,  // multiplayer player entered revive state
+    PlayerRevived, // player was revived by a teammate
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -27,6 +29,8 @@ struct BossEnragedPayload   { uint32_t entityID; };
 struct SpecialUsedPayload   { uint32_t entityID; };
 struct PickupCollectedPayload { uint32_t playerID; };
 struct SecondWindUsedPayload { uint32_t playerID; };
+struct PlayerDownedPayload  { uint32_t playerID; };
+struct PlayerRevivedPayload { uint32_t playerID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -42,6 +46,8 @@ struct Event {
         SpecialUsedPayload   specialUsed;
         PickupCollectedPayload pickupCollected;
         SecondWindUsedPayload secondWindUsed;
+        PlayerDownedPayload  playerDowned;
+        PlayerRevivedPayload playerRevived;
     };
 };
 
@@ -118,6 +124,16 @@ struct EventBus {
     void emit_second_wind_used(uint32_t playerID) {
         Event e{}; e.type = EventType::SecondWindUsed;
         e.secondWindUsed = { playerID };
+        push(e);
+    }
+    void emit_player_downed(uint32_t playerID) {
+        Event e{}; e.type = EventType::PlayerDowned;
+        e.playerDowned = { playerID };
+        push(e);
+    }
+    void emit_player_revived(uint32_t playerID) {
+        Event e{}; e.type = EventType::PlayerRevived;
+        e.playerRevived = { playerID };
         push(e);
     }
 

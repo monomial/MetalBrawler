@@ -18,6 +18,7 @@ void SpecialSystem_update(World& world, float gameDt) {
         if (!tags.present(playerID)) continue;
         if (!world.has_component<PositionComponent>(playerID)) continue;
         if (!world.has_component<SpecialMeterComponent>(playerID)) continue;
+        if (world.has_component<DownedComponent>(playerID)) continue;
         if (world.has_component<DodgeComponent>(playerID)) continue;
         if (world.has_component<AnimationComponent>(playerID) &&
             world.get_component<AnimationComponent>(playerID).dying) continue;

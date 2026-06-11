@@ -130,6 +130,17 @@ struct PlayerPerks {
     float dodgeCooldownMult = 1.f;
     float specialChargeMult = 1.f;
     int   secondWinds = 0;
+    uint8_t counts[BrawlerPerkCount] = {};
+};
+
+struct RunStats {
+    int enemiesDefeated = 0;
+    int damageDealt     = 0;
+    int damageTaken     = 0;
+    int heartsCollected = 0;
+    int specialsUsed    = 0;
+    int perksTaken      = 0;
+    float runTime       = 0.f;
 };
 
 // ---------------------------------------------------------------------------
@@ -154,6 +165,7 @@ struct PlayerPerks {
     int                  _lives;
 
     PlayerPerks          _perks[kMaxPlayers]; // per-player run-level, reset each run
+    RunStats             _runStats;
     int                  _upgradePlayerIndex; // active picker during Upgrade, -1 otherwise
     int                  _upgradeChoice[2];   // BrawlerPerk indices on offer
     int                  _middleOrder[kNumMiddleRooms]; // seeded shuffle per run
@@ -192,12 +204,14 @@ struct PlayerPerks {
         case BrawlerGamePhaseWin:
             [_renderer setOverlayVisible:YES
                                    title:kBrawlerStringWin
-                                subtitle:nil choiceA:nil choiceB:nil];
+                                subtitle:kBrawlerStringWinSubtitle choiceA:nil choiceB:nil
+                               statLines:[self _runStatLines]];
             break;
         case BrawlerGamePhaseLose:
             [_renderer setOverlayVisible:YES
                                    title:kBrawlerStringGameOver
-                                subtitle:nil choiceA:nil choiceB:nil];
+                                subtitle:nil choiceA:nil choiceB:nil
+                               statLines:[self _runStatLines]];
             break;
         case BrawlerGamePhasePaused:
             [_renderer setOverlayVisible:YES
@@ -212,6 +226,29 @@ struct PlayerPerks {
                                  choiceA:[NSString stringWithFormat:@"Attack  %@", [self upgradeChoiceLabel:0]]
                                  choiceB:[NSString stringWithFormat:@"Dodge   %@", [self upgradeChoiceLabel:1]]];
             break;
+    }
+}
+
+- (NSArray<NSString*> *)_runStatLines {
+    int seconds = (int)floorf(_runStats.runTime + 0.5f);
+    int minutes = seconds / 60;
+    seconds %= 60;
+    return @[
+        [NSString stringWithFormat:@"Time  %d:%02d", minutes, seconds],
+        [NSString stringWithFormat:@"Enemies defeated  %d", _runStats.enemiesDefeated],
+        [NSString stringWithFormat:@"Damage dealt  %d", _runStats.damageDealt],
+        [NSString stringWithFormat:@"Damage taken  %d", _runStats.damageTaken],
+        [NSString stringWithFormat:@"Hearts  %d", _runStats.heartsCollected],
+        [NSString stringWithFormat:@"Specials  %d", _runStats.specialsUsed],
+    ];
+}
+
+- (void)_refreshPerkHUD {
+    for (int p = 0; p < kMaxPlayers; ++p) {
+        BrawlerPerkSummary summary = {};
+        for (int i = 0; i < BrawlerPerkCount && i < kBrawlerPerkTypeCount; ++i)
+            summary.counts[i] = _perks[p].counts[i];
+        [_renderer setPerkSummary:summary forPlayer:p];
     }
 }
 
@@ -262,11 +299,11 @@ struct PlayerPerks {
     NSString *mesh = [dir stringByAppendingPathComponent:meshName];
     if (![[NSFileManager defaultManager] fileExistsAtPath:mesh]) return nullptr;
 
-    // Order must match AnimClipID: Idle, Walk, Attack, Hurt, Death, Dodge, Attack2.
+    // Order must match AnimClipID: Idle, Walk, Attack, Hurt, Death, Dodge, Attack2, Run.
     NSMutableArray<NSString*> *clips = [NSMutableArray array];
     for (NSString *n in @[@"idle.usdz", @"walk.usdz", @"attack.usdz",
                            @"hurt.usdz", @"death.usdz", @"dodge.usdz",
-                           @"attack2.usdz"])
+                           @"attack2.usdz", @"run.usdz"])
         [clips addObject:[dir stringByAppendingPathComponent:n]];
 
     return CharacterLoader_load(mesh, clips, device);
@@ -332,6 +369,8 @@ struct PlayerPerks {
     _lives       = kStartingLives;
     for (int i = 0; i < kMaxPlayers; ++i)
         _perks[i] = PlayerPerks{};
+    _runStats = RunStats{};
+    [self _refreshPerkHUD];
     _upgradePlayerIndex = -1;
 
     // Seeded Fisher-Yates over the middle-room pool: rooms 2..N-1 differ per
@@ -376,7 +415,8 @@ struct PlayerPerks {
     if (_upgradePlayerIndex < 0 || _upgradePlayerIndex >= _numPlayers) return;
 
     PlayerPerks& perks = _perks[_upgradePlayerIndex];
-    switch ((BrawlerPerk)_upgradeChoice[index]) {
+    BrawlerPerk chosen = (BrawlerPerk)_upgradeChoice[index];
+    switch (chosen) {
         case BrawlerPerkDamage: perks.bonusDamage += 1;    break;
         case BrawlerPerkSpeed:  perks.speedMult   += 0.2f; break;
         case BrawlerPerkMaxHP:  perks.bonusMaxHP  += 3;    break;
@@ -386,6 +426,11 @@ struct PlayerPerks {
         case BrawlerPerkSpecialCharge: perks.specialChargeMult *= 1.5f; break;
         case BrawlerPerkSecondWind:    perks.secondWinds += 1; break;
         case BrawlerPerkCount:  break;
+    }
+    if (chosen >= 0 && chosen < BrawlerPerkCount) {
+        perks.counts[chosen] += 1;
+        _runStats.perksTaken += 1;
+        [self _refreshPerkHUD];
     }
     [_audio playUIClickSound];
 
@@ -416,6 +461,8 @@ struct PlayerPerks {
     [self _spawnEnemiesForCurrentRoom];
     [self _spawnObstaclesForCurrentRoom];
     _renderer.livesRemaining = _lives;
+    _renderer.totalRooms = kNumRooms;
+    [self _refreshPerkHUD];
     // Boss room always gets the last (violet) palette; others cycle.
     BOOL isBossRoom = (_currentRoom >= kNumRooms - 1);
     _renderer.roomIndex = isBossRoom ? 5 : (_currentRoom % 5);
@@ -500,17 +547,18 @@ struct PlayerPerks {
     return YES;
 }
 
-// Returns YES when all players are in their death animation.
+// Returns YES when every player is either downed or in their death animation.
 - (BOOL)_allPlayersDying {
-    int playerCount = 0, dyingCount = 0;
+    int playerCount = 0, defeatedCount = 0;
     for (EntityID id = 0; id < _world.entity_count(); ++id) {
         if (!_world.player_tags().present(id)) continue;
         playerCount++;
-        if (_world.has_component<AnimationComponent>(id) &&
-            _world.get_component<AnimationComponent>(id).dying)
-            dyingCount++;
+        if (_world.has_component<DownedComponent>(id) ||
+            (_world.has_component<AnimationComponent>(id) &&
+             _world.get_component<AnimationComponent>(id).dying))
+            defeatedCount++;
     }
-    return playerCount > 0 && dyingCount == playerCount;
+    return playerCount > 0 && defeatedCount == playerCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -554,6 +602,9 @@ struct PlayerPerks {
 // event→audio/haptics routing, phase state machine. Headless drivers (scenario
 // tests, --autotest) call this directly with a fixed dt.
 - (void)advanceFrame:(float)dt {
+    if (_phase == BrawlerGamePhasePlaying)
+        _runStats.runTime += dt;
+
     // AutoPilot (scenario tests, --autotest): bot input replaces human input.
     if (self.autoPilotEnabled && _phase == BrawlerGamePhasePlaying) {
         for (int p = 0; p < _numPlayers; ++p)
@@ -634,6 +685,7 @@ struct PlayerPerks {
         });
 
         _world.events().for_each(EventType::SpecialUsed, [self](const Event& ev) {
+            _runStats.specialsUsed += 1;
             uint32_t pid = ev.specialUsed.entityID;
             if (_world.has_component<PositionComponent>(pid)) {
                 const auto& p = _world.get_component<PositionComponent>(pid);
@@ -685,6 +737,7 @@ struct PlayerPerks {
             if (_world.player_tags().present(died)) {
                 [_audio playHurtSound];
             } else {
+                _runStats.enemiesDefeated += 1;
                 [_audio  playDeathSound];
                 [_haptics playDeathHaptic];
                 // Soft golden "poof" — deliberately not red (kid-friendly).
@@ -698,6 +751,7 @@ struct PlayerPerks {
         });
 
         _world.events().for_each(EventType::PickupCollected, [self](const Event& ev) {
+            _runStats.heartsCollected += 1;
             uint32_t pid = ev.pickupCollected.playerID;
             if (_world.has_component<PositionComponent>(pid)) {
                 const auto& p = _world.get_component<PositionComponent>(pid);
@@ -720,8 +774,38 @@ struct PlayerPerks {
             [_renderer triggerDamageFlash];
         });
 
+        _world.events().for_each(EventType::PlayerDowned, [self](const Event& ev) {
+            uint32_t pid = ev.playerDowned.playerID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 80.f}
+                                  count:14 speed:220.f size:12.f
+                                  color:(simd_float4){0.45f, 0.48f, 0.55f, 1.f}];
+            }
+            [_audio playHurtSound];
+            [_renderer triggerDamageFlash];
+        });
+
+        _world.events().for_each(EventType::PlayerRevived, [self](const Event& ev) {
+            uint32_t pid = ev.playerRevived.playerID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 90.f}
+                                  count:20 speed:360.f size:14.f
+                                  color:(simd_float4){1.0f, 0.78f, 0.18f, 1.f}];
+            }
+            [_audio playRoomClearSound];
+        });
+
         _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {
             uint32_t tid = ev.damageDealt.targetID;
+            if (_world.has_component<FactionComponent>(tid)) {
+                FactionComponent::Type targetFaction = _world.get_component<FactionComponent>(tid).type;
+                if (targetFaction == FactionComponent::Enemy)
+                    _runStats.damageDealt += ev.damageDealt.amount;
+                else if (targetFaction == FactionComponent::Player)
+                    _runStats.damageTaken += ev.damageDealt.amount;
+            }
             if (_world.player_tags().present(tid) &&
                 _world.has_component<HealthComponent>(tid) &&
                 _world.get_component<HealthComponent>(tid).current > 0) {

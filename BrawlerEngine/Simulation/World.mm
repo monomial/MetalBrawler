@@ -12,6 +12,7 @@
 #include "Systems/HazardSystem.h"
 #include "Systems/SpecialSystem.h"
 #include "Systems/PickupSystem.h"
+#include "Systems/ReviveSystem.h"
 #include <cassert>
 
 static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
@@ -21,6 +22,7 @@ static constexpr float kFixedDt = 1.0f / 120.0f; // 8.33ms physics tick
 template<> ComponentStorage<PositionComponent>&  World::_pool() { return _positions; }
 template<> ComponentStorage<VelocityComponent>&  World::_pool() { return _velocities; }
 template<> ComponentStorage<HealthComponent>&    World::_pool() { return _healths; }
+template<> ComponentStorage<DownedComponent>&    World::_pool() { return _downed; }
 template<> ComponentStorage<FactionComponent>&   World::_pool() { return _factions; }
 template<> ComponentStorage<PlayerTagComponent>&      World::_pool() { return _playerTags; }
 template<> ComponentStorage<DamageCooldownComponent>& World::_pool() { return _damageCooldowns; }
@@ -71,6 +73,7 @@ void World::flush() {
         _positions.remove(id);
         _velocities.remove(id);
         _healths.remove(id);
+        _downed.remove(id);
         _factions.remove(id);
         _playerTags.remove(id);
         _damageCooldowns.remove(id);
@@ -126,6 +129,8 @@ void World::tick(float gameDt) {
     CombatSystem_update(*this, gameDt);
     // 3.5. PickupSystem — lifetime + collection after combat can create hearts.
     PickupSystem_update(*this, gameDt);
+    // 3.6. ReviveSystem — multiplayer teammates revive downed players after pickups.
+    ReviveSystem_update(*this, gameDt);
     // 4. HitStopSystem — managed by _hitStopTicks / trigger_hit_stop()
     // 5. AnimationSystem — advances clip time, samples bone matrices when assets loaded
     AnimationSystem_update(*this, gameDt);

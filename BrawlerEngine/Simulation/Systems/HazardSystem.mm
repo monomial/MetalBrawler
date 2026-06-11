@@ -97,6 +97,7 @@ void HazardSystem_update(World& world, float gameDt) {
             if (!world.player_tags().present(pid)) continue;
             if (!world.has_component<PositionComponent>(pid)) continue;
             if (!world.has_component<HealthComponent>(pid)) continue;
+            if (world.has_component<DownedComponent>(pid)) continue;
             if (world.has_component<DodgeComponent>(pid)) continue; // i-frames
             if (world.has_component<AnimationComponent>(pid) &&
                 world.get_component<AnimationComponent>(pid).dying) continue;

@@ -25,6 +25,7 @@ void PickupSystem_update(World& world, float gameDt) {
             if (!world.player_tags().present(playerID)) continue;
             if (!world.has_component<PositionComponent>(playerID)) continue;
             if (!world.has_component<HealthComponent>(playerID)) continue;
+            if (world.has_component<DownedComponent>(playerID)) continue;
             if (world.has_component<AnimationComponent>(playerID) &&
                 world.get_component<AnimationComponent>(playerID).dying) continue;
 
@@ -46,4 +47,3 @@ void PickupSystem_update(World& world, float gameDt) {
         if (collected) continue;
     }
 }
-

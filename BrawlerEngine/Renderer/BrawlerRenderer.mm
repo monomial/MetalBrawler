@@ -153,7 +153,9 @@ static void drawCenteredLine(CGContextRef ctx, NSString *text, CGFloat centerX, 
 static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW, CGFloat drawableH,
                                          NSString *title, NSString *subtitle,
                                          NSString *choiceA, NSString *choiceB,
+                                         NSArray<NSString*> *statLines,
                                          CGSize *outSize);
+static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, CGSize *outSize);
 
 @implementation BrawlerRenderer {
     id<MTLRenderPipelineState> _pipeline;        // flat-color quads
@@ -197,9 +199,14 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
     NSString                  *_overlaySubtitle;
     NSString                  *_overlayChoiceA;
     NSString                  *_overlayChoiceB;
+    NSArray<NSString*>        *_overlayStatLines;
     id<MTLTexture>             _overlayTexture;
     CGSize                     _overlayTextureSize;
     CGSize                     _overlayDrawableSize;
+    id<MTLTexture>             _hudRoomTexture;
+    CGSize                     _hudRoomTextureSize;
+    NSString                  *_hudRoomText;
+    BrawlerPerkSummary         _perkSummary[kBrawlerMaxPlayers];
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device pixelFormat:(MTLPixelFormat)pfmt {
@@ -409,21 +416,46 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                  subtitle:(NSString*)subtitle
                   choiceA:(NSString*)choiceA
                   choiceB:(NSString*)choiceB {
+    [self setOverlayVisible:visible
+                      title:title
+                   subtitle:subtitle
+                    choiceA:choiceA
+                    choiceB:choiceB
+                  statLines:nil];
+}
+
+- (void)setOverlayVisible:(BOOL)visible
+                    title:(NSString*)title
+                 subtitle:(NSString*)subtitle
+                  choiceA:(NSString*)choiceA
+                  choiceB:(NSString*)choiceB
+                statLines:(NSArray<NSString*>*)statLines {
     title = title ?: @"";
     subtitle = subtitle ?: @"";
     choiceA = choiceA ?: @"";
     choiceB = choiceB ?: @"";
+    NSArray<NSString*> *lines = statLines ?: @[];
+    if (lines.count > 6)
+        lines = [lines subarrayWithRange:NSMakeRange(0, 6)];
     BOOL changed = _overlayVisible != visible ||
                    ![_overlayTitle isEqualToString:title] ||
                    ![_overlaySubtitle isEqualToString:subtitle] ||
                    ![_overlayChoiceA isEqualToString:choiceA] ||
-                   ![_overlayChoiceB isEqualToString:choiceB];
+                   ![_overlayChoiceB isEqualToString:choiceB] ||
+                   ![_overlayStatLines isEqualToArray:lines];
     _overlayVisible = visible;
     _overlayTitle = [title copy];
     _overlaySubtitle = [subtitle copy];
     _overlayChoiceA = [choiceA copy];
     _overlayChoiceB = [choiceB copy];
+    _overlayStatLines = [lines copy];
     if (changed) _overlayDirty = YES;
+}
+
+- (void)setPerkSummary:(BrawlerPerkSummary)summary
+             forPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kBrawlerMaxPlayers) return;
+    _perkSummary[playerIndex] = summary;
 }
 
 - (void)setPlayerCharacter:(LoadedCharacter*)player enemyCharacter:(LoadedCharacter*)enemy {
@@ -748,6 +780,10 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                 su.color = (simd_float4){1.0f, 0.10f, 0.06f, su.color.w};
                 su.tintStrength = fmaxf(su.tintStrength, 0.5f);
             }
+            if (world->has_component<DownedComponent>(eid)) {
+                su.color = (simd_float4){0.22f, 0.24f, 0.27f, su.color.w};
+                su.tintStrength = 0.85f;
+            }
             [enc setVertexBytes:&su length:sizeof(su) atIndex:2];
 
             id<MTLTexture> tex = charData->diffuseTexture ? charData->diffuseTexture : _whiteTexture;
@@ -866,30 +902,57 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
             float scrX  = (ndcX + 1.f) * 0.5f * W;
             float scrY  = (1.f - ndcY) * 0.5f * H - kBarGap; // shift up by gap
 
-            // Background
             DrawUniforms u;
-            u.color = {0.08f, 0.08f, 0.10f, 1.f};
-            u.mvp   = simd_mul(ortho, make_model_rect(scrX, scrY, 0.f, kBarW, kBarH));
-            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
-            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
 
-            // Foreground fill (left-aligned)
-            float fill = (hp.max > 0) ? (float)hp.current / hp.max : 0.f;
-            if (fill < 0.f) fill = 0.f;
-            float fw = kBarW * fill;
-            if (fw > 1.f) {
-                bool isPlayer = world->player_tags().present(id);
-                u.color = isPlayer ? (simd_float4){0.25f, 0.65f, 1.00f, 1.f}   // blue
-                                   : (simd_float4){1.00f, 0.35f, 0.20f, 1.f};  // orange-red
-                u.mvp   = simd_mul(ortho, make_model_rect(scrX - kBarW * 0.5f + fw * 0.5f,
-                                                          scrY, 0.f, fw, kBarH));
+            bool isPlayer = world->player_tags().present(id);
+            if (isPlayer) {
+                static const float kHeartW = 12.f;
+                static const float kHeartH = 10.f;
+                static const float kHeartGap = 4.f;
+                int hearts = (hp.max + 1) / 2;
+                if (hearts < 1) hearts = 1;
+                if (hearts > 12) hearts = 12;
+                float rowW = hearts * kHeartW + (hearts - 1) * kHeartGap;
+                float left = scrX - rowW * 0.5f;
+                for (int h = 0; h < hearts; ++h) {
+                    float cx = left + kHeartW * 0.5f + h * (kHeartW + kHeartGap);
+                    u.color = (simd_float4){0.10f, 0.04f, 0.05f, 1.f};
+                    u.mvp = simd_mul(ortho, make_model_rect(cx, scrY, 0.f, kHeartW, kHeartH));
+                    [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                    [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+                    int hpForHeart = hp.current - h * 2;
+                    float fill = hpForHeart >= 2 ? 1.f : (hpForHeart == 1 ? 0.5f : 0.f);
+                    if (fill > 0.f) {
+                        float fw = kHeartW * fill;
+                        u.color = (simd_float4){0.95f, 0.12f, 0.20f, 1.f};
+                        u.mvp = simd_mul(ortho, make_model_rect(cx - kHeartW * 0.5f + fw * 0.5f,
+                                                                scrY, 0.f, fw, kHeartH));
+                        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+                    }
+                }
+            } else {
+                u.color = {0.08f, 0.08f, 0.10f, 1.f};
+                u.mvp   = simd_mul(ortho, make_model_rect(scrX, scrY, 0.f, kBarW, kBarH));
                 [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
                 [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+                float fill = (hp.max > 0) ? (float)hp.current / hp.max : 0.f;
+                if (fill < 0.f) fill = 0.f;
+                float fw = kBarW * fill;
+                if (fw > 1.f) {
+                    u.color = (simd_float4){1.00f, 0.35f, 0.20f, 1.f};
+                    u.mvp   = simd_mul(ortho, make_model_rect(scrX - kBarW * 0.5f + fw * 0.5f,
+                                                              scrY, 0.f, fw, kBarH));
+                    [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                    [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+                }
             }
 
             if (world->player_tags().present(id) &&
                 world->has_component<SpecialMeterComponent>(id)) {
-                float meterY = scrY + kBarH + kSpecialBarH;
+                float meterY = scrY + kBarH + kSpecialBarH + 2.f;
                 u.color = {0.08f, 0.08f, 0.10f, 1.f};
                 u.mvp   = simd_mul(ortho, make_model_rect(scrX, meterY, 0.f, kBarW, kSpecialBarH));
                 [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
@@ -906,7 +969,74 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                     [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
                     [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
                 }
+
+                const PlayerTagComponent& tag = world->get_component<PlayerTagComponent>(id);
+                int slot = (tag.playerIndex < kBrawlerMaxPlayers) ? tag.playerIndex : 0;
+                static const simd_float4 kPerkColors[kBrawlerPerkTypeCount] = {
+                    {0.95f, 0.12f, 0.16f, 1.f}, // damage
+                    {0.00f, 0.85f, 0.95f, 1.f}, // speed
+                    {0.15f, 0.90f, 0.30f, 1.f}, // max HP
+                    {1.00f, 0.75f, 0.18f, 1.f}, // life
+                    {1.00f, 0.42f, 0.12f, 1.f}, // knockback
+                    {0.20f, 0.45f, 1.00f, 1.f}, // dodge
+                    {1.00f, 0.92f, 0.10f, 1.f}, // special charge
+                    {0.92f, 0.92f, 0.92f, 1.f}, // second wind
+                };
+                int pipIndex = 0;
+                float pipY = meterY + kSpecialBarH + 7.f;
+                for (int type = 0; type < kBrawlerPerkTypeCount; ++type) {
+                    for (uint8_t n = 0; n < _perkSummary[slot].counts[type] && pipIndex < 14; ++n, ++pipIndex) {
+                        float pipX = scrX - kBarW * 0.5f + 4.f + pipIndex * 6.f;
+                        u.color = kPerkColors[type];
+                        u.mvp = simd_mul(ortho, make_model_rect(pipX, pipY, 0.f, 4.f, 4.f));
+                        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+                    }
+                }
             }
+
+            if (world->has_component<DownedComponent>(id)) {
+                const DownedComponent& downed = world->get_component<DownedComponent>(id);
+                if (downed.reviveProgress > 0.f) {
+                    static const float kReviveW = 70.f;
+                    static const float kReviveH = 5.f;
+                    float reviveY = scrY - 13.f;
+                    u.color = {0.08f, 0.07f, 0.04f, 1.f};
+                    u.mvp = simd_mul(ortho, make_model_rect(scrX, reviveY, 0.f, kReviveW, kReviveH));
+                    [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                    [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+                    float pct = clampf(downed.reviveProgress / 2.5f, 0.f, 1.f);
+                    float rw = kReviveW * pct;
+                    if (rw > 1.f) {
+                        u.color = {1.0f, 0.75f, 0.18f, 1.f};
+                        u.mvp = simd_mul(ortho, make_model_rect(scrX - kReviveW * 0.5f + rw * 0.5f,
+                                                                reviveY, 0.f, rw, kReviveH));
+                        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+                    }
+                }
+            }
+        }
+
+        NSString *roomText = [NSString stringWithFormat:@"ROOM %d / %d",
+                              _roomIndex + 1, MAX(_totalRooms, _roomIndex + 1)];
+        if (!_hudRoomTexture || ![_hudRoomText isEqualToString:roomText]) {
+            _hudRoomText = [roomText copy];
+            _hudRoomTexture = makeHUDLabelTexture(view.device, _hudRoomText, &_hudRoomTextureSize);
+        }
+        if (_hudRoomTexture && _texturePipeline) {
+            [enc setRenderPipelineState:_texturePipeline];
+            [enc setDepthStencilState:_noDepthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            TextureUniforms tu;
+            tu.mvp = simd_mul(ortho, make_model_rect(W * 0.5f, 30.f, 0.f,
+                                                     (float)_hudRoomTextureSize.width,
+                                                     (float)_hudRoomTextureSize.height));
+            [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+            [enc setFragmentTexture:_hudRoomTexture atIndex:0];
+            [enc setFragmentSamplerState:_linearSampler atIndex:0];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
         }
 
         // Lives dots — row of small red squares, top-left corner.
@@ -935,6 +1065,7 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                                                 (CGFloat)view.currentDrawable.texture.height,
                                                 _overlayTitle, _overlaySubtitle,
                                                 _overlayChoiceA, _overlayChoiceB,
+                                                _overlayStatLines,
                                                 &_overlayTextureSize);
             _overlayDirty = NO;
         }
@@ -1031,14 +1162,16 @@ static void drawCenteredLine(CGContextRef ctx, NSString *text, CGFloat centerX, 
 static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW, CGFloat drawableH,
                                          NSString *title, NSString *subtitle,
                                          NSString *choiceA, NSString *choiceB,
+                                         NSArray<NSString*> *statLines,
                                          CGSize *outSize) {
     BOOL hasChoices = choiceA.length > 0 || choiceB.length > 0;
+    BOOL hasStats = statLines.count > 0;
     CGFloat panelW = hasChoices ? 980.f : 760.f;
-    CGFloat panelH = hasChoices ? 340.f : 260.f;
+    CGFloat panelH = hasChoices ? 340.f : (hasStats ? 430.f : 260.f);
     panelW = MIN(panelW, drawableW - 64.f);
     panelH = MIN(panelH, drawableH - 64.f);
     panelW = MAX(panelW, 360.f);
-    panelH = MAX(panelH, 170.f);
+    panelH = MAX(panelH, hasStats ? 300.f : 170.f);
 
     NSUInteger w = (NSUInteger)ceil(panelW);
     NSUInteger h = (NSUInteger)ceil(panelH);
@@ -1065,17 +1198,67 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
     CGFloat choiceSize = 46.f;
     CGFloat subtitleSize = 40.f;
 
-    drawCenteredLine(ctx, title, panelW * 0.5f, panelH * 0.70f, maxTextW,
+    drawCenteredLine(ctx, title, panelW * 0.5f, hasStats ? panelH * 0.78f : panelH * 0.70f, maxTextW,
                      titleSize, 34.f, white);
     if (subtitle.length > 0)
-        drawCenteredLine(ctx, subtitle, panelW * 0.5f, panelH * 0.38f,
+        drawCenteredLine(ctx, subtitle, panelW * 0.5f, hasStats ? panelH * 0.63f : panelH * 0.38f,
                          maxTextW, subtitleSize, 26.f, white);
+    if (hasStats) {
+        CGColorRef softWhite = CGColorCreateGenericRGB(0.92, 0.94, 0.98, 1);
+        CGFloat y = panelH * (subtitle.length > 0 ? 0.50f : 0.58f);
+        for (NSString *line in statLines) {
+            drawCenteredLine(ctx, line, panelW * 0.5f, y, maxTextW, 28.f, 18.f, softWhite);
+            y -= 38.f;
+        }
+        CGColorRelease(softWhite);
+    }
     if (hasChoices) {
         drawCenteredLine(ctx, choiceA, panelW * 0.5f, panelH * 0.40f,
                          maxTextW, choiceSize, 28.f, white);
         drawCenteredLine(ctx, choiceB, panelW * 0.5f, panelH * 0.22f,
                          maxTextW, choiceSize, 28.f, white);
     }
+    CGColorRelease(white);
+    CGContextRelease(ctx);
+    CGColorSpaceRelease(cs);
+
+    MTLTextureDescriptor *td = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                                                                  width:w
+                                                                                 height:h
+                                                                              mipmapped:NO];
+    td.usage = MTLTextureUsageShaderRead;
+    id<MTLTexture> tex = [device newTextureWithDescriptor:td];
+    [tex replaceRegion:MTLRegionMake2D(0, 0, w, h)
+           mipmapLevel:0
+             withBytes:pixels.bytes
+           bytesPerRow:bpr];
+    if (outSize) *outSize = CGSizeMake(w, h);
+    return tex;
+}
+
+static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, CGSize *outSize) {
+    CGFloat wFloat = 190.f;
+    CGFloat hFloat = 38.f;
+    NSUInteger w = (NSUInteger)ceil(wFloat);
+    NSUInteger h = (NSUInteger)ceil(hFloat);
+    NSUInteger bpr = w * 4;
+    NSMutableData *pixels = [NSMutableData dataWithLength:bpr * h];
+
+    CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
+    CGBitmapInfo bitmapInfo = (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big;
+    CGContextRef ctx = CGBitmapContextCreate(pixels.mutableBytes, w, h, 8, bpr, cs, bitmapInfo);
+    if (!ctx) {
+        CGColorSpaceRelease(cs);
+        return nil;
+    }
+
+    CGContextSetRGBFillColor(ctx, 0.0, 0.0, 0.0, 0.44);
+    CGContextFillRect(ctx, CGRectMake(0, 0, w, h));
+    CGContextSetRGBStrokeColor(ctx, 1.0, 1.0, 1.0, 0.10);
+    CGContextStrokeRect(ctx, CGRectMake(0.5, 0.5, w - 1, h - 1));
+
+    CGColorRef white = CGColorCreateGenericRGB(1, 1, 1, 1);
+    drawCenteredLine(ctx, text, wFloat * 0.5f, 12.f, wFloat - 18.f, 22.f, 16.f, white);
     CGColorRelease(white);
     CGContextRelease(ctx);
     CGColorSpaceRelease(cs);
