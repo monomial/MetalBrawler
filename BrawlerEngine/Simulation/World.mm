@@ -37,6 +37,7 @@ template<> ComponentStorage<HazardComponent>&             World::_pool() { retur
 template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { return _specialMeters; }
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
+template<> ComponentStorage<ObstacleComponent>&           World::_pool() { return _obstacles; }
 
 // ----
 
@@ -86,6 +87,7 @@ void World::flush() {
         _paths.remove(id);
         _specialMeters.remove(id);
         _heartPickups.remove(id);
+        _obstacles.remove(id);
     }
     _deferredDestroyCount = 0;
 }

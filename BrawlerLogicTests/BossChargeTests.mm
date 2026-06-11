@@ -125,4 +125,52 @@ static EntityID spawnBoss(World& world, float x, float y, float idleTimer) {
                    @"dodge i-frames must block charge contact damage");
 }
 
+- (void)test_enrageFlipsAtHalfHPAndEmitsOnce {
+    World world;
+    spawnPlayer(world, 0, -100);
+    EntityID boss = spawnBoss(world, 0, 400, 4.f);
+    world.get_component<HealthComponent>(boss).current = 6;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertTrue(world.get_component<BossChargeComponent>(boss).enraged);
+    int seen = 0;
+    world.events().for_each(EventType::BossEnraged, [&seen](const Event&){ seen++; });
+    XCTAssertEqual(seen, 1);
+
+    world.update(kFixedDt, kFixedDt);
+    seen = 0;
+    world.events().for_each(EventType::BossEnraged, [&seen](const Event&){ seen++; });
+    XCTAssertEqual(seen, 0, @"enrage event must be one-shot");
+}
+
+- (void)test_enragedTelegraphIsShorter {
+    World world;
+    spawnPlayer(world, 0, -100);
+    EntityID boss = spawnBoss(world, 0, 400, kFixedDt * 0.5f);
+    world.get_component<HealthComponent>(boss).current = 6;
+
+    world.update(kFixedDt, kFixedDt);
+
+    const auto& c = world.get_component<BossChargeComponent>(boss);
+    XCTAssertTrue(c.enraged);
+    XCTAssertEqual(c.state, (uint8_t)BossChargeComponent::Telegraph);
+    XCTAssertLessThanOrEqual(c.timer, 0.45f);
+    XCTAssertGreaterThan(c.timer, 0.40f);
+}
+
+- (void)test_enragedChargeEnd_spawnsFourSnakes {
+    World world;
+    spawnPlayer(world, 0, -100);
+    EntityID boss = spawnBoss(world, 0, 300, 0.01f);
+    world.get_component<HealthComponent>(boss).current = 6;
+
+    advance(world, 2.0f);
+
+    int snakes = 0;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.hazards().present(id)) snakes++;
+    XCTAssertEqual(snakes, 4, @"enraged charge end must spawn 4 snakes");
+}
+
 @end

@@ -2,6 +2,7 @@
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/CombatHelpers.h"
 #include "Simulation/Systems/HazardSystem.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
@@ -11,6 +12,9 @@ static constexpr float kTelegraphTime    = 0.7f;  // wind-up — the player's do
 static constexpr float kChargeMaxTime    = 0.9f;  // safety cap on a charge
 static constexpr float kRecoverTime      = 0.8f;  // vulnerable after a charge
 static constexpr float kChargeSpeed      = 700.f;
+static constexpr float kEnragedTelegraphTime = 0.45f;
+static constexpr float kEnragedChargeSpeedMult = 1.25f;
+static constexpr float kEnragedChargeCooldownMult = 0.65f;
 static constexpr float kContactRange     = 95.f;  // body-slam radius during charge
 static constexpr int   kChargeDamage     = 2;
 static constexpr float kContactCooldown  = 0.8f;  // per-victim re-hit delay
@@ -58,6 +62,21 @@ void BossSystem_update(World& world, float gameDt) {
 
         BossChargeComponent& charge = world.get_component<BossChargeComponent>(id);
         PositionComponent&   pos    = world.get_component<PositionComponent>(id);
+
+        if (!charge.enraged &&
+            world.has_component<HealthComponent>(id)) {
+            const HealthComponent& hp = world.get_component<HealthComponent>(id);
+            if (hp.max > 0 && hp.current <= hp.max / 2) {
+                charge.enraged = true;
+                world.events().emit_boss_enraged(id);
+                ScreenShakeSystem_trigger(world, 26.f);
+                if (charge.state == BossChargeComponent::Idle) {
+                    float fastCooldown = kChargeCooldown * kEnragedChargeCooldownMult;
+                    if (charge.timer > fastCooldown) charge.timer = fastCooldown;
+                }
+            }
+        }
+
         charge.timer -= gameDt;
 
         switch (charge.state) {
@@ -65,7 +84,7 @@ void BossSystem_update(World& world, float gameDt) {
                 // EnemyAISystem drives normal chase/attack behavior here.
                 if (charge.timer <= 0.f) {
                     charge.state = BossChargeComponent::Telegraph;
-                    charge.timer = kTelegraphTime;
+                    charge.timer = charge.enraged ? kEnragedTelegraphTime : kTelegraphTime;
                     world.events().emit_boss_telegraph(id);
                 }
                 break;
@@ -97,8 +116,9 @@ void BossSystem_update(World& world, float gameDt) {
                 if (!world.has_component<VelocityComponent>(id))
                     world.add_component<VelocityComponent>(id) = {};
                 auto& vel = world.get_component<VelocityComponent>(id);
-                vel.vx = charge.dirX * kChargeSpeed;
-                vel.vy = charge.dirY * kChargeSpeed;
+                float speed = kChargeSpeed * (charge.enraged ? kEnragedChargeSpeedMult : 1.f);
+                vel.vx = charge.dirX * speed;
+                vel.vy = charge.dirY * speed;
                 vel.vz = 0.f;
                 AnimationSystem_request_clip(world, id, AnimClipID::Walk);
 
@@ -127,10 +147,10 @@ void BossSystem_update(World& world, float gameDt) {
                     ScreenShakeSystem_trigger(world, 26.f);
                     if (world.has_component<DamageCooldownComponent>(pid))
                         world.get_component<DamageCooldownComponent>(pid).remaining = kContactCooldown;
-                    if (hp.current <= 0 && world.has_component<AnimationComponent>(pid)) {
-                        world.events().emit_died(pid);
-                        world.get_component<AnimationComponent>(pid).dying = true;
-                        AnimationSystem_request_clip(world, pid, AnimClipID::Death);
+                    if (hp.current <= 0 &&
+                        !Combat_try_second_wind(world, pid) &&
+                        world.has_component<AnimationComponent>(pid)) {
+                        Combat_apply_death(world, pid);
                     }
                 }
 
@@ -146,8 +166,10 @@ void BossSystem_update(World& world, float gameDt) {
                     // boss on looping paths (the design doc's ground hazard).
                     float bx = pos.x, by = pos.y;
                     float baseAng = atan2f(-charge.dirY, -charge.dirX); // back the way it came
-                    for (int s = -1; s <= 1; ++s) {
-                        float ang = baseAng + (float)s * 0.7f;
+                    int snakeCount = charge.enraged ? 4 : 3;
+                    for (int s = 0; s < snakeCount; ++s) {
+                        float centered = (float)s - (float)(snakeCount - 1) * 0.5f;
+                        float ang = baseAng + centered * 0.7f;
                         HazardSystem_spawn_snake(world, bx, by,
                                                  bx + cosf(ang) * 380.f,
                                                  by + sinf(ang) * 380.f);
@@ -162,7 +184,8 @@ void BossSystem_update(World& world, float gameDt) {
                 AnimationSystem_request_clip(world, id, AnimClipID::Idle);
                 if (charge.timer <= 0.f) {
                     charge.state = BossChargeComponent::Idle;
-                    charge.timer = kChargeCooldown;
+                    charge.timer = kChargeCooldown *
+                                   (charge.enraged ? kEnragedChargeCooldownMult : 1.f);
                 }
                 break;
             }

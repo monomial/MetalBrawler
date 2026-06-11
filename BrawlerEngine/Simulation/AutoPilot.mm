@@ -6,9 +6,16 @@
 // head-on also sets FacingComponent toward the target, so the ±70° punch arc
 // check passes once we stop.
 static constexpr float kEngageDist = 100.0f;
+static constexpr int   kStuckSampleFrames = 30; // ~0.5s at the fixed 60Hz scenario driver
+static constexpr int   kUnstuckFrames     = 24; // ~0.4s
 
 InputState AutoPilot_input(World& world, int playerIndex) {
     InputState in = {};
+    static float s_lastX[4] = {};
+    static float s_lastY[4] = {};
+    static int   s_sampleFrames[4] = {};
+    static int   s_unstuckFrames[4] = {};
+    static bool  s_hasSample[4] = {};
 
     // Find this player's entity.
     EntityID me = kInvalidEntity;
@@ -102,6 +109,36 @@ InputState AutoPilot_input(World& world, int playerIndex) {
     // approached from a different direction than its previous kill).
     in.moveX = (dist > 0.001f) ? bdx / dist : 0.f;
     in.moveY = (dist > 0.001f) ? bdy / dist : 0.f;
+
+    int slot = (playerIndex >= 0 && playerIndex < 4) ? playerIndex : 0;
+    if (!s_hasSample[slot]) {
+        s_lastX[slot] = myPos.x;
+        s_lastY[slot] = myPos.y;
+        s_sampleFrames[slot] = 0;
+        s_unstuckFrames[slot] = 0;
+        s_hasSample[slot] = true;
+    }
+    s_sampleFrames[slot] += 1;
+    if (s_sampleFrames[slot] >= kStuckSampleFrames) {
+        float sx = myPos.x - s_lastX[slot];
+        float sy = myPos.y - s_lastY[slot];
+        bool tryingToMove = (in.moveX * in.moveX + in.moveY * in.moveY) > 0.01f;
+        if (tryingToMove && sx * sx + sy * sy <= 2.f * 2.f)
+            s_unstuckFrames[slot] = kUnstuckFrames;
+        else if (sx * sx + sy * sy > 120.f * 120.f)
+            s_unstuckFrames[slot] = 0; // room reload or respawn
+        s_lastX[slot] = myPos.x;
+        s_lastY[slot] = myPos.y;
+        s_sampleFrames[slot] = 0;
+    }
+    if (s_unstuckFrames[slot] > 0 &&
+        (in.moveX * in.moveX + in.moveY * in.moveY) > 0.01f) {
+        float px = -in.moveY;
+        float py =  in.moveX;
+        in.moveX = px;
+        in.moveY = py;
+        s_unstuckFrames[slot] -= 1;
+    }
 
     if (dist <= kEngageDist) {
         // Hold attack through the first punch (which both starts the swing and

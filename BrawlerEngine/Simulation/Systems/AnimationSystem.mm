@@ -61,15 +61,23 @@ static void begin_transition(World& world, EntityID id,
         world.events().emit_dodge_started(id);
 }
 
-static float clip_speed_multiplier(AnimClipID id) {
+static float clip_speed_multiplier(World& world, EntityID entity, AnimClipID id) {
+    float mult = 1.f;
     switch (id) {
-        case AnimClipID::Attack:  return 4.0f;
-        case AnimClipID::Attack2: return 3.0f; // finisher lands a touch heavier
-        case AnimClipID::Hurt:    return 2.0f;
-        case AnimClipID::Dodge:   return 2.0f;
-        case AnimClipID::Death:   return 2.0f;
-        default:                  return 1.0f;
+        case AnimClipID::Attack:  mult = 4.0f; break;
+        case AnimClipID::Attack2: mult = 3.0f; break; // finisher lands a touch heavier
+        case AnimClipID::Hurt:    mult = 2.0f; break;
+        case AnimClipID::Dodge:   mult = 2.0f; break;
+        case AnimClipID::Death:   mult = 2.0f; break;
+        default:                  mult = 1.0f; break;
     }
+    if (id == AnimClipID::Dodge &&
+        world.has_component<StatsComponent>(entity)) {
+        float cooldownMult = world.get_component<StatsComponent>(entity).dodgeCooldownMult;
+        if (cooldownMult > 0.01f)
+            mult /= cooldownMult;
+    }
+    return mult;
 }
 
 void AnimationSystem_update(World& world, float gameDt) {
@@ -90,7 +98,7 @@ void AnimationSystem_update(World& world, float gameDt) {
         float duration = clip_duration(charData, anim.currentClip);
         // Attack and Hurt play at 1.5× so punches feel snappy and hit reactions
         // are brief. Idle/Walk/Death keep normal speed.
-        anim.clipTime += gameDt * clip_speed_multiplier(anim.currentClip);
+        anim.clipTime += gameDt * clip_speed_multiplier(world, id, anim.currentClip);
         anim.clipDone  = false;
 
         if (clip_loops(anim.currentClip)) {

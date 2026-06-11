@@ -11,8 +11,10 @@ enum class EventType : uint8_t {
     AttackStarted, // an Attack/Attack2 clip actually began (audio: swing whoosh)
     DodgeStarted,  // a Dodge clip actually began (audio + haptics)
     BossTelegraph, // boss is winding up a charge (audio + warning particles)
+    BossEnraged,   // boss crossed half HP and entered phase two
     SpecialUsed,   // player spent a full special meter
     PickupCollected, // player collected a health pickup
+    SecondWindUsed, // player consumed a Second Wind save instead of dying
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -21,8 +23,10 @@ struct HitContactPayload    { uint32_t attackerID; uint32_t targetID; };
 struct AttackStartedPayload { uint32_t entityID; uint8_t clipID; }; // clipID = (uint8_t)AnimClipID
 struct DodgeStartedPayload  { uint32_t entityID; };
 struct BossTelegraphPayload { uint32_t entityID; };
+struct BossEnragedPayload   { uint32_t entityID; };
 struct SpecialUsedPayload   { uint32_t entityID; };
 struct PickupCollectedPayload { uint32_t playerID; };
+struct SecondWindUsedPayload { uint32_t playerID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -34,8 +38,10 @@ struct Event {
         AttackStartedPayload attackStarted;
         DodgeStartedPayload  dodgeStarted;
         BossTelegraphPayload bossTelegraph;
+        BossEnragedPayload   bossEnraged;
         SpecialUsedPayload   specialUsed;
         PickupCollectedPayload pickupCollected;
+        SecondWindUsedPayload secondWindUsed;
     };
 };
 
@@ -94,6 +100,11 @@ struct EventBus {
         e.bossTelegraph = { entityID };
         push(e);
     }
+    void emit_boss_enraged(uint32_t entityID) {
+        Event e{}; e.type = EventType::BossEnraged;
+        e.bossEnraged = { entityID };
+        push(e);
+    }
     void emit_special_used(uint32_t entityID) {
         Event e{}; e.type = EventType::SpecialUsed;
         e.specialUsed = { entityID };
@@ -102,6 +113,11 @@ struct EventBus {
     void emit_pickup_collected(uint32_t playerID) {
         Event e{}; e.type = EventType::PickupCollected;
         e.pickupCollected = { playerID };
+        push(e);
+    }
+    void emit_second_wind_used(uint32_t playerID) {
+        Event e{}; e.type = EventType::SecondWindUsed;
+        e.secondWindUsed = { playerID };
         push(e);
     }
 

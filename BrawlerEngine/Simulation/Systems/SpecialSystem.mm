@@ -34,8 +34,11 @@ void SpecialSystem_update(World& world, float gameDt) {
 
         const PositionComponent& ppos = world.get_component<PositionComponent>(playerID);
         int damage = 2;
-        if (world.has_component<StatsComponent>(playerID))
+        float knockbackMult = 1.f;
+        if (world.has_component<StatsComponent>(playerID)) {
             damage += world.get_component<StatsComponent>(playerID).damageBonus;
+            knockbackMult = world.get_component<StatsComponent>(playerID).knockbackMult;
+        }
 
         bool hitAnything = false;
         for (EntityID targetID = 0; targetID < count; ++targetID) {
@@ -59,7 +62,8 @@ void SpecialSystem_update(World& world, float gameDt) {
             world.events().emit_damage(targetID, damage);
 
             if (hp.current <= 0) {
-                Combat_apply_death(world, targetID);
+                if (!Combat_try_second_wind(world, targetID))
+                    Combat_apply_death(world, targetID);
                 continue;
             }
 
@@ -72,8 +76,8 @@ void SpecialSystem_update(World& world, float gameDt) {
                 KnockbackComponent& kb = world.has_component<KnockbackComponent>(targetID)
                     ? world.get_component<KnockbackComponent>(targetID)
                     : world.add_component<KnockbackComponent>(targetID);
-                kb.velX     = (dx / dist) * kCombatKnockbackSpeed * 1.5f * scale;
-                kb.velY     = (dy / dist) * kCombatKnockbackSpeed * 1.5f * scale;
+                kb.velX     = (dx / dist) * kCombatKnockbackSpeed * 1.5f * scale * knockbackMult;
+                kb.velY     = (dy / dist) * kCombatKnockbackSpeed * 1.5f * scale * knockbackMult;
                 kb.elapsed  = 0.f;
                 kb.duration = kCombatKnockbackDuration;
             }
@@ -91,4 +95,3 @@ void SpecialSystem_update(World& world, float gameDt) {
         }
     }
 }
-

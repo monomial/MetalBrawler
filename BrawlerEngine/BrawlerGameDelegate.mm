@@ -18,9 +18,16 @@ struct EnemySpawn {
     float x, y;
 };
 
+struct ObstacleSpawn {
+    float x, y;
+    float halfW, halfH;
+};
+
 struct RoomDef {
     const EnemySpawn* spawns;
     int               count;
+    const ObstacleSpawn* obstacles;
+    int               obstacleCount;
 };
 
 // Run structure: fixed intro room, then kMiddlePerRun of the middle pool in a
@@ -57,15 +64,22 @@ static const EnemySpawn kMidTwinHeavies[] = {
 static const EnemySpawn kBossSpawns[] = {
     {EnemyArchetype::Boss,      0, 350},
 };
+static const ObstacleSpawn kHeavyEscortObstacles[] = {
+    {-300.f, 150.f, 30.f, 30.f},
+    { 300.f, 150.f, 30.f, 30.f},
+};
+static const ObstacleSpawn kMixedObstacles[] = {
+    {0.f, 320.f, 35.f, 35.f},
+};
 
-static const RoomDef kIntroRoom = {kIntroSpawns, 2};
-static const RoomDef kBossRoom  = {kBossSpawns, 1};
+static const RoomDef kIntroRoom = {kIntroSpawns, 2, nullptr, 0};
+static const RoomDef kBossRoom  = {kBossSpawns, 1, nullptr, 0};
 static const RoomDef kMiddleRooms[] = {
-    {kMidGruntsRusher, 3},
-    {kMidRusherPack,   3},
-    {kMidHeavyEscort,  3},
-    {kMidMixed,        4},
-    {kMidTwinHeavies,  2},
+    {kMidGruntsRusher, 3, nullptr, 0},
+    {kMidRusherPack,   3, nullptr, 0},
+    {kMidHeavyEscort,  3, kHeavyEscortObstacles, 2},
+    {kMidMixed,        4, kMixedObstacles, 1},
+    {kMidTwinHeavies,  2, nullptr, 0},
 };
 static const int kNumMiddleRooms = 5;
 static const int kMiddlePerRun   = 4;                  // middle rooms per run
@@ -90,6 +104,10 @@ typedef NS_ENUM(int, BrawlerPerk) {
     BrawlerPerkSpeed,
     BrawlerPerkMaxHP,
     BrawlerPerkLife,
+    BrawlerPerkKnockback,
+    BrawlerPerkQuickDodge,
+    BrawlerPerkSpecialCharge,
+    BrawlerPerkSecondWind,
     BrawlerPerkCount
 };
 
@@ -98,12 +116,20 @@ static NSString *const kPerkLabels[BrawlerPerkCount] = {
     @"+20% Move Speed",
     @"+3 Max Health",
     @"+1 Team Life",
+    @"+30% Knockback",
+    @"Quick Dodge",
+    @"+50% Special Charge",
+    @"Second Wind",
 };
 
 struct PlayerPerks {
     int   bonusDamage = 0;
     float speedMult   = 1.f;
     int   bonusMaxHP  = 0;
+    float knockbackMult = 1.f;
+    float dodgeCooldownMult = 1.f;
+    float specialChargeMult = 1.f;
+    int   secondWinds = 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -355,6 +381,10 @@ struct PlayerPerks {
         case BrawlerPerkSpeed:  perks.speedMult   += 0.2f; break;
         case BrawlerPerkMaxHP:  perks.bonusMaxHP  += 3;    break;
         case BrawlerPerkLife:   _lives += 1;               break;
+        case BrawlerPerkKnockback:     perks.knockbackMult *= 1.3f; break;
+        case BrawlerPerkQuickDodge:    perks.dodgeCooldownMult *= 0.7f; break;
+        case BrawlerPerkSpecialCharge: perks.specialChargeMult *= 1.5f; break;
+        case BrawlerPerkSecondWind:    perks.secondWinds += 1; break;
         case BrawlerPerkCount:  break;
     }
     [_audio playUIClickSound];
@@ -384,6 +414,7 @@ struct PlayerPerks {
     [self resetInput];
     [self _spawnPlayers];
     [self _spawnEnemiesForCurrentRoom];
+    [self _spawnObstaclesForCurrentRoom];
     _renderer.livesRemaining = _lives;
     // Boss room always gets the last (violet) palette; others cycle.
     BOOL isBossRoom = (_currentRoom >= kNumRooms - 1);
@@ -417,6 +448,10 @@ struct PlayerPerks {
     auto& stats = _world.add_component<StatsComponent>(e);
     stats.damageBonus = perks.bonusDamage;
     stats.speedMult   = perks.speedMult;
+    stats.knockbackMult = perks.knockbackMult;
+    stats.dodgeCooldownMult = perks.dodgeCooldownMult;
+    stats.specialChargeMult = perks.specialChargeMult;
+    stats.secondWinds = perks.secondWinds;
 }
 
 - (void)_spawnEnemiesForCurrentRoom {
@@ -438,6 +473,16 @@ struct PlayerPerks {
             _world.add_component<BossTagComponent>(e);
             _world.add_component<BossChargeComponent>(e); // charge attack state machine
         }
+    }
+}
+
+- (void)_spawnObstaclesForCurrentRoom {
+    const RoomDef& room = [self _currentRoomDef];
+    for (int i = 0; i < room.obstacleCount; ++i) {
+        const ObstacleSpawn& spawn = room.obstacles[i];
+        EntityID e = _world.defer_create();
+        _world.add_component<PositionComponent>(e) = {spawn.x, spawn.y, 0.f};
+        _world.add_component<ObstacleComponent>(e) = {spawn.halfW, spawn.halfH};
     }
 }
 
@@ -623,6 +668,18 @@ struct PlayerPerks {
             [_audio playSwingSound];
         });
 
+        _world.events().for_each(EventType::BossEnraged, [self](const Event& ev) {
+            uint32_t bid = ev.bossEnraged.entityID;
+            if (_world.has_component<PositionComponent>(bid)) {
+                const auto& p = _world.get_component<PositionComponent>(bid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 130.f}
+                                  count:40 speed:520.f size:20.f
+                                  color:(simd_float4){1.0f, 0.05f, 0.03f, 1.f}];
+            }
+            [_renderer triggerHitBlur:1.f];
+            [_audio playFinisherSound];
+        });
+
         _world.events().for_each(EventType::EntityDied, [self](const Event& ev) {
             uint32_t died = ev.entityDied.entityID;
             if (_world.player_tags().present(died)) {
@@ -649,6 +706,18 @@ struct PlayerPerks {
                                   color:(simd_float4){1.0f, 0.5f, 0.6f, 1.f}];
             }
             [_audio playRoomClearSound];
+        });
+
+        _world.events().for_each(EventType::SecondWindUsed, [self](const Event& ev) {
+            uint32_t pid = ev.secondWindUsed.playerID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 90.f}
+                                  count:24 speed:360.f size:14.f
+                                  color:(simd_float4){1.0f, 0.82f, 0.25f, 1.f}];
+            }
+            [_audio playRoomClearSound];
+            [_renderer triggerDamageFlash];
         });
 
         _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {
@@ -758,6 +827,7 @@ struct PlayerPerks {
     _attackPulse = NO;
     _dodgePulse  = NO;
     _pausePulse  = NO;
+    _specialPulse = NO;
 }
 
 - (void)drawInMTKView:(MTKView *)view {

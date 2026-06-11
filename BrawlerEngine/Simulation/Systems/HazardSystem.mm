@@ -2,6 +2,7 @@
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/CombatHelpers.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
@@ -114,10 +115,10 @@ void HazardSystem_update(World& world, float gameDt) {
             ScreenShakeSystem_trigger(world, 12.f);
             if (world.has_component<DamageCooldownComponent>(pid))
                 world.get_component<DamageCooldownComponent>(pid).remaining = kHazardRehit;
-            if (hp.current <= 0 && world.has_component<AnimationComponent>(pid)) {
-                world.events().emit_died(pid);
-                world.get_component<AnimationComponent>(pid).dying = true;
-                AnimationSystem_request_clip(world, pid, AnimClipID::Death);
+            if (hp.current <= 0 &&
+                !Combat_try_second_wind(world, pid) &&
+                world.has_component<AnimationComponent>(pid)) {
+                Combat_apply_death(world, pid);
             }
         }
     }

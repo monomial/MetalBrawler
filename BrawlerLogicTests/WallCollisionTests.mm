@@ -112,4 +112,81 @@ static constexpr float kEps     = 1e-3f;
     XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 0.f, kEps);
 }
 
+- (void)test_obstaclePushesEntityOutOnXAxis {
+    World world;
+    EntityID obstacle = world.defer_create();
+    world.add_component<PositionComponent>(obstacle) = {0, 0, 0};
+    world.add_component<ObstacleComponent>(obstacle) = {30.f, 30.f};
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {60.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(e) = {100.f, 0.f, 0.f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 70.f, kEps);
+    XCTAssertEqualWithAccuracy(world.get_component<VelocityComponent>(e).vx, 0.f, kEps);
+}
+
+- (void)test_obstaclePushesEntityOutOnYAxis {
+    World world;
+    EntityID obstacle = world.defer_create();
+    world.add_component<PositionComponent>(obstacle) = {0, 0, 0};
+    world.add_component<ObstacleComponent>(obstacle) = {30.f, 30.f};
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {0.f, 60.f, 0.f};
+    world.add_component<VelocityComponent>(e) = {0.f, 100.f, 0.f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).y, 70.f, kEps);
+    XCTAssertEqualWithAccuracy(world.get_component<VelocityComponent>(e).vy, 0.f, kEps);
+}
+
+- (void)test_obstacleSlidePreservesTangentialVelocity {
+    World world;
+    EntityID obstacle = world.defer_create();
+    world.add_component<PositionComponent>(obstacle) = {0, 0, 0};
+    world.add_component<ObstacleComponent>(obstacle) = {30.f, 30.f};
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {60.f, 20.f, 0.f};
+    world.add_component<VelocityComponent>(e) = {120.f, 220.f, 0.f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 70.f, kEps);
+    XCTAssertEqualWithAccuracy(world.get_component<VelocityComponent>(e).vx, 0.f, kEps);
+    XCTAssertGreaterThan(world.get_component<VelocityComponent>(e).vy, 100.f);
+}
+
+- (void)test_hazardPassesThroughObstacle {
+    World world;
+    EntityID obstacle = world.defer_create();
+    world.add_component<PositionComponent>(obstacle) = {0, 0, 0};
+    world.add_component<ObstacleComponent>(obstacle) = {30.f, 30.f};
+    EntityID hazard = world.defer_create();
+    world.add_component<PositionComponent>(hazard) = {0.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(hazard) = {100.f, 0.f, 0.f};
+    world.add_component<HazardComponent>(hazard);
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertLessThan(world.get_component<PositionComponent>(hazard).x, 2.f,
+                      @"hazard moves normally but is not pushed out of pillars");
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(hazard).y, 0.f, kEps);
+}
+
+- (void)test_positionOutsideObstacleUntouched {
+    World world;
+    EntityID obstacle = world.defer_create();
+    world.add_component<PositionComponent>(obstacle) = {0, 0, 0};
+    world.add_component<ObstacleComponent>(obstacle) = {30.f, 30.f};
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {120.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(e) = {0.f, 0.f, 0.f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 120.f, kEps);
+}
+
 @end

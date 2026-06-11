@@ -125,6 +125,11 @@ struct HeartPickupComponent {
     float lifetime = 8.f;
 };
 
+struct ObstacleComponent {
+    float halfW = 30.f;
+    float halfH = 30.f;
+};
+
 // Looping waypoint path. HazardSystem moves the entity along the closed
 // polyline pts[0..count-1] → pts[0] at `speed`, wrapping forever.
 struct PathFollowComponent {
@@ -139,6 +144,7 @@ struct PathFollowComponent {
 struct BossChargeComponent {
     enum State : uint8_t { Idle = 0, Telegraph = 1, Charge = 2, Recover = 3 };
     uint8_t state = Idle;
+    bool    enraged = false;
     float   timer = 4.f;  // Idle: until next charge; other states: time left
     float   dirX  = 0.f;  // locked charge direction
     float   dirY  = 1.f;
@@ -148,8 +154,12 @@ struct BossChargeComponent {
 // player entities at spawn from BrawlerGameDelegate's run state (the World is
 // rebuilt every room, so the run-level truth lives in the delegate).
 struct StatsComponent {
-    int   damageBonus = 0;   // added to attack damage
-    float speedMult   = 1.f; // multiplies move speed
+    int   damageBonus       = 0;   // added to attack damage
+    float speedMult         = 1.f; // multiplies move speed
+    float knockbackMult     = 1.f; // multiplies outgoing shove velocity
+    float dodgeCooldownMult = 1.f; // multiplies Dodge clip/recovery duration
+    float specialChargeMult = 1.f; // multiplies meter gained from landed hits
+    int   secondWinds       = 0;   // one-time saves at 1 HP before death
 };
 
 struct SpecialMeterComponent {

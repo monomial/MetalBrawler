@@ -108,6 +108,7 @@
 		84B4DCD81D9F68880B9A5B12 /* ParticleSim.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D45E4FC758466D4BD09D6E3C /* ParticleSim.cpp */; };
 		84FA8A58B0870FE8AAACBB9B /* BrawlerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9E760FCE7B77214BDA856B4F /* BrawlerRenderer.mm */; };
 		86B0D6EC90AC0670A1185EE2 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 189A9141A8E1CF5522C84640 /* MetalKit.framework */; };
+		896D025C9F3A69B3D5CBDC4F /* PerkTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 93B9C1EC9E3813A99222392F /* PerkTests.mm */; };
 		8A8D99039449CB6D58F019B8 /* CombatHelpers.mm in Sources */ = {isa = PBXBuildFile; fileRef = C531E0D88462726A7EF7AC84 /* CombatHelpers.mm */; };
 		8CC75A52AA0F02D030983BB3 /* SkinnedMesh.metal in Sources */ = {isa = PBXBuildFile; fileRef = AEA11E8F308C6EE6CEC1DF0A /* SkinnedMesh.metal */; };
 		8E0991FE8CD3247491E9E6D8 /* EdgeCaseTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B578A52EC9FECB06192D70B /* EdgeCaseTests.mm */; };
@@ -254,6 +255,7 @@
 		902FD5C1BFF4E6D41C19E864 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
 		919D57C7ED2481D89652E04D /* HazardSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HazardSystem.h; sourceTree = "<group>"; };
 		91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Brawler.metal; sourceTree = "<group>"; };
+		93B9C1EC9E3813A99222392F /* PerkTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PerkTests.mm; sourceTree = "<group>"; };
 		944C66793805FF7C35F893F2 /* Brawler-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9872E2A72357EB6205023978 /* EnemyAITests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EnemyAITests.mm; sourceTree = "<group>"; };
 		9961037DF203AB455E73AEA4 /* Brawler-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Brawler-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -595,6 +597,7 @@
 				F8EA69DF4FB6B3FAF54FA58D /* InputTests.mm */,
 				526D4C7092E51F0F48DA11E5 /* KnockbackTests.mm */,
 				D016D086DC068F9E7DAC251A /* ParticleSimTests.mm */,
+				93B9C1EC9E3813A99222392F /* PerkTests.mm */,
 				082F14CDBDD078DD1EFF688D /* PhysicsTests.mm */,
 				6C09B93A12A57BB8AE99ED96 /* PickupTests.mm */,
 				7B4C71C96BADA923A9B9BDB9 /* RespawnTests.mm */,
@@ -918,6 +921,7 @@
 				C7F37FA49D9D836E6707C7BA /* KnockbackTests.mm in Sources */,
 				84B4DCD81D9F68880B9A5B12 /* ParticleSim.cpp in Sources */,
 				ABE83CA7172A267D87C54D03 /* ParticleSimTests.mm in Sources */,
+				896D025C9F3A69B3D5CBDC4F /* PerkTests.mm in Sources */,
 				2471F779BC0C4BA0956ED4B3 /* PhysicsSystem.mm in Sources */,
 				3AC352810814EAE388FEF07E /* PhysicsTests.mm in Sources */,
 				FA43657E9E94B1934D57E7FE /* PickupSystem.mm in Sources */,

@@ -596,6 +596,28 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                                              kRoomWidth, kWallThick));
         [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
         [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+        for (EntityID oid = 0; oid < world->entity_count(); ++oid) {
+            if (!world->obstacles().present(oid)) continue;
+            if (!world->has_component<PositionComponent>(oid)) continue;
+            const auto& pos = world->get_component<PositionComponent>(oid);
+            const auto& obs = world->get_component<ObstacleComponent>(oid);
+            float w = obs.halfW * 2.f;
+            float h = obs.halfH * 2.f;
+
+            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y + obs.halfH, w, kWallHeight, true));
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y - obs.halfH, w, kWallHeight, true));
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x - obs.halfW, pos.y, h, kWallHeight, false));
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x + obs.halfW, pos.y, h, kWallHeight, false));
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
     }
 
     // Blob shadows — soft dark circles grounding each character, drawn flat
@@ -720,6 +742,11 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                 su.color.y = su.color.y + (1.f - su.color.y) * flash;
                 su.color.z = su.color.z + (1.f - su.color.z) * flash;
                 su.tintStrength = flash;
+            }
+            if (world->has_component<BossChargeComponent>(eid) &&
+                world->get_component<BossChargeComponent>(eid).enraged) {
+                su.color = (simd_float4){1.0f, 0.10f, 0.06f, su.color.w};
+                su.tintStrength = fmaxf(su.tintStrength, 0.5f);
             }
             [enc setVertexBytes:&su length:sizeof(su) atIndex:2];
 

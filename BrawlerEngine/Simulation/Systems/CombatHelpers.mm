@@ -13,6 +13,23 @@ void Combat_spawn_heart_drop_if_needed(World& world, EntityID victimID) {
     world.add_component<HeartPickupComponent>(heart);
 }
 
+bool Combat_try_second_wind(World& world, EntityID victimID) {
+    if (!world.player_tags().present(victimID)) return false;
+    if (!world.has_component<HealthComponent>(victimID)) return false;
+    if (!world.has_component<StatsComponent>(victimID)) return false;
+
+    StatsComponent& stats = world.get_component<StatsComponent>(victimID);
+    if (stats.secondWinds <= 0) return false;
+
+    HealthComponent& hp = world.get_component<HealthComponent>(victimID);
+    if (hp.current > 0) return false;
+
+    stats.secondWinds -= 1;
+    hp.current = 1;
+    world.events().emit_second_wind_used(victimID);
+    return true;
+}
+
 void Combat_apply_death(World& world, EntityID victimID) {
     world.events().emit_died(victimID);
     Combat_spawn_heart_drop_if_needed(world, victimID);
@@ -29,4 +46,3 @@ void Combat_apply_death(World& world, EntityID victimID) {
         vel.vx = vel.vy = vel.vz = 0.f;
     }
 }
-

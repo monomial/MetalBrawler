@@ -114,7 +114,10 @@ void CombatSystem_update(World& world, float gameDt) {
             if (world.has_component<PlayerTagComponent>(attackerID) &&
                 world.has_component<SpecialMeterComponent>(attackerID)) {
                 SpecialMeterComponent& meter = world.get_component<SpecialMeterComponent>(attackerID);
-                meter.charge += 0.15f;
+                float chargeGain = 0.15f;
+                if (world.has_component<StatsComponent>(attackerID))
+                    chargeGain *= world.get_component<StatsComponent>(attackerID).specialChargeMult;
+                meter.charge += chargeGain;
                 if (meter.charge > 1.f) meter.charge = 1.f;
             }
 
@@ -130,6 +133,8 @@ void CombatSystem_update(World& world, float gameDt) {
                 if (world.has_component<EnemyArchetypeComponent>(targetID))
                     scale = enemy_archetype_def(
                         world.get_component<EnemyArchetypeComponent>(targetID).type).knockbackScale;
+                if (world.has_component<StatsComponent>(attackerID))
+                    scale *= world.get_component<StatsComponent>(attackerID).knockbackMult;
                 KnockbackComponent& kb = world.has_component<KnockbackComponent>(targetID)
                     ? world.get_component<KnockbackComponent>(targetID)
                     : world.add_component<KnockbackComponent>(targetID);
@@ -140,7 +145,8 @@ void CombatSystem_update(World& world, float gameDt) {
             }
 
             if (hp.current <= 0) {
-                Combat_apply_death(world, targetID);
+                if (!Combat_try_second_wind(world, targetID))
+                    Combat_apply_death(world, targetID);
             } else if (world.has_component<AnimationComponent>(targetID)) {
                 // Players stay mobile when hit (no stun) — TMNT-style.
                 // Enemies react unless they're a boss; bosses react ~10% of the time.

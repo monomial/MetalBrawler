@@ -1,6 +1,7 @@
 #include "ContactDamageSystem.h"
 #include "Simulation/World.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include "Simulation/Systems/CombatHelpers.h"
 #include <math.h>
 
 static constexpr float kContactRange   = 65.f; // world units — must exceed kSeparationRadius (60)
@@ -63,12 +64,8 @@ void ContactDamageSystem_update(World& world, float gameDt) {
     world.events().emit_damage(playerID, kContactDamage);
 
     if (hp.current <= 0) {
-        world.events().emit_died(playerID);
-        // Mark dying and play death animation; game loop transitions to game-over on EntityDied.
-        if (world.has_component<AnimationComponent>(playerID)) {
-            world.get_component<AnimationComponent>(playerID).dying = true;
-            AnimationSystem_request_clip(world, playerID, AnimClipID::Death);
-        }
+        if (!Combat_try_second_wind(world, playerID))
+            Combat_apply_death(world, playerID);
     } else {
         AnimationSystem_request_clip(world, playerID, AnimClipID::Hurt);
     }
