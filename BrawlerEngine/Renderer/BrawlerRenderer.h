@@ -61,6 +61,7 @@ struct BrawlerPerkSummary {
 // red edge vignette when the player takes damage. Both decay automatically.
 - (void)triggerHitBlur:(float)strength;
 - (void)triggerDamageFlash;
+- (void)beginFinalKillZoomAt:(simd_float3)pos;
 
 // Spawn a radial particle burst (hit sparks, telegraphs, clears) at a world
 // position. Rendered as additive camera-facing billboards next frame.

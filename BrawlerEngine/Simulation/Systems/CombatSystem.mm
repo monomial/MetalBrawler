@@ -39,6 +39,59 @@ static constexpr int   kFinisherHitStopTicks = 7;
 static constexpr float kHitShake             = 7.f;
 static constexpr float kFinisherShake        = 30.f;
 static constexpr float kPlayerHitShake       = 22.f;
+static constexpr float kProjectileSpeed      = 420.f;
+
+static bool is_ranged_attacker(World& world, EntityID attackerID) {
+    if (!world.has_component<EnemyArchetypeComponent>(attackerID)) return false;
+    return enemy_archetype_def(
+        world.get_component<EnemyArchetypeComponent>(attackerID).type).ranged;
+}
+
+static EntityID nearest_living_player(World& world, const PositionComponent& origin) {
+    EntityID best = kInvalidEntity;
+    float bestD2 = 0.f;
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (!world.player_tags().present(id)) continue;
+        if (!world.has_component<PositionComponent>(id)) continue;
+        if (!world.has_component<HealthComponent>(id)) continue;
+        if (world.get_component<HealthComponent>(id).current <= 0) continue;
+        if (world.has_component<DownedComponent>(id)) continue;
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) continue;
+        const PositionComponent& p = world.get_component<PositionComponent>(id);
+        float dx = p.x - origin.x;
+        float dy = p.y - origin.y;
+        float d2 = dx * dx + dy * dy;
+        if (best == kInvalidEntity || d2 < bestD2) {
+            best = id;
+            bestD2 = d2;
+        }
+    }
+    return best;
+}
+
+static bool spawn_projectile_at_target(World& world, EntityID attackerID,
+                                       const PositionComponent& atkPos,
+                                       int damage) {
+    EntityID targetID = nearest_living_player(world, atkPos);
+    if (targetID == kInvalidEntity) return false;
+    const PositionComponent& tPos = world.get_component<PositionComponent>(targetID);
+    float dx = tPos.x - atkPos.x;
+    float dy = tPos.y - atkPos.y;
+    float dist = sqrtf(dx * dx + dy * dy);
+    if (dist <= 0.001f) {
+        dx = 0.f;
+        dy = 1.f;
+        dist = 1.f;
+    }
+    EntityID proj = world.defer_create();
+    world.add_component<PositionComponent>(proj) = {atkPos.x, atkPos.y, 12.f};
+    ProjectileComponent& pc = world.add_component<ProjectileComponent>(proj);
+    pc.vx = (dx / dist) * kProjectileSpeed;
+    pc.vy = (dy / dist) * kProjectileSpeed;
+    pc.damage = damage;
+    return true;
+}
 
 void CombatSystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // frozen during HitStop
@@ -71,6 +124,14 @@ void CombatSystem_update(World& world, float gameDt) {
         FactionComponent::Type tgtFaction = (atkFaction == FactionComponent::Player)
                                             ? FactionComponent::Enemy
                                             : FactionComponent::Player;
+
+        if (atkFaction == FactionComponent::Enemy && is_ranged_attacker(world, attackerID)) {
+            int damage = win.damage;
+            if (spawn_projectile_at_target(world, attackerID, atkPos, damage)) {
+                atkAnim.hitApplied = true;
+            }
+            continue;
+        }
 
         // Facing direction for arc check — fall back to +Y if absent.
         float facingDx = 0.f, facingDy = 1.f;
@@ -151,7 +212,7 @@ void CombatSystem_update(World& world, float gameDt) {
 
             if (hp.current <= 0) {
                 if (!Combat_try_second_wind(world, targetID))
-                    Combat_apply_death(world, targetID);
+                    Combat_apply_death(world, targetID, attackerID);
             } else if (world.has_component<AnimationComponent>(targetID)) {
                 // Players stay mobile when hit (no stun) — TMNT-style.
                 // Enemies react unless they're a boss; bosses react ~10% of the time.

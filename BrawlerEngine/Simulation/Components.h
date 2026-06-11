@@ -130,6 +130,17 @@ struct HeartPickupComponent {
     float lifetime = 8.f;
 };
 
+struct ExitComponent {
+    bool active = true;
+};
+
+struct ProjectileComponent {
+    float vx = 0.f;
+    float vy = 0.f;
+    int damage = 1;
+    float lifetime = 2.5f;
+};
+
 struct PendingSpawn {
     uint8_t archetype = 0;
     uint8_t wave = 0;

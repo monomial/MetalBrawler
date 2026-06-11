@@ -108,6 +108,38 @@
     XCTAssertFalse(world.has_component<HealthComponent>(e));
 }
 
+- (void)test_slowMotion_scalesTickGameDtAndExpires {
+    World world;
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {0.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(e) = {120.f, 0.f, 0.f};
+
+    world.trigger_slow_motion(2, 0.3f);
+    XCTAssertEqualWithAccuracy(world.time_scale(), 0.3f, 0.001f);
+    world.update(1.f / 120.f, 1.f / 120.f);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 0.3f, 0.001f);
+    world.update(1.f / 120.f, 1.f / 120.f);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 0.6f, 0.001f);
+    XCTAssertEqualWithAccuracy(world.time_scale(), 1.f, 0.001f);
+    world.update(1.f / 120.f, 1.f / 120.f);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 1.6f, 0.001f);
+}
+
+- (void)test_hitStopTakesPrecedenceOverSlowMotion {
+    World world;
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {0.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(e) = {120.f, 0.f, 0.f};
+
+    world.trigger_slow_motion(2, 0.3f);
+    world.trigger_hit_stop(1);
+    world.update(1.f / 120.f, 1.f / 120.f);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 0.f, 0.001f);
+    XCTAssertEqualWithAccuracy(world.time_scale(), 0.3f, 0.001f);
+    world.update(1.f / 120.f, 1.f / 120.f);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 0.3f, 0.001f);
+}
+
 // --- Multiple entities are independent ---
 
 - (void)test_multipleEntities_independentComponents {

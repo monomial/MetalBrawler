@@ -65,7 +65,7 @@ void SpecialSystem_update(World& world, float gameDt) {
 
             if (hp.current <= 0) {
                 if (!Combat_try_second_wind(world, targetID))
-                    Combat_apply_death(world, targetID);
+                    Combat_apply_death(world, targetID, playerID);
                 continue;
             }
 

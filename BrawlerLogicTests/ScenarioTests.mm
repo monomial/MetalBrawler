@@ -43,6 +43,17 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     }
 }
 
+static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSeconds) {
+    int maxFrames = (int)(maxSimSeconds / kFrameDt);
+    for (int i = 0; i < maxFrames; ++i) {
+        if (d.currentRoom == room && d.gamePhase == BrawlerGamePhasePlaying) return YES;
+        if (d.gamePhase == BrawlerGamePhaseUpgrade)
+            pickPerk(d);
+        [d advanceFrame:kFrameDt];
+    }
+    return d.currentRoom == room && d.gamePhase == BrawlerGamePhasePlaying;
+}
+
 @interface ScenarioTests : XCTestCase
 @end
 
@@ -69,8 +80,8 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 300.f);
-    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 300 sim-seconds (ended in phase %ld, room %d, lives %d)",
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 360.f);
+    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 360 sim-seconds (ended in phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
     XCTAssertEqual(d.currentRoom, 6, @"a full run is intro + 4 middle rooms + boss");
 
@@ -91,7 +102,7 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     [d startGameWithPlayers:2];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 300.f);
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 360.f);
     XCTAssertTrue(won, @"2P AutoPilot failed to win (phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
 }
@@ -193,7 +204,12 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
 
     [d chooseUpgrade:0];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
-    XCTAssertEqual(d.currentRoom, 2, @"choice advances to the next room");
+    XCTAssertEqual(d.currentRoom, 1, @"choice returns to the cleared room");
+    XCTAssertEqual([d exitEntityCount], 1, @"last choice spawns the exit portal");
+
+    BOOL advanced = advanceUntilRoom(d, 2, 20.f);
+    XCTAssertTrue(advanced, @"AutoPilot must walk through the exit before room advances");
+    XCTAssertEqual([d exitEntityCount], 0);
 }
 
 - (void)test_twoPlayers_eachGetsOwnUpgradeChoiceBeforeNextRoom {
@@ -221,7 +237,11 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
 
     [d chooseUpgrade:1];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
-    XCTAssertEqual(d.currentRoom, 2, @"next room starts only after every active player picks");
+    XCTAssertEqual(d.currentRoom, 1, @"next room waits until a player reaches the exit");
+    XCTAssertEqual([d exitEntityCount], 1);
+
+    BOOL advanced = advanceUntilRoom(d, 2, 20.f);
+    XCTAssertTrue(advanced, @"AutoPilot must walk through the exit after both choices");
 }
 
 - (void)test_fourPlayers_getFourSequentialUpgradeTurns {
@@ -239,7 +259,9 @@ static void advanceSeconds(BrawlerGameDelegate *d, float seconds) {
     }
 
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
-    XCTAssertEqual(d.currentRoom, 2);
+    XCTAssertEqual(d.currentRoom, 1);
+    XCTAssertEqual([d exitEntityCount], 1);
+    XCTAssertTrue(advanceUntilRoom(d, 2, 20.f));
 }
 
 // --- Determinism -------------------------------------------------------------

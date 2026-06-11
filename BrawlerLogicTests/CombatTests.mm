@@ -1,5 +1,6 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
+#include "Simulation/Systems/WaveSystem.h"
 #include "Platform/InputState.h"
 
 static constexpr float kFixedDt      = 1.0f / 120.0f;
@@ -40,6 +41,21 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
     world.add_component<FactionComponent>(e).type   = FactionComponent::Enemy;
     world.add_component<HealthComponent>(e)         = {hp, hp};
     return e;
+}
+
+static EntityID addWaveController(World& world, int currentWave, int waveCount) {
+    EntityID c = world.defer_create();
+    WaveControllerComponent& wave = world.add_component<WaveControllerComponent>(c);
+    wave.phase = WavePhaseFighting;
+    wave.currentWave = currentWave;
+    wave.waveCount = waveCount;
+    return c;
+}
+
+static int eventCount(World& world, EventType type) {
+    int count = 0;
+    world.events().for_each(type, [&count](const Event&) { count++; });
+    return count;
 }
 
 @interface CombatTests : XCTestCase
@@ -242,6 +258,40 @@ static EntityID spawnAttackingEnemy(World& world, float x, float y,
     world.update(kFixedDt, kFixedDt); // gameDt=0 — CombatSystem returns early
 
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 3);
+}
+
+- (void)test_finalKillEmittedOnlyForTrueLastKill {
+    World midWave;
+    EntityID p1 = spawnPlayer(midWave, 0, 0);
+    setPlayerAttacking(midWave, p1);
+    spawnEnemy(midWave, 50, 0, 1);
+    addWaveController(midWave, 0, 2);
+    midWave.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(eventCount(midWave, EventType::FinalKill), 0);
+    XCTAssertEqualWithAccuracy(midWave.time_scale(), 1.f, 0.001f);
+
+    World anotherAlive;
+    EntityID p2 = spawnPlayer(anotherAlive, 0, 0);
+    setPlayerAttacking(anotherAlive, p2);
+    spawnEnemy(anotherAlive, 50, 0, 1);
+    spawnEnemy(anotherAlive, 200, 0, 1);
+    addWaveController(anotherAlive, 0, 1);
+    anotherAlive.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(eventCount(anotherAlive, EventType::FinalKill), 0);
+
+    World lastKill;
+    EntityID p3 = spawnPlayer(lastKill, 0, 0);
+    setPlayerAttacking(lastKill, p3);
+    EntityID enemy = spawnEnemy(lastKill, 50, 0, 1);
+    addWaveController(lastKill, 0, 1);
+    lastKill.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(eventCount(lastKill, EventType::FinalKill), 1);
+    XCTAssertEqualWithAccuracy(lastKill.time_scale(), 0.3f, 0.001f);
+    BOOL payloadOK = NO;
+    lastKill.events().for_each(EventType::FinalKill, [p3, enemy, &payloadOK](const Event& ev) {
+        payloadOK = ev.finalKill.killerID == p3 && ev.finalKill.victimID == enemy;
+    });
+    XCTAssertTrue(payloadOK);
 }
 
 // ---------------------------------------------------------------------------

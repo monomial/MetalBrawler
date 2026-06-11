@@ -58,6 +58,8 @@ public:
 
     // Trigger N physics ticks at gameDt=0 (combat freeze without pausing render/audio).
     void trigger_hit_stop(int ticks);
+    void trigger_slow_motion(int ticks, float scale);
+    float time_scale() const { return _slowMoTicks > 0 ? _slowMoScale : 1.f; }
 
     // Called by the platform layer once per render frame before update().
     // playerIndex 0–3 maps to the player entity with matching PlayerTagComponent.playerIndex.
@@ -117,6 +119,8 @@ public:
     ComponentStorage<PathFollowComponent>&         paths()            { return _paths; }
     ComponentStorage<SpecialMeterComponent>&       special_meters()   { return _specialMeters; }
     ComponentStorage<HeartPickupComponent>&        heart_pickups()    { return _heartPickups; }
+    ComponentStorage<ExitComponent>&               exits()            { return _exits; }
+    ComponentStorage<ProjectileComponent>&         projectiles()      { return _projectiles; }
     ComponentStorage<WaveControllerComponent>&     wave_controllers() { return _waveControllers; }
     ComponentStorage<SpawnMarkerComponent>&        spawn_markers()    { return _spawnMarkers; }
     ComponentStorage<SpawnAnimComponent>&          spawn_anims()      { return _spawnAnims; }
@@ -138,6 +142,8 @@ private:
     EventBus   _events;         // cleared each tick
     float      _accumulator;    // leftover time between fixed ticks
     int        _hitStopTicks;   // remaining ticks at gameDt=0
+    int        _slowMoTicks;    // remaining ticks at scaled fixed dt
+    float      _slowMoScale;    // gameDt multiplier while slow-mo is active
     InputState _inputs[4];      // one slot per player (0–3), set by platform each render frame
 
     ComponentStorage<PositionComponent>  _positions;
@@ -160,6 +166,8 @@ private:
     ComponentStorage<PathFollowComponent>         _paths;
     ComponentStorage<SpecialMeterComponent>       _specialMeters;
     ComponentStorage<HeartPickupComponent>        _heartPickups;
+    ComponentStorage<ExitComponent>               _exits;
+    ComponentStorage<ProjectileComponent>         _projectiles;
     ComponentStorage<WaveControllerComponent>     _waveControllers;
     ComponentStorage<SpawnMarkerComponent>        _spawnMarkers;
     ComponentStorage<SpawnAnimComponent>          _spawnAnims;
@@ -201,6 +209,8 @@ template<> ComponentStorage<HazardComponent>&             World::_pool<HazardCom
 template<> ComponentStorage<PathFollowComponent>&         World::_pool<PathFollowComponent>();
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool<SpecialMeterComponent>();
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool<HeartPickupComponent>();
+template<> ComponentStorage<ExitComponent>&               World::_pool<ExitComponent>();
+template<> ComponentStorage<ProjectileComponent>&         World::_pool<ProjectileComponent>();
 template<> ComponentStorage<WaveControllerComponent>&     World::_pool<WaveControllerComponent>();
 template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool<SpawnMarkerComponent>();
 template<> ComponentStorage<SpawnAnimComponent>&          World::_pool<SpawnAnimComponent>();

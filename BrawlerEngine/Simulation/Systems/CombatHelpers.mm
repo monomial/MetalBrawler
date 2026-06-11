@@ -2,6 +2,9 @@
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/WaveSystem.h"
 
+static constexpr int   kSlowMoTicks = 216;
+static constexpr float kSlowMoScale = 0.3f;
+
 void Combat_spawn_heart_drop_if_needed(World& world, EntityID victimID) {
     if (!world.has_component<FactionComponent>(victimID)) return;
     if (world.get_component<FactionComponent>(victimID).type != FactionComponent::Enemy) return;
@@ -56,7 +59,45 @@ static bool is_living_enemy_for_sweep(World& world, EntityID id) {
     return true;
 }
 
-static void Combat_apply_death_internal(World& world, EntityID victimID,
+static bool any_other_living_enemy(World& world, EntityID victimID) {
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (id == victimID) continue;
+        if (is_living_enemy_for_sweep(world, id)) return true;
+    }
+    return false;
+}
+
+static void trigger_final_kill_if_needed(World& world, EntityID victimID, EntityID killerID) {
+    if (killerID == kInvalidEntity) return;
+    if (!world.has_component<FactionComponent>(victimID)) return;
+    if (world.get_component<FactionComponent>(victimID).type != FactionComponent::Enemy) return;
+    if (any_other_living_enemy(world, victimID)) return;
+
+    bool roomFinished = WaveSystem_room_finished(world);
+    if (!roomFinished) {
+        roomFinished = true;
+        bool hasController = false;
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (!world.wave_controllers().present(id)) continue;
+            hasController = true;
+            const WaveControllerComponent& ctrl = world.get_component<WaveControllerComponent>(id);
+            bool finalWaveClear = !ctrl.bossMode &&
+                                  ctrl.phase == WavePhaseFighting &&
+                                  ctrl.currentWave + 1 >= ctrl.waveCount;
+            if (ctrl.phase != WavePhaseDone && !finalWaveClear) {
+                roomFinished = false;
+                break;
+            }
+        }
+        if (!hasController) roomFinished = true;
+    }
+    if (!roomFinished) return;
+
+    world.trigger_slow_motion(kSlowMoTicks, kSlowMoScale);
+    world.events().emit_final_kill(killerID, victimID);
+}
+
+static void Combat_apply_death_internal(World& world, EntityID victimID, EntityID killerID,
                                         bool allowHeartDrop, bool allowBossSweep) {
     if (world.player_tags().present(victimID) &&
         !world.has_component<DownedComponent>(victimID) &&
@@ -105,12 +146,14 @@ static void Combat_apply_death_internal(World& world, EntityID victimID,
             if (id == victimID) continue;
             if (!is_living_enemy_for_sweep(world, id)) continue;
             world.get_component<HealthComponent>(id).current = 0;
-            Combat_apply_death_internal(world, id, false, false);
+            Combat_apply_death_internal(world, id, killerID, false, false);
         }
         WaveSystem_force_done(world);
     }
+
+    trigger_final_kill_if_needed(world, victimID, killerID);
 }
 
-void Combat_apply_death(World& world, EntityID victimID) {
-    Combat_apply_death_internal(world, victimID, true, true);
+void Combat_apply_death(World& world, EntityID victimID, EntityID killerID) {
+    Combat_apply_death_internal(world, victimID, killerID, true, true);
 }

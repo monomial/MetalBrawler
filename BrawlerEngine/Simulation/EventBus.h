@@ -19,6 +19,8 @@ enum class EventType : uint8_t {
     PlayerRevived, // player was revived by a teammate
     WaveStarted,   // spawn markers appeared for a wave
     SpawnLanded,   // spawn animation completed
+    FinalKill,      // true last enemy of the room was killed
+    ExitReached,    // post-upgrade exit portal was entered
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -35,6 +37,8 @@ struct PlayerDownedPayload  { uint32_t playerID; };
 struct PlayerRevivedPayload { uint32_t playerID; };
 struct WaveStartedPayload   { uint8_t waveIndex; };
 struct SpawnLandedPayload   { uint32_t entityID; uint8_t style; };
+struct FinalKillPayload     { uint32_t killerID; uint32_t victimID; };
+struct ExitReachedPayload   { uint32_t entityID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -54,6 +58,8 @@ struct Event {
         PlayerRevivedPayload playerRevived;
         WaveStartedPayload   waveStarted;
         SpawnLandedPayload   spawnLanded;
+        FinalKillPayload     finalKill;
+        ExitReachedPayload   exitReached;
     };
 };
 
@@ -150,6 +156,16 @@ struct EventBus {
     void emit_spawn_landed(uint32_t entityID, uint8_t style) {
         Event e{}; e.type = EventType::SpawnLanded;
         e.spawnLanded = { entityID, style };
+        push(e);
+    }
+    void emit_final_kill(uint32_t killerID, uint32_t victimID) {
+        Event e{}; e.type = EventType::FinalKill;
+        e.finalKill = { killerID, victimID };
+        push(e);
+    }
+    void emit_exit_reached(uint32_t entityID) {
+        Event e{}; e.type = EventType::ExitReached;
+        e.exitReached = { entityID };
         push(e);
     }
 

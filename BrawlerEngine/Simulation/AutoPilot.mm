@@ -8,14 +8,24 @@
 static constexpr float kEngageDist = 100.0f;
 static constexpr int   kStuckSampleFrames = 30; // ~0.5s at the fixed 60Hz scenario driver
 static constexpr int   kUnstuckFrames     = 24; // ~0.4s
+static float s_lastX[4] = {};
+static float s_lastY[4] = {};
+static int   s_sampleFrames[4] = {};
+static int   s_unstuckFrames[4] = {};
+static bool  s_hasSample[4] = {};
+
+void AutoPilot_reset() {
+    for (int i = 0; i < 4; ++i) {
+        s_lastX[i] = 0.f;
+        s_lastY[i] = 0.f;
+        s_sampleFrames[i] = 0;
+        s_unstuckFrames[i] = 0;
+        s_hasSample[i] = false;
+    }
+}
 
 InputState AutoPilot_input(World& world, int playerIndex) {
     InputState in = {};
-    static float s_lastX[4] = {};
-    static float s_lastY[4] = {};
-    static int   s_sampleFrames[4] = {};
-    static int   s_unstuckFrames[4] = {};
-    static bool  s_hasSample[4] = {};
 
     // Find this player's entity.
     EntityID me = kInvalidEntity;
@@ -90,7 +100,26 @@ InputState AutoPilot_input(World& world, int playerIndex) {
         return in;
     }
 
-    if (!found) return in; // room clearing — stand still
+    if (!found) {
+        EntityID exitID = kInvalidEntity;
+        float exitD2 = 0.f, edx = 0.f, edy = 0.f;
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (!world.exits().present(id)) continue;
+            if (!world.has_component<PositionComponent>(id)) continue;
+            const PositionComponent& p = world.get_component<PositionComponent>(id);
+            float dx = p.x - myPos.x, dy = p.y - myPos.y;
+            float d2 = dx * dx + dy * dy;
+            if (exitID == kInvalidEntity || d2 < exitD2) {
+                exitID = id; exitD2 = d2; edx = dx; edy = dy;
+            }
+        }
+        if (exitID != kInvalidEntity) {
+            float d = sqrtf(exitD2);
+            in.moveX = (d > 0.001f) ? edx / d : 0.f;
+            in.moveY = (d > 0.001f) ? edy / d : 0.f;
+        }
+        return in;
+    }
 
     float dist = sqrtf(bestD2);
 

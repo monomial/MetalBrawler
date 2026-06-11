@@ -5,6 +5,7 @@
 #include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/WaveSystem.h"
+#include "Simulation/RoomBounds.h"
 #include "Assets/CharacterLoader.h"
 #import "Renderer/BrawlerRenderer.h"
 #import "Haptics/HapticsEngine.h"
@@ -50,12 +51,13 @@ static const EnemySpawn kMidRusherPack[] = {
     {EnemyArchetype::Rusher, 0,  250, 380},
     {EnemyArchetype::Rusher, 1, -160, 450},
     {EnemyArchetype::Rusher, 1,  160, 450},
+    {EnemyArchetype::Spitter, 1,    0, 520},
 };
 static const EnemySpawn kMidHeavyEscort[] = {
     {EnemyArchetype::Grunt,  0, -250, 400},
     {EnemyArchetype::Grunt,  0,  250, 400},
     {EnemyArchetype::Heavy,  1,    0, 300},
-    {EnemyArchetype::Grunt,  1,    0, 450},
+    {EnemyArchetype::Spitter,1,    0, 450},
 };
 static const EnemySpawn kMidMixed[] = {
     {EnemyArchetype::Rusher, 0, -250, 380},
@@ -74,6 +76,7 @@ static const EnemySpawn kBossSpawns[] = {
 static const EnemySpawn kBossReinforcements[] = {
     {EnemyArchetype::Grunt,  0, -260, 330},
     {EnemyArchetype::Rusher, 0,  260, 330},
+    {EnemyArchetype::Spitter,0,    0, 520},
 };
 static const ObstacleSpawn kHeavyEscortObstacles[] = {
     {-300.f, 150.f, 30.f, 30.f},
@@ -87,7 +90,7 @@ static const RoomDef kIntroRoom = {kIntroSpawns, 3, nullptr, 0};
 static const RoomDef kBossRoom  = {kBossSpawns, 1, nullptr, 0};
 static const RoomDef kMiddleRooms[] = {
     {kMidGruntsRusher, 4, nullptr, 0},
-    {kMidRusherPack,   4, nullptr, 0},
+    {kMidRusherPack,   5, nullptr, 0},
     {kMidHeavyEscort,  4, kHeavyEscortObstacles, 2},
     {kMidMixed,        4, kMixedObstacles, 1},
     {kMidTwinHeavies,  3, nullptr, 0},
@@ -188,6 +191,13 @@ struct RunStats {
 - (int)currentRoom               { return _currentRoom + 1; } // 1-indexed for UI
 - (int)livesRemaining            { return _lives; }
 - (int)currentUpgradePlayerIndex { return (_phase == BrawlerGamePhaseUpgrade) ? _upgradePlayerIndex : -1; }
+
+- (int)exitEntityCount {
+    int count = 0;
+    for (EntityID id = 0; id < _world.entity_count(); ++id)
+        if (_world.exits().present(id)) count++;
+    return count;
+}
 
 - (void)_refreshOverlay {
     switch (_phase) {
@@ -376,6 +386,7 @@ struct RunStats {
 }
 
 - (void)_startNewRun {
+    AutoPilot_reset();
     _currentRoom = 0;
     _lives       = kStartingLives;
     for (int i = 0; i < kMaxPlayers; ++i)
@@ -459,8 +470,7 @@ struct RunStats {
     }
 
     _upgradePlayerIndex = -1;
-    _currentRoom += 1;
-    [self _loadRoom];
+    [self _spawnExit];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
 }
 
@@ -477,6 +487,12 @@ struct RunStats {
     // Boss room always gets the last (violet) palette; others cycle.
     BOOL isBossRoom = (_currentRoom >= kNumRooms - 1);
     _renderer.roomIndex = isBossRoom ? 5 : (_currentRoom % 5);
+}
+
+- (void)_spawnExit {
+    EntityID exit = _world.defer_create();
+    _world.add_component<PositionComponent>(exit) = {0.f, kRoomMaxY - 60.f, 0.f};
+    _world.add_component<ExitComponent>(exit);
 }
 
 - (void)_spawnPlayers {
@@ -553,6 +569,8 @@ struct RunStats {
 // mid-animation); waiting for removal means the room-clear message only
 // appears after the last enemy has fully collapsed.
 - (BOOL)_allEnemiesDefeated {
+    if ([self exitEntityCount] > 0)
+        return NO;
     if (!WaveSystem_room_finished(_world))
         return NO;
     for (EntityID id = 0; id < _world.entity_count(); ++id) {
@@ -724,6 +742,15 @@ struct RunStats {
                               color:(simd_float4){1.0f, 0.5f, 0.12f, 1.f}];
         }
 
+        for (EntityID id = 0; id < _world.entity_count(); ++id) {
+            if (!_world.projectiles().present(id)) continue;
+            if (!_world.has_component<PositionComponent>(id)) continue;
+            const auto& p = _world.get_component<PositionComponent>(id);
+            [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 18.f}
+                              count:1 speed:70.f size:7.f
+                              color:(simd_float4){1.0f, 0.6f, 0.2f, 1.f}];
+        }
+
         // Spawn markers glow on the floor before enemies arrive.
         for (EntityID id = 0; id < _world.entity_count(); ++id) {
             if (!_world.spawn_markers().present(id)) continue;
@@ -858,6 +885,25 @@ struct RunStats {
                     dispatch_async(dispatch_get_main_queue(), self.onPlayerDamaged);
             }
         });
+
+        _world.events().for_each(EventType::FinalKill, [self](const Event& ev) {
+            uint32_t killer = ev.finalKill.killerID;
+            if (_world.has_component<PositionComponent>(killer)) {
+                const auto& p = _world.get_component<PositionComponent>(killer);
+                [_renderer beginFinalKillZoomAt:(simd_float3){p.x, p.y, 0.f}];
+            }
+        });
+
+        BOOL exitReached = NO;
+        _world.events().for_each(EventType::ExitReached, [&exitReached](const Event& ev) {
+            (void)ev;
+            exitReached = YES;
+        });
+        if (exitReached && _currentRoom + 1 < kNumRooms) {
+            _currentRoom += 1;
+            [self _loadRoom];
+            [self _transitionToPhase:BrawlerGamePhasePlaying];
+        }
     }
 
     // -----------------------------------------------------------------------

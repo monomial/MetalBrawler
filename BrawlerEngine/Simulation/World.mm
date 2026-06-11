@@ -12,6 +12,8 @@
 #include "Systems/HazardSystem.h"
 #include "Systems/SpecialSystem.h"
 #include "Systems/PickupSystem.h"
+#include "Systems/ExitSystem.h"
+#include "Systems/ProjectileSystem.h"
 #include "Systems/WaveSystem.h"
 #include "Systems/ReviveSystem.h"
 #include <cassert>
@@ -40,6 +42,8 @@ template<> ComponentStorage<HazardComponent>&             World::_pool() { retur
 template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { return _specialMeters; }
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
+template<> ComponentStorage<ExitComponent>&               World::_pool() { return _exits; }
+template<> ComponentStorage<ProjectileComponent>&         World::_pool() { return _projectiles; }
 template<> ComponentStorage<WaveControllerComponent>&     World::_pool() { return _waveControllers; }
 template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool() { return _spawnMarkers; }
 template<> ComponentStorage<SpawnAnimComponent>&          World::_pool() { return _spawnAnims; }
@@ -53,6 +57,8 @@ World::World()
     , _deferredDestroyCount(0)
     , _accumulator(0.0f)
     , _hitStopTicks(0)
+    , _slowMoTicks(0)
+    , _slowMoScale(1.f)
     , _inputs{}
 {}
 
@@ -69,6 +75,11 @@ void World::defer_destroy(EntityID id) {
 
 void World::trigger_hit_stop(int ticks) {
     if (ticks > _hitStopTicks) _hitStopTicks = ticks;
+}
+
+void World::trigger_slow_motion(int ticks, float scale) {
+    if (ticks > _slowMoTicks) _slowMoTicks = ticks;
+    _slowMoScale = scale;
 }
 
 void World::flush() {
@@ -94,6 +105,8 @@ void World::flush() {
         _paths.remove(id);
         _specialMeters.remove(id);
         _heartPickups.remove(id);
+        _exits.remove(id);
+        _projectiles.remove(id);
         _waveControllers.remove(id);
         _spawnMarkers.remove(id);
         _spawnAnims.remove(id);
@@ -124,6 +137,8 @@ void World::tick(float gameDt) {
     // 1.75. KnockbackSystem — overrides AI/input velocity while an entity is
     //       being shoved (runs after the velocity writers, before integration)
     KnockbackSystem_update(*this, gameDt);
+    // 1.8. ProjectileSystem — ranged shots integrate after knockback, before physics.
+    ProjectileSystem_update(*this, gameDt);
     // 2. PhysicsSystem
     PhysicsSystem_update(*this, gameDt);
     // 2.5. WallCollisionSystem — clamp entities to room bounds
@@ -136,6 +151,8 @@ void World::tick(float gameDt) {
     CombatSystem_update(*this, gameDt);
     // 3.5. PickupSystem — lifetime + collection after combat can create hearts.
     PickupSystem_update(*this, gameDt);
+    // 3.52. ExitSystem — post-upgrade portal, after combat/pickups.
+    ExitSystem_update(*this, gameDt);
     // 3.55. WaveSystem — room enemy waves after pickups, before animation.
     WaveSystem_update(*this, gameDt);
     // 3.6. ReviveSystem — multiplayer teammates revive downed players after pickups.
@@ -172,6 +189,9 @@ void World::update(float physicalDt, float /*gameDt*/) {
         if (_hitStopTicks > 0) {
             tickGameDt = 0.0f;
             --_hitStopTicks;
+        } else if (_slowMoTicks > 0) {
+            tickGameDt = kFixedDt * _slowMoScale;
+            --_slowMoTicks;
         }
 
         tick(tickGameDt);

@@ -8,3 +8,4 @@ class World;
 // --autotest visual smoke mode in place of human input. Deterministic — no
 // randomness — so a seeded World replays identically.
 InputState AutoPilot_input(World& world, int playerIndex);
+void AutoPilot_reset();

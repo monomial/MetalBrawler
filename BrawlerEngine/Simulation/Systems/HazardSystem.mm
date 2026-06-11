@@ -119,7 +119,7 @@ void HazardSystem_update(World& world, float gameDt) {
             if (hp.current <= 0 &&
                 !Combat_try_second_wind(world, pid) &&
                 world.has_component<AnimationComponent>(pid)) {
-                Combat_apply_death(world, pid);
+                Combat_apply_death(world, pid, id);
             }
         }
     }
