@@ -2,8 +2,8 @@
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/WaveSystem.h"
 
-static constexpr int   kSlowMoTicks = 216;
-static constexpr float kSlowMoScale = 0.3f;
+static constexpr int   kSlowMoTicks = 400;
+static constexpr float kSlowMoScale = 0.1f;
 
 void Combat_spawn_heart_drop_if_needed(World& world, EntityID victimID) {
     if (!world.has_component<FactionComponent>(victimID)) return;

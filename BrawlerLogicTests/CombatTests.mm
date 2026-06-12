@@ -286,7 +286,7 @@ static EntityID spawnAttackingEnemy(World& world, float x, float y,
     addWaveController(lastKill, 0, 1);
     lastKill.update(kFixedDt, kFixedDt);
     XCTAssertEqual(eventCount(lastKill, EventType::FinalKill), 1);
-    XCTAssertEqualWithAccuracy(lastKill.time_scale(), 0.3f, 0.001f);
+    XCTAssertEqualWithAccuracy(lastKill.time_scale(), 0.1f, 0.001f);
     BOOL payloadOK = NO;
     lastKill.events().for_each(EventType::FinalKill, [p3, enemy, &payloadOK](const Event& ev) {
         payloadOK = ev.finalKill.killerID == p3 && ev.finalKill.victimID == enemy;

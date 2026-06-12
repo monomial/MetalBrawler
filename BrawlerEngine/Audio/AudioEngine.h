@@ -30,6 +30,8 @@
 
 // Background music.
 - (void)startBattleMusic;
+- (void)pauseMusic;
+- (void)resumeMusic;
 - (void)stopMusic;
 - (void)setMusicVolume:(float)volume; // 0.0–1.0, default 0.6
 

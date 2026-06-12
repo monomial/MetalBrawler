@@ -60,6 +60,7 @@ public:
     void trigger_hit_stop(int ticks);
     void trigger_slow_motion(int ticks, float scale);
     float time_scale() const { return _slowMoTicks > 0 ? _slowMoScale : 1.f; }
+    float slow_motion_duration_seconds() const;
 
     // Called by the platform layer once per render frame before update().
     // playerIndex 0–3 maps to the player entity with matching PlayerTagComponent.playerIndex.

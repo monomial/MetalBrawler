@@ -245,6 +245,7 @@ static const int kNumSfxNodes = 8;
     AVAudioPCMBuffer    *_uiClickBuf;
     AVAudioPlayer       *_musicPlayer;
     float                _musicVolume;
+    BOOL                 _musicPaused;
     BOOL                 _started;
 }
 
@@ -322,6 +323,10 @@ static const int kNumSfxNodes = 8;
         return;
     }
     if (_musicPlayer && _musicPlayer.playing) return;
+    if (_musicPlayer && _musicPaused) {
+        [self resumeMusic];
+        return;
+    }
 
     NSError *err = nil;
     _musicPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:url error:&err];
@@ -330,12 +335,26 @@ static const int kNumSfxNodes = 8;
     _musicPlayer.volume        = _musicVolume;
     [_musicPlayer prepareToPlay];
     [_musicPlayer play];
+    _musicPaused = NO;
     NSLog(@"AudioEngine: music started (%@)", url.lastPathComponent);
+}
+
+- (void)pauseMusic {
+    if (!_musicPlayer || !_musicPlayer.playing) return;
+    [_musicPlayer pause];
+    _musicPaused = YES;
+}
+
+- (void)resumeMusic {
+    if (!_musicPlayer || !_musicPaused) return;
+    [_musicPlayer play];
+    _musicPaused = NO;
 }
 
 - (void)stopMusic {
     [_musicPlayer stop];
     _musicPlayer = nil;
+    _musicPaused = NO;
 }
 
 - (void)setMusicVolume:(float)volume {

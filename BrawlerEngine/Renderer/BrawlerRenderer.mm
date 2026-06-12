@@ -85,6 +85,12 @@ static const simd_float3 kQuadVerts[6] = {
     { 0.5f,-0.5f,0.f},{ 0.5f, 0.5f,0.f},{-0.5f, 0.5f,0.f},
 };
 
+static const simd_float3 kExitArrowVerts[9] = {
+    {-14.f,-60.f,0.f},{ 14.f,-60.f,0.f},{-14.f, 22.f,0.f},
+    { 14.f,-60.f,0.f},{ 14.f, 22.f,0.f},{-14.f, 22.f,0.f},
+    {-36.f, 22.f,0.f},{ 36.f, 22.f,0.f},{  0.f, 60.f,0.f},
+};
+
 static const float kEntitySize   = 40.0f;
 static const float kCamDist      = 800.0f;  // base camera distance (single player)
 static const float kCamDistMax   = 1500.0f; // max zoom-out (players very far apart)
@@ -93,8 +99,7 @@ static const float kCamPitch     = 55.0f * ((float)M_PI / 180.0f);
 static const float kFOVY         = 70.0f * ((float)M_PI / 180.0f);
 static const float kNear         = 1.0f;
 static const float kFar          = 3000.0f;
-static const float kFinalKillZoomDuration = 1.8f;
-static const float kFinalKillZoomEaseBack = 0.5f;
+static const float kFinalKillZoomMinEaseBack = 0.5f;
 
 static simd_float4x4 make_perspective(float fovY, float aspect, float n, float f) {
     float t = 1.f / tanf(fovY * .5f);
@@ -172,6 +177,7 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     id<MTLDepthStencilState>   _shadowDepthState; // test, never write
     id<MTLSamplerState>        _linearSampler;
     id<MTLBuffer>              _quadVB;
+    id<MTLBuffer>              _exitArrowVB;
     id<MTLBuffer>              _boneBuf[3];      // triple-buffered bone matrices
     id<MTLTexture>             _whiteTexture;    // 1×1 white fallback when no diffuse
     int                        _frameIdx;
@@ -197,6 +203,7 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     float                      _hitBlur;     // 0..1, decays fast
     float                      _damageFlash; // 0..1, decays slower
     float                      _finalKillZoomTime;
+    float                      _finalKillZoomDuration;
     simd_float3                _finalKillZoomPos;
 
     BOOL                       _overlayVisible;
@@ -221,6 +228,8 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
 
     _quadVB   = [device newBufferWithBytes:kQuadVerts length:sizeof(kQuadVerts)
                                    options:MTLResourceStorageModeShared];
+    _exitArrowVB = [device newBufferWithBytes:kExitArrowVerts length:sizeof(kExitArrowVerts)
+                                      options:MTLResourceStorageModeShared];
     _proj     = matrix_identity_float4x4;
     _frameIdx = 0;
     // Default facing: π/2 = characters face +Y (up the screen) until first movement.
@@ -503,9 +512,10 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     _damageFlash = 1.f;
 }
 
-- (void)beginFinalKillZoomAt:(simd_float3)pos {
+- (void)beginFinalKillZoomAt:(simd_float3)pos duration:(float)seconds {
     _finalKillZoomPos = pos;
-    _finalKillZoomTime = kFinalKillZoomDuration;
+    _finalKillZoomDuration = fmaxf(seconds, 0.001f);
+    _finalKillZoomTime = _finalKillZoomDuration;
 }
 
 - (void)drawWorld:(World*)world inView:(MTKView*)view commandBuffer:(id<MTLCommandBuffer>)cmd {
@@ -560,10 +570,11 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     float spread  = fmaxf(pMaxX - pMinX, pMaxY - pMinY);
     float camDist = clampf(kCamDist + spread * kCamZoomScale, kCamDist, kCamDistMax);
     if (_finalKillZoomTime > 0.f) {
-        float elapsed = kFinalKillZoomDuration - _finalKillZoomTime;
+        float elapsed = _finalKillZoomDuration - _finalKillZoomTime;
+        float easeBack = fmaxf(kFinalKillZoomMinEaseBack, 0.25f * _finalKillZoomDuration);
         float zoom = 1.f;
-        if (_finalKillZoomTime < kFinalKillZoomEaseBack) {
-            float t = _finalKillZoomTime / kFinalKillZoomEaseBack;
+        if (_finalKillZoomTime < easeBack) {
+            float t = _finalKillZoomTime / easeBack;
             zoom = t * t * (3.f - 2.f * t);
         } else if (elapsed < 0.35f) {
             float t = elapsed / 0.35f;
@@ -772,23 +783,18 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             continue;
         }
 
-        // Exit portal: cyan floor glow plus a faint vertical pillar.
+        // Exit arrow: flat cyan ground marker pointing toward the top-edge exit.
         if (world->exits().present(eid)) {
             float pulse = 1.0f + 0.18f * sinf((float)CACurrentMediaTime() * 6.f + (float)eid);
             [enc setRenderPipelineState:_pipeline];
             [enc setDepthStencilState:_depthState];
-            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            [enc setVertexBuffer:_exitArrowVB offset:0 atIndex:0];
             DrawUniforms u;
-            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 3.f,
-                                                 70.f * pulse, 70.f * pulse));
-            u.color = (simd_float4){0.12f, 0.92f, 1.0f, 0.95f};
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 2.5f,
+                                                 pulse, pulse));
+            u.color = (simd_float4){0.12f * pulse, 0.92f * pulse, 1.0f * pulse, 0.95f};
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
-            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
-
-            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y, 22.f, 260.f, true));
-            u.color = (simd_float4){0.25f, 0.90f, 1.0f, 0.28f};
-            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
-            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:9];
             continue;
         }
 

@@ -357,6 +357,7 @@ struct RunStats {
             [_audio playUIClickSound];
             break;
         case BrawlerGamePhasePlaying:
+            [_audio resumeMusic];
             [_audio startBattleMusic];
             _phaseTimer = 0;
             break;
@@ -373,7 +374,7 @@ struct RunStats {
             _phaseTimer = kLoseDuration;
             break;
         case BrawlerGamePhasePaused:
-            // Leave music playing — startBattleMusic has a guard so resuming won't restart it.
+            [_audio pauseMusic];
             break;
         case BrawlerGamePhaseUpgrade:
             [self resetInput];
@@ -761,11 +762,6 @@ struct RunStats {
                               color:(simd_float4){1.0f, 0.58f, 0.16f, 1.f}];
         }
 
-        _world.events().for_each(EventType::WaveStarted, [self](const Event& ev) {
-            (void)ev;
-            [_audio playUIClickSound];
-        });
-
         _world.events().for_each(EventType::SpawnLanded, [self](const Event& ev) {
             uint32_t eid = ev.spawnLanded.entityID;
             if (_world.has_component<PositionComponent>(eid)) {
@@ -890,7 +886,8 @@ struct RunStats {
             uint32_t killer = ev.finalKill.killerID;
             if (_world.has_component<PositionComponent>(killer)) {
                 const auto& p = _world.get_component<PositionComponent>(killer);
-                [_renderer beginFinalKillZoomAt:(simd_float3){p.x, p.y, 0.f}];
+                [_renderer beginFinalKillZoomAt:(simd_float3){p.x, p.y, 0.f}
+                                       duration:_world.slow_motion_duration_seconds()];
             }
         });
 

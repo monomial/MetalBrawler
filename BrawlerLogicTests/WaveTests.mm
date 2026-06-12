@@ -217,7 +217,7 @@ static void setPlayerAttacking(World& world, EntityID player) {
         {(uint8_t)EnemyArchetype::Grunt, 0, 0.f, 300.f},
         {(uint8_t)EnemyArchetype::Heavy, 1, 120.f, 300.f},
     };
-    addController(world, spawns, 2, 2);
+    EntityID controller = addController(world, spawns, 2, 2);
 
     advance(world, kInitialWaveDelay + kMarkerTelegraph + kSpawnAnimDuration + 0.2f);
     EntityID enemy = firstEnemy(world);
@@ -225,6 +225,12 @@ static void setPlayerAttacking(World& world, EntityID player) {
     XCTAssertEqual(markerCount(world), 0);
 
     markEnemyDeadForWave(world, enemy);
+    world.update(kFrameDt, kFrameDt);
+    XCTAssertEqual(world.get_component<WaveControllerComponent>(controller).phase, WavePhaseFighting);
+    XCTAssertEqualWithAccuracy(world.get_component<WaveControllerComponent>(controller).timer,
+                               kInterWaveDelay - 1.0f / 120.0f, 0.001f);
+    XCTAssertEqual(markerCount(world), 0);
+
     advance(world, kInterWaveDelay - 0.2f);
     XCTAssertEqual(markerCount(world), 0);
     XCTAssertFalse(WaveSystem_room_finished(world));

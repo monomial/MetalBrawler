@@ -125,6 +125,15 @@
     XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(e).x, 1.6f, 0.001f);
 }
 
+- (void)test_slowMotionDurationSeconds_tracksRemainingWallClockTicks {
+    World world;
+    world.trigger_slow_motion(400, 0.1f);
+    XCTAssertEqualWithAccuracy(world.slow_motion_duration_seconds(), 400.f / 120.f, 0.0001f);
+
+    world.update(1.f / 120.f, 1.f / 120.f);
+    XCTAssertEqualWithAccuracy(world.slow_motion_duration_seconds(), 399.f / 120.f, 0.0001f);
+}
+
 - (void)test_hitStopTakesPrecedenceOverSlowMotion {
     World world;
     EntityID e = world.defer_create();

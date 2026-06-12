@@ -82,6 +82,10 @@ void World::trigger_slow_motion(int ticks, float scale) {
     _slowMoScale = scale;
 }
 
+float World::slow_motion_duration_seconds() const {
+    return (float)_slowMoTicks * kFixedDt;
+}
+
 void World::flush() {
     for (uint32_t i = 0; i < _deferredDestroyCount; ++i) {
         EntityID id = _deferredDestroy[i];
