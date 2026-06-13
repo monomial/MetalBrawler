@@ -1,5 +1,6 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
+#include "Simulation/Systems/CombatHelpers.h"
 #include "Simulation/Systems/WaveSystem.h"
 #include "Platform/InputState.h"
 
@@ -40,6 +41,13 @@ static EntityID spawnEnemy(World& world, float x, float y, int hp = 3) {
     world.add_component<VelocityComponent>(e)       = {0, 0, 0};
     world.add_component<FactionComponent>(e).type   = FactionComponent::Enemy;
     world.add_component<HealthComponent>(e)         = {hp, hp};
+    return e;
+}
+
+static EntityID spawnBossEnemy(World& world, float x, float y, int hp = 12) {
+    EntityID e = spawnEnemy(world, x, y, hp);
+    world.add_component<BossTagComponent>(e);
+    world.add_component<AnimationComponent>(e);
     return e;
 }
 
@@ -292,6 +300,33 @@ static EntityID spawnAttackingEnemy(World& world, float x, float y,
         payloadOK = ev.finalKill.killerID == p3 && ev.finalKill.victimID == enemy;
     });
     XCTAssertTrue(payloadOK);
+}
+
+- (void)test_twinBossFirstDeathDoesNotSweepSecondLastDeathSweepsMinions {
+    World world;
+    EntityID player = spawnPlayer(world, 0, 0);
+    EntityID firstBoss = spawnBossEnemy(world, -80, 300);
+    EntityID secondBoss = spawnBossEnemy(world, 80, 300);
+    EntityID minion = spawnEnemy(world, 0, 200, 3);
+
+    EntityID c = addWaveController(world, 0, 1);
+    world.get_component<WaveControllerComponent>(c).bossMode = true;
+
+    world.get_component<HealthComponent>(firstBoss).current = 0;
+    Combat_apply_death(world, firstBoss, player);
+    XCTAssertTrue(world.has_component<HealthComponent>(secondBoss));
+    XCTAssertEqual(world.get_component<HealthComponent>(secondBoss).current, 12);
+    XCTAssertEqual(world.get_component<HealthComponent>(minion).current, 3);
+    XCTAssertFalse(WaveSystem_room_finished(world));
+    XCTAssertEqual(eventCount(world, EventType::FinalKill), 0);
+    XCTAssertEqualWithAccuracy(world.time_scale(), 1.f, 0.001f);
+
+    world.get_component<HealthComponent>(secondBoss).current = 0;
+    Combat_apply_death(world, secondBoss, player);
+    XCTAssertEqual(world.get_component<HealthComponent>(minion).current, 0);
+    XCTAssertTrue(WaveSystem_room_finished(world));
+    XCTAssertEqual(eventCount(world, EventType::FinalKill), 1);
+    XCTAssertEqualWithAccuracy(world.time_scale(), 0.1f, 0.001f);
 }
 
 // ---------------------------------------------------------------------------

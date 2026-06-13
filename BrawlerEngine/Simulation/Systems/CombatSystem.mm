@@ -1,4 +1,5 @@
 #include "CombatSystem.h"
+#include "Simulation/Difficulty.h"
 #include "Simulation/World.h"
 #include "Platform/InputState.h"
 #include "Simulation/Systems/AnimationSystem.h"
@@ -100,8 +101,9 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
     EntityID proj = world.defer_create();
     world.add_component<PositionComponent>(proj) = {atkPos.x, atkPos.y, 12.f};
     ProjectileComponent& pc = world.add_component<ProjectileComponent>(proj);
-    pc.vx = dirX * kProjectileSpeed;
-    pc.vy = dirY * kProjectileSpeed;
+    float speed = kProjectileSpeed * Difficulty_projectile_mult(world.difficulty());
+    pc.vx = dirX * speed;
+    pc.vy = dirY * speed;
     pc.damage = damage;
     return true;
 }

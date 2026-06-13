@@ -98,6 +98,8 @@ public:
 
     void set_scrap(int scrap) { _scrap = scrap; }
     int scrap() const { return _scrap; }
+    void set_difficulty(int level) { _difficulty = level; }
+    int difficulty() const { return _difficulty; }
 
     // Per-frame event bus — cleared at top of each tick, readable by all systems.
     EventBus& events() { return _events; }
@@ -156,6 +158,7 @@ private:
     float      _slowMoScale;    // gameDt multiplier while slow-mo is active
     InputState _inputs[4];      // one slot per player (0–3), set by platform each render frame
     int        _scrap;          // delegate-mirrored run currency for deterministic shop logic
+    int        _difficulty;     // 0-based room difficulty, mirrored by delegate at room load
 
     ComponentStorage<PositionComponent>  _positions;
     ComponentStorage<VelocityComponent>  _velocities;

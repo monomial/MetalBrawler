@@ -69,6 +69,7 @@ World::World()
     , _slowMoScale(1.f)
     , _inputs{}
     , _scrap(0)
+    , _difficulty(0)
 {}
 
 World::~World() {}

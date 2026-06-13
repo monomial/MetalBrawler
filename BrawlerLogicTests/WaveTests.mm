@@ -38,6 +38,7 @@ static EntityID addController(World& world, const PendingSpawn* spawns, int spaw
     for (int i = 0; i < spawnCount; ++i)
         ctrl.spawns[i] = spawns[i];
     if (bossMode) {
+        ctrl.bossMinionCap = kBossMinionCap;
         ctrl.reinforceCount = 2;
         ctrl.reinforcements[0] = {(uint8_t)EnemyArchetype::Grunt, 0, -160.f, 260.f};
         ctrl.reinforcements[1] = {(uint8_t)EnemyArchetype::Rusher, 0, 160.f, 260.f};
@@ -311,8 +312,9 @@ static void setPlayerAttacking(World& world, EntityID player) {
     XCTAssertEqual(livingMinionCount(world), 2);
 
     Enemy_spawn(world, (uint8_t)EnemyArchetype::Grunt, 0.f, 180.f);
+    Enemy_spawn(world, (uint8_t)EnemyArchetype::Grunt, 80.f, 180.f);
     advance(world, kBossReinforceInterval + 0.2f);
-    XCTAssertEqual(markerCount(world), 0, @"three live minions should hold the cap");
+    XCTAssertEqual(markerCount(world), 0, @"four live minions should hold the cap");
 
     Combat_apply_death(world, boss);
     world.update(kFrameDt, kFrameDt);

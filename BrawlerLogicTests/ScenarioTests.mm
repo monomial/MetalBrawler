@@ -80,10 +80,10 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 420.f);
-    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 420 sim-seconds (ended in phase %ld, room %d, lives %d)",
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 510.f);
+    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 510 sim-seconds (ended in phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
-    XCTAssertEqual(d.currentRoom, 7, @"a full run is intro + 4 middle rooms + shop + boss");
+    XCTAssertEqual(d.currentRoom, 8, @"a full run is intro + 4 middle rooms + shop + boss + twin boss");
 
     // Every room fires RoomClear; every non-final clear offers an upgrade.
     NSInteger clears = 0, upgrades = 0;
@@ -91,8 +91,8 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
         if (p.integerValue == BrawlerGamePhaseRoomClear) clears++;
         if (p.integerValue == BrawlerGamePhaseUpgrade)   upgrades++;
     }
-    XCTAssertGreaterThanOrEqual(clears,   (NSInteger)5);
-    XCTAssertGreaterThanOrEqual(upgrades, (NSInteger)4);
+    XCTAssertGreaterThanOrEqual(clears,   (NSInteger)6);
+    XCTAssertGreaterThanOrEqual(upgrades, (NSInteger)5);
 }
 
 - (void)test_autoPilot_2P_winsFullRun {
@@ -102,9 +102,29 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d startGameWithPlayers:2];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 420.f);
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 510.f);
     XCTAssertTrue(won, @"2P AutoPilot failed to win (phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
+    XCTAssertEqual(d.currentRoom, 8);
+}
+
+- (void)test_singleBossRoomOffersUpgradeAndWinWaitsForTwinBoss {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:42];
+    d.autoPilotEnabled = YES;
+
+    [d startGameWithPlayers:1];
+    XCTAssertTrue(advanceUntilRoom(d, 7, 360.f), @"AutoPilot must reach the single-boss room");
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
+
+    XCTAssertTrue(advanceUntilPhase(d, BrawlerGamePhaseUpgrade, 120.f),
+                  @"single-boss room should clear into an upgrade instead of Win");
+    XCTAssertEqual(d.currentRoom, 7);
+    XCTAssertNotEqual(d.gamePhase, BrawlerGamePhaseWin);
+
+    pickPerk(d);
+    [d advanceFrame:kFrameDt];
+    XCTAssertTrue(advanceUntilRoom(d, 8, 30.f), @"exit after single-boss upgrade should load twin-boss room");
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
 }
 
 // --- Lose path --------------------------------------------------------------

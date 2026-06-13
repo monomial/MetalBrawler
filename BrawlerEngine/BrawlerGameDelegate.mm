@@ -42,9 +42,10 @@ struct RoomDef {
 };
 
 // Run structure: fixed intro room, then kMiddlePerRun of the middle pool in a
-// seeded-shuffled order, boss last.
+// seeded-shuffled order, single boss, then twin-boss finale.
 static const EnemySpawn kIntroSpawns[] = {
-    {EnemyArchetype::Grunt,  0,    0, 350},
+    {EnemyArchetype::Grunt,  0, -140, 350},
+    {EnemyArchetype::Grunt,  0,  140, 350},
     {EnemyArchetype::Grunt,  1, -200, 250},
     {EnemyArchetype::Grunt,  1,  200, 250},
 };
@@ -54,34 +55,44 @@ static const EnemySpawn kMidGruntsRusher[] = {
     {EnemyArchetype::Grunt,  1, -160, 390},
     {EnemyArchetype::Rusher, 1,  160, 390},
     {EnemyArchetype::Leaper, 1,    0, 470},
+    {EnemyArchetype::Spitter,2,    0, 520},
 };
 static const EnemySpawn kMidRusherPack[] = {
     {EnemyArchetype::Rusher, 0, -250, 380},
     {EnemyArchetype::Rusher, 0,  250, 380},
     {EnemyArchetype::Rusher, 1, -160, 450},
     {EnemyArchetype::Rusher, 1,  160, 450},
+    {EnemyArchetype::Rusher, 1,    0, 360},
     {EnemyArchetype::Spitter, 1,    0, 520},
+    {EnemyArchetype::Leaper, 2,    0, 430},
 };
 static const EnemySpawn kMidHeavyEscort[] = {
     {EnemyArchetype::Grunt,  0, -250, 400},
     {EnemyArchetype::Grunt,  0,  250, 400},
     {EnemyArchetype::Heavy,  1,    0, 300},
     {EnemyArchetype::Spitter,1,    0, 450},
+    {EnemyArchetype::Spitter,2, -180, 510},
 };
 static const EnemySpawn kMidMixed[] = {
     {EnemyArchetype::Rusher, 0, -250, 380},
     {EnemyArchetype::Rusher, 0,  250, 380},
     {EnemyArchetype::Heavy,  1, -150, 300}, // clear of the (0,320) pillar
     {EnemyArchetype::Grunt,  1,    0, 150},
+    {EnemyArchetype::Leaper, 2,  180, 460},
 };
 static const EnemySpawn kMidTwinHeavies[] = {
     {EnemyArchetype::Heavy,  0, -180, 320},
     {EnemyArchetype::Leaper, 0,  180, 420},
     {EnemyArchetype::Heavy,  1,  120, 320},
     {EnemyArchetype::Rusher, 1, -260, 400},
+    {EnemyArchetype::Spitter,2,    0, 520},
 };
 static const EnemySpawn kBossSpawns[] = {
     {EnemyArchetype::Boss,   0,    0, 350},
+};
+static const EnemySpawn kFinalSpawns[] = {
+    {EnemyArchetype::Boss,   0, -220, 350},
+    {EnemyArchetype::Boss,   0,  220, 350},
 };
 static const EnemySpawn kBossReinforcements[] = {
     {EnemyArchetype::Grunt,  0, -260, 330},
@@ -121,20 +132,21 @@ static const BoxSpawn kShopBoxes[] = {
     {-360.f, 320.f, true}, {360.f, 320.f, false}, {0.f, 560.f, false},
 };
 
-static const RoomDef kIntroRoom = {kIntroSpawns, 3, nullptr, 0, kIntroBoxes, 3, false};
+static const RoomDef kIntroRoom = {kIntroSpawns, 4, nullptr, 0, kIntroBoxes, 3, false};
 static const RoomDef kBossRoom  = {kBossSpawns, 1, nullptr, 0, kBossBoxes, 2, false};
+static const RoomDef kFinalRoom = {kFinalSpawns, 2, nullptr, 0, kBossBoxes, 2, false};
 static const RoomDef kShopRoom  = {nullptr, 0, nullptr, 0, kShopBoxes, 3, true};
 static const RoomDef kMiddleRooms[] = {
-    {kMidGruntsRusher, 5, nullptr, 0, kGruntsBoxes, 3, false},
-    {kMidRusherPack,   5, nullptr, 0, kRusherBoxes, 3, false},
-    {kMidHeavyEscort,  4, kHeavyEscortObstacles, 2, kHeavyBoxes, 4, false},
-    {kMidMixed,        4, kMixedObstacles, 1, kMixedBoxes, 3, false},
-    {kMidTwinHeavies,  4, nullptr, 0, kTwinBoxes, 3, false},
+    {kMidGruntsRusher, 6, nullptr, 0, kGruntsBoxes, 3, false},
+    {kMidRusherPack,   7, nullptr, 0, kRusherBoxes, 3, false},
+    {kMidHeavyEscort,  5, kHeavyEscortObstacles, 2, kHeavyBoxes, 4, false},
+    {kMidMixed,        5, kMixedObstacles, 1, kMixedBoxes, 3, false},
+    {kMidTwinHeavies,  5, nullptr, 0, kTwinBoxes, 3, false},
 };
 static const int kNumMiddleRooms = 5;
 static const int kMiddlePerRun   = 4;                  // middle rooms per run
 static const int kShopRoomIndex  = 3;                  // 0-based: after two middles
-static const int kNumRooms       = kMiddlePerRun + 3;  // intro + middles + shop + boss
+static const int kNumRooms       = kMiddlePerRun + 4;  // intro + middles + shop + boss + final
 static const int kStartingLives  = 3;
 static const int kMaxPlayers     = 4;
 
@@ -469,7 +481,8 @@ struct RunStats {
 - (const RoomDef&)_currentRoomDef {
     if (_currentRoom <= 0)              return kIntroRoom;
     if (_currentRoom == kShopRoomIndex) return kShopRoom;
-    if (_currentRoom >= kNumRooms - 1)  return kBossRoom;
+    if (_currentRoom == kNumRooms - 1)  return kFinalRoom;
+    if (_currentRoom == kNumRooms - 2)  return kBossRoom;
     int middleSlot = (_currentRoom < kShopRoomIndex) ? (_currentRoom - 1)
                                                      : (_currentRoom - 2);
     return kMiddleRooms[_middleOrder[middleSlot]];
@@ -540,6 +553,7 @@ struct RunStats {
     _world = World();
     _world.set_seed(self.rngSeedOverride ? self.rngSeedOverride : arc4random());
     _world.set_scrap(_scrap);
+    _world.set_difficulty(_currentRoom);
     [self resetInput];
     [self _spawnPlayers];
     [self _spawnWaveControllerForCurrentRoom];
@@ -606,7 +620,8 @@ struct RunStats {
     wave.currentWave = 0;
     wave.timer = kInitialWaveDelay;
     wave.phase = WavePhaseInitialDelay;
-    wave.bossMode = (_currentRoom >= kNumRooms - 1);
+    wave.bossMode = (_currentRoom >= kNumRooms - 2);
+    wave.bossMinionCap = (_currentRoom == kNumRooms - 1) ? kFinalBossMinionCap : kBossMinionCap;
     for (int i = 0; i < room.count; ++i) {
         const EnemySpawn& spawn = room.spawns[i];
         wave.spawns[i] = {(uint8_t)spawn.type, spawn.wave, spawn.x, spawn.y};

@@ -1,4 +1,5 @@
 #include "WaveSystem.h"
+#include "Simulation/Difficulty.h"
 #include "Simulation/Systems/EnemyFactory.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
@@ -196,7 +197,7 @@ void WaveSystem_update(World& world, float gameDt) {
                 if (marker_count(world) == 0) {
                     ctrl.phase = WavePhaseFighting;
                     ctrl.timer = (ctrl.bossMode && ctrl.currentWave + 1 >= ctrl.waveCount)
-                        ? kBossReinforceInterval : 0.f;
+                        ? kBossReinforceInterval * Difficulty_reinforce_mult(world.difficulty()) : 0.f;
                 }
                 break;
 
@@ -225,8 +226,8 @@ void WaveSystem_update(World& world, float gameDt) {
                     break;
                 }
 
-                if (living_minion_count(world) >= kBossMinionCap) {
-                    ctrl.timer = kBossReinforceInterval;
+                if (living_minion_count(world) >= ctrl.bossMinionCap) {
+                    ctrl.timer = kBossReinforceInterval * Difficulty_reinforce_mult(world.difficulty());
                     break;
                 }
                 ctrl.timer -= gameDt;

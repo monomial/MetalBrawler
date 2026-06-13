@@ -6,7 +6,8 @@ static constexpr float kMarkerTelegraph       = 1.0f;
 static constexpr float kInterWaveDelay        = 1.5f;
 static constexpr float kSpawnAnimDuration     = 0.6f;
 static constexpr float kBossReinforceInterval = 9.0f;
-static constexpr int   kBossMinionCap         = 3;
+static constexpr int   kBossMinionCap         = 4;
+static constexpr int   kFinalBossMinionCap    = 3;
 
 enum WavePhase : uint8_t {
     WavePhaseInitialDelay = 0,

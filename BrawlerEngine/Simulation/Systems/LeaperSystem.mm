@@ -1,4 +1,5 @@
 #include "LeaperSystem.h"
+#include "Simulation/Difficulty.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/CombatHelpers.h"
@@ -9,8 +10,6 @@ static constexpr uint8_t kLeaperWalk = 0;
 static constexpr uint8_t kLeaperTelegraph = 1;
 static constexpr uint8_t kLeaperLeap = 2;
 static constexpr uint8_t kLeaperRecover = 3;
-static constexpr float kTelegraphDuration = 0.9f;
-static constexpr float kLeapDuration = 0.40f;
 static constexpr float kRecoverDuration = 0.6f;
 static constexpr float kRetryCooldown = 0.5f;
 static constexpr float kLeapMin = 180.f;
@@ -152,7 +151,7 @@ void LeaperSystem_update(World& world, float gameDt) {
             }
 
             leap.state = kLeaperTelegraph;
-            leap.timer = kTelegraphDuration;
+            leap.timer = Difficulty_leaper_telegraph(world.difficulty());
             leap.startX = pos.x;
             leap.startY = pos.y;
             leap.destX = destX;
@@ -189,7 +188,7 @@ void LeaperSystem_update(World& world, float gameDt) {
 
         if (leap.state == kLeaperLeap) {
             leap.timer += gameDt;
-            float t = clampf(leap.timer / kLeapDuration, 0.f, 1.f);
+            float t = clampf(leap.timer / Difficulty_leap_duration(world.difficulty()), 0.f, 1.f);
             float eased = smoothstep(t);
             pos.x = leap.startX + (leap.destX - leap.startX) * eased;
             pos.y = leap.startY + (leap.destY - leap.startY) * eased;
@@ -210,7 +209,8 @@ void LeaperSystem_update(World& world, float gameDt) {
             if (leap.timer <= 0.f) {
                 leap.state = kLeaperWalk;
                 leap.timer = 0.f;
-                leap.cooldown = enemy_archetype_def((uint8_t)EnemyArchetype::Leaper).attackCooldown;
+                leap.cooldown = enemy_archetype_def((uint8_t)EnemyArchetype::Leaper).attackCooldown *
+                                Difficulty_cooldown_mult(world.difficulty());
             }
         }
     }

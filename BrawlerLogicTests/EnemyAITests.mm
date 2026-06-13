@@ -1,6 +1,8 @@
 #import <XCTest/XCTest.h>
+#include "Simulation/Difficulty.h"
 #include "Simulation/World.h"
 #include "Simulation/Systems/AnimationSystem.h"
+#include <math.h>
 
 static constexpr float kFixedDt  = 1.0f / 120.0f;
 static constexpr float kEps      = 1e-3f;
@@ -11,6 +13,7 @@ static EntityID spawnPlayer(World& world, float x, float y) {
     world.add_component<PlayerTagComponent>(e) = {true, 0};
     world.add_component<PositionComponent>(e)         = {x, y, 0};
     world.add_component<FactionComponent>(e).type     = FactionComponent::Player;
+    world.add_component<HealthComponent>(e)           = {10, 10};
     return e;
 }
 
@@ -27,6 +30,29 @@ static EntityID spawnEnemy(World& world, float x, float y) {
 @end
 
 @implementation EnemyAITests
+
+- (void)test_difficultyHelpers_matchDesignValuesAndClamps {
+    XCTAssertEqualWithAccuracy(Difficulty_cooldown_mult(0), 1.f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_speed_mult(0), 1.f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_projectile_mult(0), 1.f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_leaper_telegraph(0), 0.9f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_leap_duration(0), 0.4f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_reinforce_mult(0), 1.f, kEps);
+
+    XCTAssertEqualWithAccuracy(Difficulty_cooldown_mult(4), 0.72f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_speed_mult(4), 1.12f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_projectile_mult(4), 1.14f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_leaper_telegraph(4), 0.72f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_leap_duration(4), 0.34f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_reinforce_mult(4), 0.80f, kEps);
+
+    XCTAssertEqualWithAccuracy(Difficulty_cooldown_mult(100), 0.45f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_speed_mult(100), 1.25f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_projectile_mult(100), 1.30f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_leaper_telegraph(100), 0.55f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_leap_duration(100), 0.30f, kEps);
+    XCTAssertEqualWithAccuracy(Difficulty_reinforce_mult(100), 0.60f, kEps);
+}
 
 - (void)test_enemy_movesCloserToPlayer {
     World world;
@@ -202,6 +228,64 @@ static EntityID spawnEnemy(World& world, float x, float y) {
                    AnimClipID::Idle);
     XCTAssertEqual(world.get_component<AnimationComponent>(enemy).requestedClip,
                    AnimClipID::Idle);
+}
+
+- (void)test_difficultyScalesEnemyCooldownAndMoveSpeed {
+    World world;
+    world.set_difficulty(4);
+    spawnPlayer(world, 0, 0);
+    EntityID enemy = spawnEnemy(world, 50, 0);
+    world.add_component<AnimationComponent>(enemy);
+    world.add_component<EnemyAttackCooldownComponent>(enemy) = {0.f, 0.f};
+    world.add_component<EnemyArchetypeComponent>(enemy).type = (uint8_t)EnemyArchetype::Grunt;
+
+    world.update(kFixedDt, kFixedDt);
+
+    const auto& cd = world.get_component<EnemyAttackCooldownComponent>(enemy);
+    XCTAssertEqualWithAccuracy(cd.remaining,
+                               enemy_archetype_def((uint8_t)EnemyArchetype::Grunt).attackCooldown * 0.72f,
+                               kEps);
+
+    World speedWorld;
+    speedWorld.set_difficulty(4);
+    spawnPlayer(speedWorld, 0, 0);
+    EntityID mover = spawnEnemy(speedWorld, 400, 0);
+    speedWorld.add_component<EnemyArchetypeComponent>(mover).type = (uint8_t)EnemyArchetype::Grunt;
+    speedWorld.update(kFixedDt, kFixedDt);
+    XCTAssertEqualWithAccuracy(speedWorld.get_component<VelocityComponent>(mover).vx, -168.f, kEps);
+}
+
+- (void)test_difficultyScalesLeaperTelegraphLeapAndCooldownWithTelegraphFloor {
+    World world;
+    world.set_difficulty(4);
+    spawnPlayer(world, 0, 0);
+    EntityID leaper = spawnEnemy(world, 0, 300);
+    world.add_component<AnimationComponent>(leaper);
+    world.add_component<EnemyArchetypeComponent>(leaper).type = (uint8_t)EnemyArchetype::Leaper;
+    world.add_component<LeaperComponent>(leaper);
+
+    world.update(kFixedDt, kFixedDt);
+    LeaperComponent& leap = world.get_component<LeaperComponent>(leaper);
+    XCTAssertEqual(leap.state, 1);
+    XCTAssertEqualWithAccuracy(leap.timer, Difficulty_leaper_telegraph(4), kEps);
+
+    leap.timer = 0.f;
+    world.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(leap.state, 2);
+    float startY = world.get_component<PositionComponent>(leaper).y;
+    float destX = leap.destX;
+    float destY = leap.destY;
+    for (int i = 0; i < 42; ++i) world.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(leap.state, 3);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(leaper).x, destX, 0.01f);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(leaper).y, destY, 0.01f);
+    XCTAssertGreaterThan(fabsf(startY - destY), 0.01f);
+
+    leap.timer = 0.f;
+    world.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(leap.state, 0);
+    XCTAssertEqualWithAccuracy(leap.cooldown, 4.f * Difficulty_cooldown_mult(4), kEps);
+    XCTAssertGreaterThanOrEqual(Difficulty_leaper_telegraph(100), 0.55f);
 }
 
 - (void)test_enemyStandsStillDuringWindup {

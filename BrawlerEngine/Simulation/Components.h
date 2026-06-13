@@ -179,6 +179,7 @@ struct WaveControllerComponent {
     float timer = 0.f;
     uint8_t phase = 0; // 0 InitialDelay, 1 Telegraph, 2 Fighting, 3 Done
     bool bossMode = false;
+    int bossMinionCap = 3;
     PendingSpawn reinforcements[8] = {};
     int reinforceCount = 0;
 };

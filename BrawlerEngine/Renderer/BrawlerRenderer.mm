@@ -5,6 +5,7 @@
 #import <CoreText/CoreText.h>
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
+#include "Simulation/Difficulty.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include "Simulation/Systems/WaveSystem.h"
 #include "Assets/CharacterLoader.h"
@@ -977,7 +978,7 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             if (world->has_component<LeaperComponent>(eid)) {
                 const auto& leap = world->get_component<LeaperComponent>(eid);
                 if (leap.state == 2) {
-                    float t = clampf(leap.timer / 0.40f, 0.f, 1.f);
+                    float t = clampf(leap.timer / Difficulty_leap_duration(world->difficulty()), 0.f, 1.f);
                     zOffset += sinf(t * (float)M_PI) * 130.f;
                 }
             }

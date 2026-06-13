@@ -366,6 +366,7 @@
 		F8EA69DF4FB6B3FAF54FA58D /* InputTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InputTests.mm; sourceTree = "<group>"; };
 		FAF3F21DD7E270F0BC8FA7AC /* InputState.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputState.h; sourceTree = "<group>"; };
 		FBA387FDC8009B9AC204C7A6 /* ReviveTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ReviveTests.mm; sourceTree = "<group>"; };
+		FCE1569D4C1ADA2A49F35FD4 /* Difficulty.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Difficulty.h; sourceTree = "<group>"; };
 		FEBA70EAAA83493ED7BCE052 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -699,6 +700,7 @@
 				4C0FC36C17D24C6AEF5AA2FD /* AutoPilot.h */,
 				CF9FA6911941DBCF64A77A5A /* AutoPilot.mm */,
 				68EFA4044C94C89BE86E76FE /* Components.h */,
+				FCE1569D4C1ADA2A49F35FD4 /* Difficulty.h */,
 				066039CBB33075C16F617655 /* EnemyArchetypes.h */,
 				72EF48FFC9B95A1916C4568A /* EventBus.h */,
 				B4C88275BB431FFCDEDDF60E /* RoomBounds.h */,

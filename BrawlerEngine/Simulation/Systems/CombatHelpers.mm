@@ -79,6 +79,15 @@ static bool any_other_living_enemy(World& world, EntityID victimID) {
     return false;
 }
 
+static bool any_other_living_boss(World& world, EntityID victimID) {
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (id == victimID) continue;
+        if (!world.boss_tags().present(id)) continue;
+        if (is_living_enemy_for_sweep(world, id)) return true;
+    }
+    return false;
+}
+
 static void trigger_final_kill_if_needed(World& world, EntityID victimID, EntityID killerID) {
     if (killerID == kInvalidEntity) return;
     if (!world.has_component<FactionComponent>(victimID)) return;
@@ -157,7 +166,8 @@ static void Combat_apply_death_internal(World& world, EntityID victimID, EntityI
         vel.vx = vel.vy = vel.vz = 0.f;
     }
 
-    if (allowBossSweep && world.has_component<BossTagComponent>(victimID)) {
+    if (allowBossSweep && world.has_component<BossTagComponent>(victimID) &&
+        !any_other_living_boss(world, victimID)) {
         for (EntityID id = 0; id < world.entity_count(); ++id) {
             if (id == victimID) continue;
             if (!is_living_enemy_for_sweep(world, id)) continue;

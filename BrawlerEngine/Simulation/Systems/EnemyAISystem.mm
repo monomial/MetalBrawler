@@ -1,5 +1,6 @@
 #include "EnemyAISystem.h"
 #include "Simulation/World.h"
+#include "Simulation/Difficulty.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include <math.h>
@@ -11,7 +12,8 @@ static constexpr float kStopRadius          = 110.0f; // stop chasing within thi
 static constexpr float kEnemyAttackCooldown = 2.0f;   // seconds between attack initiations
 static constexpr float kEnemyAttackWindup   = 0.35f;  // committed warning before punch
 static constexpr float kRangedTelegraphWidth = 18.f;
-static constexpr float kRangedMaxDistance = 1050.f;
+static constexpr float kProjectileBaseSpeed = 420.f;
+static constexpr float kProjectileLifetime = 2.5f;
 static constexpr float kAimStep = 20.f;
 
 static bool point_blocked_by_obstacle(World& world, float x, float y) {
@@ -30,7 +32,9 @@ static bool point_blocked_by_obstacle(World& world, float x, float y) {
 static float telegraph_distance_until_blocked(World& world, const PositionComponent& from,
                                               float dirX, float dirY) {
     float lastClear = 0.f;
-    for (float d = kAimStep; d <= kRangedMaxDistance; d += kAimStep) {
+    float maxDistance = kProjectileBaseSpeed * Difficulty_projectile_mult(world.difficulty()) *
+                        kProjectileLifetime;
+    for (float d = kAimStep; d <= maxDistance; d += kAimStep) {
         float x = from.x + dirX * d;
         float y = from.y + dirY * d;
         if (x < kRoomMinX || x > kRoomMaxX || y < kRoomMinY || y > kRoomMaxY)
@@ -39,7 +43,7 @@ static float telegraph_distance_until_blocked(World& world, const PositionCompon
             return lastClear;
         lastClear = d;
     }
-    return kRangedMaxDistance;
+    return maxDistance;
 }
 
 void EnemyAISystem_update(World& world, float gameDt) {
@@ -95,9 +99,9 @@ void EnemyAISystem_update(World& world, float gameDt) {
             isRusher = archetype == (uint8_t)EnemyArchetype::Rusher;
             const EnemyArchetypeDef& def =
                 enemy_archetype_def(archetype);
-            moveSpeed  = def.moveSpeed;
+            moveSpeed  = def.moveSpeed * Difficulty_speed_mult(world.difficulty());
             stopRadius = def.stopRadius;
-            cooldown   = def.attackCooldown;
+            cooldown   = def.attackCooldown * Difficulty_cooldown_mult(world.difficulty());
         }
 
         // Find nearest alive player.
