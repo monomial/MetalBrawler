@@ -80,10 +80,10 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 360.f);
-    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 360 sim-seconds (ended in phase %ld, room %d, lives %d)",
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 420.f);
+    XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 420 sim-seconds (ended in phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
-    XCTAssertEqual(d.currentRoom, 6, @"a full run is intro + 4 middle rooms + boss");
+    XCTAssertEqual(d.currentRoom, 7, @"a full run is intro + 4 middle rooms + shop + boss");
 
     // Every room fires RoomClear; every non-final clear offers an upgrade.
     NSInteger clears = 0, upgrades = 0;
@@ -102,7 +102,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d startGameWithPlayers:2];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
 
-    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 360.f);
+    BOOL won = advanceUntilPhase(d, BrawlerGamePhaseWin, 420.f);
     XCTAssertTrue(won, @"2P AutoPilot failed to win (phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
 }

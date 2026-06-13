@@ -130,6 +130,11 @@ struct HeartPickupComponent {
     float lifetime = 8.f;
 };
 
+struct ScrapPickupComponent {
+    int value = 2;
+    float lifetime = 12.f;
+};
+
 struct ExitComponent {
     bool active = true;
 };
@@ -192,6 +197,20 @@ struct SpawnAnimComponent {
 struct ObstacleComponent {
     float halfW = 30.f;
     float halfH = 30.f;
+};
+
+struct BoxComponent {
+    bool hasScrap = true;
+};
+
+struct ShopkeeperComponent {
+    bool active = true;
+};
+
+struct ShopItemComponent {
+    uint8_t perkID = 0;
+    int price = 25;
+    bool prevAttack[4] = {};
 };
 
 // Looping waypoint path. HazardSystem moves the entity along the closed

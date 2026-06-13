@@ -29,6 +29,8 @@ struct BrawlerPerkSummary {
 // 0-based room number — selects the room color palette. Set at room load.
 @property (nonatomic) int roomIndex;
 @property (nonatomic) int totalRooms;
+@property (nonatomic) int scrapCount;
+@property (nonatomic, copy) NSString *shopPrompt;
 
 // Shared phase overlay rendered into the Metal drawable, so macOS/iOS/tvOS
 // present the same text and the smoke harness can capture it.

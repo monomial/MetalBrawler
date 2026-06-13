@@ -12,6 +12,7 @@
 #include "Systems/HazardSystem.h"
 #include "Systems/SpecialSystem.h"
 #include "Systems/PickupSystem.h"
+#include "Systems/ShopSystem.h"
 #include "Systems/ExitSystem.h"
 #include "Systems/ProjectileSystem.h"
 #include "Systems/LeaperSystem.h"
@@ -43,6 +44,7 @@ template<> ComponentStorage<HazardComponent>&             World::_pool() { retur
 template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { return _specialMeters; }
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
+template<> ComponentStorage<ScrapPickupComponent>&        World::_pool() { return _scrapPickups; }
 template<> ComponentStorage<ExitComponent>&               World::_pool() { return _exits; }
 template<> ComponentStorage<ProjectileComponent>&         World::_pool() { return _projectiles; }
 template<> ComponentStorage<TelegraphLineComponent>&      World::_pool() { return _telegraphLines; }
@@ -51,6 +53,9 @@ template<> ComponentStorage<WaveControllerComponent>&     World::_pool() { retur
 template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool() { return _spawnMarkers; }
 template<> ComponentStorage<SpawnAnimComponent>&          World::_pool() { return _spawnAnims; }
 template<> ComponentStorage<ObstacleComponent>&           World::_pool() { return _obstacles; }
+template<> ComponentStorage<BoxComponent>&                World::_pool() { return _boxes; }
+template<> ComponentStorage<ShopkeeperComponent>&         World::_pool() { return _shopkeepers; }
+template<> ComponentStorage<ShopItemComponent>&           World::_pool() { return _shopItems; }
 
 // ----
 
@@ -63,6 +68,7 @@ World::World()
     , _slowMoTicks(0)
     , _slowMoScale(1.f)
     , _inputs{}
+    , _scrap(0)
 {}
 
 World::~World() {}
@@ -112,6 +118,7 @@ void World::flush() {
         _paths.remove(id);
         _specialMeters.remove(id);
         _heartPickups.remove(id);
+        _scrapPickups.remove(id);
         _exits.remove(id);
         _projectiles.remove(id);
         _telegraphLines.remove(id);
@@ -120,6 +127,9 @@ void World::flush() {
         _spawnMarkers.remove(id);
         _spawnAnims.remove(id);
         _obstacles.remove(id);
+        _boxes.remove(id);
+        _shopkeepers.remove(id);
+        _shopItems.remove(id);
     }
     _deferredDestroyCount = 0;
 }
@@ -162,6 +172,8 @@ void World::tick(float gameDt) {
     CombatSystem_update(*this, gameDt);
     // 3.5. PickupSystem — lifetime + collection after combat can create hearts.
     PickupSystem_update(*this, gameDt);
+    // 3.51. ShopSystem — purchases after pickup collection updates currency.
+    ShopSystem_update(*this, gameDt);
     // 3.52. ExitSystem — post-upgrade portal, after combat/pickups.
     ExitSystem_update(*this, gameDt);
     // 3.55. WaveSystem — room enemy waves after pickups, before animation.

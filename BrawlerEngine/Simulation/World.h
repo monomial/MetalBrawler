@@ -96,6 +96,9 @@ public:
     uint32_t rand_range(uint32_t n) { return n ? rand_u32() % n : 0; }
     float    rand_float01()         { return (float)(rand_u32() >> 8) * (1.0f / 16777216.0f); }
 
+    void set_scrap(int scrap) { _scrap = scrap; }
+    int scrap() const { return _scrap; }
+
     // Per-frame event bus — cleared at top of each tick, readable by all systems.
     EventBus& events() { return _events; }
 
@@ -120,6 +123,7 @@ public:
     ComponentStorage<PathFollowComponent>&         paths()            { return _paths; }
     ComponentStorage<SpecialMeterComponent>&       special_meters()   { return _specialMeters; }
     ComponentStorage<HeartPickupComponent>&        heart_pickups()    { return _heartPickups; }
+    ComponentStorage<ScrapPickupComponent>&        scrap_pickups()    { return _scrapPickups; }
     ComponentStorage<ExitComponent>&               exits()            { return _exits; }
     ComponentStorage<ProjectileComponent>&         projectiles()      { return _projectiles; }
     ComponentStorage<TelegraphLineComponent>&      telegraph_lines()  { return _telegraphLines; }
@@ -128,6 +132,9 @@ public:
     ComponentStorage<SpawnMarkerComponent>&        spawn_markers()    { return _spawnMarkers; }
     ComponentStorage<SpawnAnimComponent>&          spawn_anims()      { return _spawnAnims; }
     ComponentStorage<ObstacleComponent>&           obstacles()        { return _obstacles; }
+    ComponentStorage<BoxComponent>&                boxes()            { return _boxes; }
+    ComponentStorage<ShopkeeperComponent>&         shopkeepers()      { return _shopkeepers; }
+    ComponentStorage<ShopItemComponent>&           shop_items()       { return _shopItems; }
 
 private:
     void flush();
@@ -148,6 +155,7 @@ private:
     int        _slowMoTicks;    // remaining ticks at scaled fixed dt
     float      _slowMoScale;    // gameDt multiplier while slow-mo is active
     InputState _inputs[4];      // one slot per player (0–3), set by platform each render frame
+    int        _scrap;          // delegate-mirrored run currency for deterministic shop logic
 
     ComponentStorage<PositionComponent>  _positions;
     ComponentStorage<VelocityComponent>  _velocities;
@@ -169,6 +177,7 @@ private:
     ComponentStorage<PathFollowComponent>         _paths;
     ComponentStorage<SpecialMeterComponent>       _specialMeters;
     ComponentStorage<HeartPickupComponent>        _heartPickups;
+    ComponentStorage<ScrapPickupComponent>        _scrapPickups;
     ComponentStorage<ExitComponent>               _exits;
     ComponentStorage<ProjectileComponent>         _projectiles;
     ComponentStorage<TelegraphLineComponent>      _telegraphLines;
@@ -177,6 +186,9 @@ private:
     ComponentStorage<SpawnMarkerComponent>        _spawnMarkers;
     ComponentStorage<SpawnAnimComponent>          _spawnAnims;
     ComponentStorage<ObstacleComponent>           _obstacles;
+    ComponentStorage<BoxComponent>                _boxes;
+    ComponentStorage<ShopkeeperComponent>         _shopkeepers;
+    ComponentStorage<ShopItemComponent>           _shopItems;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -214,6 +226,7 @@ template<> ComponentStorage<HazardComponent>&             World::_pool<HazardCom
 template<> ComponentStorage<PathFollowComponent>&         World::_pool<PathFollowComponent>();
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool<SpecialMeterComponent>();
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool<HeartPickupComponent>();
+template<> ComponentStorage<ScrapPickupComponent>&        World::_pool<ScrapPickupComponent>();
 template<> ComponentStorage<ExitComponent>&               World::_pool<ExitComponent>();
 template<> ComponentStorage<ProjectileComponent>&         World::_pool<ProjectileComponent>();
 template<> ComponentStorage<TelegraphLineComponent>&      World::_pool<TelegraphLineComponent>();
@@ -222,3 +235,6 @@ template<> ComponentStorage<WaveControllerComponent>&     World::_pool<WaveContr
 template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool<SpawnMarkerComponent>();
 template<> ComponentStorage<SpawnAnimComponent>&          World::_pool<SpawnAnimComponent>();
 template<> ComponentStorage<ObstacleComponent>&           World::_pool<ObstacleComponent>();
+template<> ComponentStorage<BoxComponent>&                World::_pool<BoxComponent>();
+template<> ComponentStorage<ShopkeeperComponent>&         World::_pool<ShopkeeperComponent>();
+template<> ComponentStorage<ShopItemComponent>&           World::_pool<ShopItemComponent>();

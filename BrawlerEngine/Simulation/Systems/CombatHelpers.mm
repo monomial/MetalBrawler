@@ -17,6 +17,18 @@ void Combat_spawn_heart_drop_if_needed(World& world, EntityID victimID) {
     world.add_component<HeartPickupComponent>(heart);
 }
 
+static void Combat_spawn_scrap_drop_if_needed(World& world, EntityID victimID) {
+    if (!world.has_component<FactionComponent>(victimID)) return;
+    if (world.get_component<FactionComponent>(victimID).type != FactionComponent::Enemy) return;
+    if (!world.has_component<PositionComponent>(victimID)) return;
+    if (world.rand_float01() >= 0.35f) return;
+
+    const PositionComponent& p = world.get_component<PositionComponent>(victimID);
+    EntityID scrap = world.defer_create();
+    world.add_component<PositionComponent>(scrap) = {p.x, p.y, 0.f};
+    world.add_component<ScrapPickupComponent>(scrap).value = 2;
+}
+
 bool Combat_try_second_wind(World& world, EntityID victimID) {
     if (!world.player_tags().present(victimID)) return false;
     if (!world.has_component<HealthComponent>(victimID)) return false;
@@ -128,8 +140,10 @@ static void Combat_apply_death_internal(World& world, EntityID victimID, EntityI
     }
 
     world.events().emit_died(victimID);
-    if (allowHeartDrop)
+    if (allowHeartDrop) {
         Combat_spawn_heart_drop_if_needed(world, victimID);
+        Combat_spawn_scrap_drop_if_needed(world, victimID);
+    }
 
     if (world.has_component<AnimationComponent>(victimID)) {
         world.get_component<AnimationComponent>(victimID).dying = true;

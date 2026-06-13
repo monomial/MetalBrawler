@@ -68,6 +68,8 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 
 // Headless-test visibility for post-upgrade exit flow.
 - (int)exitEntityCount;
+- (int)shopkeeperEntityCount;
+- (int)shopItemEntityCount;
 
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.

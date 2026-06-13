@@ -78,6 +78,7 @@
 		4BF8BAD89CABEAD53BD10A44 /* CombatSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 538BD37CD7D75E3768953CB5 /* CombatSystem.mm */; };
 		4E14456C7391B77F4D3D34EB /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A75FE85F1481015D8E48A17 /* ImageIO.framework */; };
 		4E3B27489DAF8938C14FDB71 /* WallCollisionSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B76A9E58C446E2F8B6C06DD /* WallCollisionSystem.mm */; };
+		4F591570A8A96BE1F042D4C4 /* ShopSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C2F7FC2F5F5FAC5BCBAE9686 /* ShopSystem.mm */; };
 		50ED2FD06E22B72E86F64103 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
 		51598F653C1D2E42A5B8C378 /* SpecialTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE7645C47762F4FE0C8C623D /* SpecialTests.mm */; };
 		5174FD522C2B1B2FCFECFBAD /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
@@ -88,6 +89,7 @@
 		559B6E385EAC05D153777995 /* ScenarioTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = E7C61DC2D317E9E0C9BBB0D0 /* ScenarioTests.mm */; };
 		576B041AF1D568757D866C8D /* RespawnSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = D75C1F416498549428B0847F /* RespawnSystem.mm */; };
 		576B0F53BC1A1F381480FC72 /* SkinnedMesh.metal in Sources */ = {isa = PBXBuildFile; fileRef = AEA11E8F308C6EE6CEC1DF0A /* SkinnedMesh.metal */; };
+		57D750D2FBF623FFFE74CF47 /* ShopSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C2F7FC2F5F5FAC5BCBAE9686 /* ShopSystem.mm */; };
 		586FD3DC80D11E23BFD046F3 /* AnimationSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C375040E396E4D9619804D9B /* AnimationSystem.mm */; };
 		59CE7AD96D1F598CD531EF41 /* CharacterLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = EDC56629B2591E36265F1929 /* CharacterLoader.mm */; };
 		5BBE49926130E69BCFC163BE /* ScreenShakeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */; };
@@ -131,6 +133,7 @@
 		8EC948CF7AD38B2A37F95C9C /* BrawlerGameDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */; };
 		90BC4A4DC3C5371134D28DF3 /* EnemyAISystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = A6357873050DA593E566E786 /* EnemyAISystem.mm */; };
 		911EEA89EDB8892F9329ECFC /* ContactDamageSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = E08F4EDFB0334F580F6544B3 /* ContactDamageSystem.mm */; };
+		91EF30AA8B8F5A8C8DB9283A /* ShopSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C2F7FC2F5F5FAC5BCBAE9686 /* ShopSystem.mm */; };
 		929D4BACEF301869C19C76B7 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E2880B0C289082F3EBD31B3 /* CoreGraphics.framework */; };
 		945F8809287421DC965F4EE0 /* CharacterLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = EDC56629B2591E36265F1929 /* CharacterLoader.mm */; };
 		946A61D111C585A14BDB66E2 /* AnimationTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 25D5EF275206644E9DE55572 /* AnimationTests.mm */; };
@@ -139,6 +142,7 @@
 		98CEA10EAC71E40CC62D6E6E /* PhysicsSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = EBD7464D60D21D33CB1F8405 /* PhysicsSystem.mm */; };
 		9A6A12EF7B71D2CFAE9D8541 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 715C3C7D44563762906F4C0E /* CoreText.framework */; };
 		9AD6EFC2209676994164E1FD /* HazardSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = DED4B252FB69C6A2E9E02281 /* HazardSystem.mm */; };
+		9BDF9F3281DD8118F67B20B9 /* ShopSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C2F7FC2F5F5FAC5BCBAE9686 /* ShopSystem.mm */; };
 		9C31C1B825CCB83B7021E0E0 /* ProjectileSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = C6D66EDC83CC03139E13497C /* ProjectileSystem.mm */; };
 		9C7DE264984098BE17962BC6 /* PhysicsSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = EBD7464D60D21D33CB1F8405 /* PhysicsSystem.mm */; };
 		9DB25D80FE73F1B040B4A20D /* BrawlerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9E760FCE7B77214BDA856B4F /* BrawlerRenderer.mm */; };
@@ -157,6 +161,7 @@
 		AABA13F71A3A2B0814FB8E60 /* ReviveTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = FBA387FDC8009B9AC204C7A6 /* ReviveTests.mm */; };
 		ABE83CA7172A267D87C54D03 /* ParticleSimTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = D016D086DC068F9E7DAC251A /* ParticleSimTests.mm */; };
 		AC53FC267E4DAEF5AA7CBDEE /* EnemyAITests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9872E2A72357EB6205023978 /* EnemyAITests.mm */; };
+		ACE0F759D2806FF8CD822DA2 /* Part2EconomyShopTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 306003ED964E75B8555CAA67 /* Part2EconomyShopTests.mm */; };
 		ADB120D033DF7EADB93D9779 /* EnemyFactory.mm in Sources */ = {isa = PBXBuildFile; fileRef = 621FBF9A123AC0A8066AD4CE /* EnemyFactory.mm */; };
 		AE487591C26654757F0B0AD8 /* ScreenShakeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */; };
 		AFE853CC98A2E88A2DDB5A00 /* EnemyFactory.mm in Sources */ = {isa = PBXBuildFile; fileRef = 621FBF9A123AC0A8066AD4CE /* EnemyFactory.mm */; };
@@ -248,6 +253,7 @@
 		2A7FD8B528E4D7B75E7C364B /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		2B5AD103103E8A725B32172A /* SceneDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SceneDelegate.mm; sourceTree = "<group>"; };
 		2E0F001FF6C5253EF5147C6D /* LeaperSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LeaperSystem.h; sourceTree = "<group>"; };
+		306003ED964E75B8555CAA67 /* Part2EconomyShopTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Part2EconomyShopTests.mm; sourceTree = "<group>"; };
 		30796A6CE2160427FFD83AE4 /* BrawlerGameDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrawlerGameDelegate.h; sourceTree = "<group>"; };
 		326645C6B66BC216DB893220 /* SpecialSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpecialSystem.h; sourceTree = "<group>"; };
 		3288EB8DE9747307AEFD95B3 /* AnimationSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationSystem.h; sourceTree = "<group>"; };
@@ -323,11 +329,13 @@
 		BC5FF81E52FAB811994FD9FD /* KnockbackSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = KnockbackSystem.mm; sourceTree = "<group>"; };
 		BC684CD950C3062F59683B1C /* BrawlerGameDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BrawlerGameDelegate.mm; sourceTree = "<group>"; };
 		C198EE6AC4B8C900025F2E54 /* ContactDamageTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ContactDamageTests.mm; sourceTree = "<group>"; };
+		C2F7FC2F5F5FAC5BCBAE9686 /* ShopSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ShopSystem.mm; sourceTree = "<group>"; };
 		C35BBBB175DED3F3EEEA8394 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		C375040E396E4D9619804D9B /* AnimationSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AnimationSystem.mm; sourceTree = "<group>"; };
 		C4DCA0AD535592B6F1B2412D /* ProjectileTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ProjectileTests.mm; sourceTree = "<group>"; };
 		C531E0D88462726A7EF7AC84 /* CombatHelpers.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CombatHelpers.mm; sourceTree = "<group>"; };
 		C6D66EDC83CC03139E13497C /* ProjectileSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ProjectileSystem.mm; sourceTree = "<group>"; };
+		CE77D0F1A07C527CD5A096D4 /* ShopSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShopSystem.h; sourceTree = "<group>"; };
 		CF2CBB9D86AF5E72CFC86218 /* ExitSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ExitSystem.mm; sourceTree = "<group>"; };
 		CF9FA6911941DBCF64A77A5A /* AutoPilot.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AutoPilot.mm; sourceTree = "<group>"; };
 		D016D086DC068F9E7DAC251A /* ParticleSimTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ParticleSimTests.mm; sourceTree = "<group>"; };
@@ -475,6 +483,8 @@
 				0C51BBE79E9595127F48C1B0 /* ReviveSystem.mm */,
 				A8227C8B70B2C5AA3BAB6E75 /* ScreenShakeSystem.h */,
 				74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */,
+				CE77D0F1A07C527CD5A096D4 /* ShopSystem.h */,
+				C2F7FC2F5F5FAC5BCBAE9686 /* ShopSystem.mm */,
 				326645C6B66BC216DB893220 /* SpecialSystem.h */,
 				4A06655E74E7CC2633292B56 /* SpecialSystem.mm */,
 				8A46A664260E52C99AFEA3AE /* WallCollisionSystem.h */,
@@ -656,6 +666,7 @@
 				F8EA69DF4FB6B3FAF54FA58D /* InputTests.mm */,
 				526D4C7092E51F0F48DA11E5 /* KnockbackTests.mm */,
 				F00FA3CA96DA77B5D056EE51 /* LeaperTests.mm */,
+				306003ED964E75B8555CAA67 /* Part2EconomyShopTests.mm */,
 				D016D086DC068F9E7DAC251A /* ParticleSimTests.mm */,
 				93B9C1EC9E3813A99222392F /* PerkTests.mm */,
 				082F14CDBDD078DD1EFF688D /* PhysicsTests.mm */,
@@ -874,6 +885,7 @@
 				23FAD6704B9A44886CF6038F /* ReviveSystem.mm in Sources */,
 				81733D88A551215128A9F349 /* SceneDelegate.mm in Sources */,
 				6232FD0FD00A65A3D2EB1B4E /* ScreenShakeSystem.mm in Sources */,
+				91EF30AA8B8F5A8C8DB9283A /* ShopSystem.mm in Sources */,
 				8CC75A52AA0F02D030983BB3 /* SkinnedMesh.metal in Sources */,
 				3DE0291A0BC8BDD3D6214B23 /* SpecialSystem.mm in Sources */,
 				E5E6B577365BA74F2E6FA25B /* WallCollisionSystem.mm in Sources */,
@@ -917,6 +929,7 @@
 				6CB7E3BB62C45F5A52DF6CBE /* ReviveSystem.mm in Sources */,
 				FFBFE8BEAB965AB93B0F4BCF /* SceneDelegate.mm in Sources */,
 				AE487591C26654757F0B0AD8 /* ScreenShakeSystem.mm in Sources */,
+				4F591570A8A96BE1F042D4C4 /* ShopSystem.mm in Sources */,
 				D321E71099975FC994A8D4A2 /* SkinnedMesh.metal in Sources */,
 				727615BED718613BC1D233B9 /* SpecialSystem.mm in Sources */,
 				01E9E88F53BA254153908535 /* WallCollisionSystem.mm in Sources */,
@@ -960,6 +973,7 @@
 				576B041AF1D568757D866C8D /* RespawnSystem.mm in Sources */,
 				32D16522AAF47A26FF5381CA /* ReviveSystem.mm in Sources */,
 				95ACD8D4747449DDA852AFAA /* ScreenShakeSystem.mm in Sources */,
+				9BDF9F3281DD8118F67B20B9 /* ShopSystem.mm in Sources */,
 				576B0F53BC1A1F381480FC72 /* SkinnedMesh.metal in Sources */,
 				39892236C8D82621784DA06D /* SpecialSystem.mm in Sources */,
 				4E3B27489DAF8938C14FDB71 /* WallCollisionSystem.mm in Sources */,
@@ -1005,6 +1019,7 @@
 				C7F37FA49D9D836E6707C7BA /* KnockbackTests.mm in Sources */,
 				FE2E1F03A1DB70CB8AAAA608 /* LeaperSystem.mm in Sources */,
 				F1E5AC2B85C2DCAF2E498DDF /* LeaperTests.mm in Sources */,
+				ACE0F759D2806FF8CD822DA2 /* Part2EconomyShopTests.mm in Sources */,
 				84B4DCD81D9F68880B9A5B12 /* ParticleSim.cpp in Sources */,
 				ABE83CA7172A267D87C54D03 /* ParticleSimTests.mm in Sources */,
 				896D025C9F3A69B3D5CBDC4F /* PerkTests.mm in Sources */,
@@ -1021,6 +1036,7 @@
 				559B6E385EAC05D153777995 /* ScenarioTests.mm in Sources */,
 				5BBE49926130E69BCFC163BE /* ScreenShakeSystem.mm in Sources */,
 				A54CE6F9D19C06B1B6D0C014 /* ScreenShakeTests.mm in Sources */,
+				57D750D2FBF623FFFE74CF47 /* ShopSystem.mm in Sources */,
 				B2AD8DAC62F4301E3368436D /* SpecialSystem.mm in Sources */,
 				51598F653C1D2E42A5B8C378 /* SpecialTests.mm in Sources */,
 				5D4C09FFFBE60C5156067F9B /* WallCollisionSystem.mm in Sources */,

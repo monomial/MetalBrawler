@@ -26,11 +26,19 @@ struct ObstacleSpawn {
     float halfW, halfH;
 };
 
+struct BoxSpawn {
+    float x, y;
+    bool hasScrap;
+};
+
 struct RoomDef {
     const EnemySpawn* spawns;
     int               count;
     const ObstacleSpawn* obstacles;
     int               obstacleCount;
+    const BoxSpawn*   boxes;
+    int               boxCount;
+    bool              isShop;
 };
 
 // Run structure: fixed intro room, then kMiddlePerRun of the middle pool in a
@@ -88,18 +96,45 @@ static const ObstacleSpawn kMixedObstacles[] = {
     {0.f, 320.f, 35.f, 35.f},
 };
 
-static const RoomDef kIntroRoom = {kIntroSpawns, 3, nullptr, 0};
-static const RoomDef kBossRoom  = {kBossSpawns, 1, nullptr, 0};
+static const BoxSpawn kIntroBoxes[] = {
+    {-360.f,  70.f, true}, { 360.f,  90.f, false}, { 0.f, 560.f, true},
+};
+static const BoxSpawn kGruntsBoxes[] = {
+    {-410.f, 180.f, true}, {390.f, 180.f, true}, {-320.f, 560.f, false},
+};
+static const BoxSpawn kRusherBoxes[] = {
+    {-420.f, 120.f, false}, {420.f, 140.f, true}, {0.f, 610.f, true},
+};
+static const BoxSpawn kHeavyBoxes[] = {
+    {-410.f, 240.f, true}, {410.f, 240.f, false}, {-120.f, 600.f, true}, {230.f, 590.f, true},
+};
+static const BoxSpawn kMixedBoxes[] = {
+    {-420.f, 130.f, true}, {420.f, 130.f, false}, {-330.f, 590.f, true},
+};
+static const BoxSpawn kTwinBoxes[] = {
+    {-430.f, 170.f, false}, {430.f, 170.f, true}, {0.f, 610.f, true},
+};
+static const BoxSpawn kBossBoxes[] = {
+    {-420.f, 170.f, true}, {420.f, 170.f, false},
+};
+static const BoxSpawn kShopBoxes[] = {
+    {-360.f, 320.f, true}, {360.f, 320.f, false}, {0.f, 560.f, false},
+};
+
+static const RoomDef kIntroRoom = {kIntroSpawns, 3, nullptr, 0, kIntroBoxes, 3, false};
+static const RoomDef kBossRoom  = {kBossSpawns, 1, nullptr, 0, kBossBoxes, 2, false};
+static const RoomDef kShopRoom  = {nullptr, 0, nullptr, 0, kShopBoxes, 3, true};
 static const RoomDef kMiddleRooms[] = {
-    {kMidGruntsRusher, 5, nullptr, 0},
-    {kMidRusherPack,   5, nullptr, 0},
-    {kMidHeavyEscort,  4, kHeavyEscortObstacles, 2},
-    {kMidMixed,        4, kMixedObstacles, 1},
-    {kMidTwinHeavies,  4, nullptr, 0},
+    {kMidGruntsRusher, 5, nullptr, 0, kGruntsBoxes, 3, false},
+    {kMidRusherPack,   5, nullptr, 0, kRusherBoxes, 3, false},
+    {kMidHeavyEscort,  4, kHeavyEscortObstacles, 2, kHeavyBoxes, 4, false},
+    {kMidMixed,        4, kMixedObstacles, 1, kMixedBoxes, 3, false},
+    {kMidTwinHeavies,  4, nullptr, 0, kTwinBoxes, 3, false},
 };
 static const int kNumMiddleRooms = 5;
 static const int kMiddlePerRun   = 4;                  // middle rooms per run
-static const int kNumRooms       = kMiddlePerRun + 2;  // intro + middles + boss
+static const int kShopRoomIndex  = 3;                  // 0-based: after two middles
+static const int kNumRooms       = kMiddlePerRun + 3;  // intro + middles + shop + boss
 static const int kStartingLives  = 3;
 static const int kMaxPlayers     = 4;
 
@@ -182,6 +217,7 @@ struct RunStats {
 
     PlayerPerks          _perks[kMaxPlayers]; // per-player run-level, reset each run
     RunStats             _runStats;
+    int                  _scrap;
     int                  _upgradePlayerIndex; // active picker during Upgrade, -1 otherwise
     int                  _upgradeChoice[2];   // BrawlerPerk indices on offer
     int                  _middleOrder[kNumMiddleRooms]; // seeded shuffle per run
@@ -198,6 +234,20 @@ struct RunStats {
     int count = 0;
     for (EntityID id = 0; id < _world.entity_count(); ++id)
         if (_world.exits().present(id)) count++;
+    return count;
+}
+
+- (int)shopkeeperEntityCount {
+    int count = 0;
+    for (EntityID id = 0; id < _world.entity_count(); ++id)
+        if (_world.shopkeepers().present(id)) count++;
+    return count;
+}
+
+- (int)shopItemEntityCount {
+    int count = 0;
+    for (EntityID id = 0; id < _world.entity_count(); ++id)
+        if (_world.shop_items().present(id)) count++;
     return count;
 }
 
@@ -395,6 +445,7 @@ struct RunStats {
     for (int i = 0; i < kMaxPlayers; ++i)
         _perks[i] = PlayerPerks{};
     _runStats = RunStats{};
+    _scrap = 0;
     [self _refreshPerkHUD];
     _upgradePlayerIndex = -1;
 
@@ -417,8 +468,11 @@ struct RunStats {
 
 - (const RoomDef&)_currentRoomDef {
     if (_currentRoom <= 0)              return kIntroRoom;
+    if (_currentRoom == kShopRoomIndex) return kShopRoom;
     if (_currentRoom >= kNumRooms - 1)  return kBossRoom;
-    return kMiddleRooms[_middleOrder[_currentRoom - 1]];
+    int middleSlot = (_currentRoom < kShopRoomIndex) ? (_currentRoom - 1)
+                                                     : (_currentRoom - 2);
+    return kMiddleRooms[_middleOrder[middleSlot]];
 }
 
 // Roll two distinct perks from the pool using the (seeded) world RNG so
@@ -434,13 +488,9 @@ struct RunStats {
     return kPerkLabels[_upgradeChoice[index]];
 }
 
-- (void)chooseUpgrade:(int)index {
-    if (_phase != BrawlerGamePhaseUpgrade) return;
-    if (index < 0 || index > 1) return;
-    if (_upgradePlayerIndex < 0 || _upgradePlayerIndex >= _numPlayers) return;
-
-    PlayerPerks& perks = _perks[_upgradePlayerIndex];
-    BrawlerPerk chosen = (BrawlerPerk)_upgradeChoice[index];
+- (void)_applyPerk:(BrawlerPerk)chosen toPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return;
+    PlayerPerks& perks = _perks[playerIndex];
     switch (chosen) {
         case BrawlerPerkDamage: perks.bonusDamage += 1;    break;
         case BrawlerPerkSpeed:  perks.speedMult   += 0.2f; break;
@@ -455,8 +505,17 @@ struct RunStats {
     if (chosen >= 0 && chosen < BrawlerPerkCount) {
         perks.counts[chosen] += 1;
         _runStats.perksTaken += 1;
-        [self _refreshPerkHUD];
     }
+}
+
+- (void)chooseUpgrade:(int)index {
+    if (_phase != BrawlerGamePhaseUpgrade) return;
+    if (index < 0 || index > 1) return;
+    if (_upgradePlayerIndex < 0 || _upgradePlayerIndex >= _numPlayers) return;
+
+    BrawlerPerk chosen = (BrawlerPerk)_upgradeChoice[index];
+    [self _applyPerk:chosen toPlayer:_upgradePlayerIndex];
+    [self _refreshPerkHUD];
     [_audio playUIClickSound];
 
     // Multiplayer: each active player gets their own fresh, deterministic
@@ -480,16 +539,22 @@ struct RunStats {
 - (void)_loadRoom {
     _world = World();
     _world.set_seed(self.rngSeedOverride ? self.rngSeedOverride : arc4random());
+    _world.set_scrap(_scrap);
     [self resetInput];
     [self _spawnPlayers];
     [self _spawnWaveControllerForCurrentRoom];
     [self _spawnObstaclesForCurrentRoom];
+    [self _spawnBoxesForCurrentRoom];
+    if ([self _currentRoomDef].isShop) {
+        [self _spawnExit];
+        [self _spawnShopkeeper];
+        [self _spawnShopItems];
+    }
     _renderer.livesRemaining = _lives;
     _renderer.totalRooms = kNumRooms;
+    _renderer.scrapCount = _scrap;
     [self _refreshPerkHUD];
-    // Boss room always gets the last (violet) palette; others cycle.
-    BOOL isBossRoom = (_currentRoom >= kNumRooms - 1);
-    _renderer.roomIndex = isBossRoom ? 5 : (_currentRoom % 5);
+    _renderer.roomIndex = _currentRoom;
 }
 
 - (void)_spawnExit {
@@ -533,6 +598,7 @@ struct RunStats {
 
 - (void)_spawnWaveControllerForCurrentRoom {
     const RoomDef& room = [self _currentRoomDef];
+    if (room.isShop) return;
     EntityID controller = _world.defer_create();
     WaveControllerComponent& wave = _world.add_component<WaveControllerComponent>(controller);
     wave.spawnCount = room.count;
@@ -566,12 +632,104 @@ struct RunStats {
     }
 }
 
+- (void)_spawnBoxesForCurrentRoom {
+    const RoomDef& room = [self _currentRoomDef];
+    for (int i = 0; i < room.boxCount; ++i) {
+        const BoxSpawn& spawn = room.boxes[i];
+        EntityID e = _world.defer_create();
+        _world.add_component<PositionComponent>(e) = {spawn.x, spawn.y, 0.f};
+        _world.add_component<BoxComponent>(e).hasScrap = spawn.hasScrap;
+    }
+}
+
+- (void)_spawnShopkeeper {
+    EntityID e = _world.defer_create();
+    _world.add_component<PositionComponent>(e) = {0.f, 380.f, 0.f};
+    _world.add_component<VelocityComponent>(e) = {0.f, 0.f, 0.f};
+    _world.add_component<AnimationComponent>(e);
+    _world.add_component<FacingComponent>(e);
+    _world.add_component<ShopkeeperComponent>(e);
+}
+
+- (void)_spawnShopItems {
+    uint8_t picks[3] = {};
+    for (int i = 0; i < 3; ++i) {
+        uint8_t perk = 0;
+        bool unique = false;
+        while (!unique) {
+            perk = (uint8_t)_world.rand_range(BrawlerPerkCount);
+            unique = true;
+            for (int j = 0; j < i; ++j) {
+                if (picks[j] == perk) {
+                    unique = false;
+                    break;
+                }
+            }
+        }
+        picks[i] = perk;
+    }
+    int expensiveSlot = (int)_world.rand_range(3);
+    static const float kShopX[3] = {-250.f, 0.f, 250.f};
+    for (int i = 0; i < 3; ++i) {
+        EntityID e = _world.defer_create();
+        _world.add_component<PositionComponent>(e) = {kShopX[i], 150.f, 0.f};
+        ShopItemComponent& item = _world.add_component<ShopItemComponent>(e);
+        item.perkID = picks[i];
+        item.price = (i == expensiveSlot) ? 40 : 25;
+    }
+}
+
+- (void)_applyShopPerk:(BrawlerPerk)perk {
+    for (int p = 0; p < _numPlayers && p < kMaxPlayers; ++p)
+        [self _applyPerk:perk toPlayer:p];
+    [self _refreshPerkHUD];
+}
+
+- (void)_refreshShopPrompt {
+    if (![self _currentRoomDef].isShop) {
+        _renderer.shopPrompt = @"";
+        return;
+    }
+    EntityID nearestItem = kInvalidEntity;
+    float nearestD2 = 0.f;
+    for (EntityID itemID = 0; itemID < _world.entity_count(); ++itemID) {
+        if (!_world.shop_items().present(itemID)) continue;
+        if (!_world.has_component<PositionComponent>(itemID)) continue;
+        const PositionComponent& ipos = _world.get_component<PositionComponent>(itemID);
+        for (EntityID playerID = 0; playerID < _world.entity_count(); ++playerID) {
+            if (!_world.player_tags().present(playerID)) continue;
+            if (!_world.has_component<PositionComponent>(playerID)) continue;
+            if (!_world.has_component<HealthComponent>(playerID)) continue;
+            if (_world.has_component<DownedComponent>(playerID)) continue;
+            const PositionComponent& ppos = _world.get_component<PositionComponent>(playerID);
+            float dx = ppos.x - ipos.x;
+            float dy = ppos.y - ipos.y;
+            float d2 = dx * dx + dy * dy;
+            if (d2 > 110.f * 110.f) continue;
+            if (nearestItem == kInvalidEntity || d2 < nearestD2) {
+                nearestItem = itemID;
+                nearestD2 = d2;
+            }
+        }
+    }
+    if (nearestItem == kInvalidEntity) {
+        _renderer.shopPrompt = @"";
+        return;
+    }
+    const ShopItemComponent& item = _world.get_component<ShopItemComponent>(nearestItem);
+    NSString *label = (item.perkID < BrawlerPerkCount) ? kPerkLabels[item.perkID] : @"Perk";
+    _renderer.shopPrompt = [NSString stringWithFormat:@"%@ - %d SCRAP (PUNCH TO BUY)",
+                            label, item.price];
+}
+
 // Returns YES when no enemy entities remain in the world — i.e. all death
 // animations have finished and AnimationSystem has removed the entities.
 // Checking the dying flag would trigger too early (entities still visible
 // mid-animation); waiting for removal means the room-clear message only
 // appears after the last enemy has fully collapsed.
 - (BOOL)_allEnemiesDefeated {
+    if ([self _currentRoomDef].isShop)
+        return NO;
     if ([self exitEntityCount] > 0)
         return NO;
     if (!WaveSystem_room_finished(_world))
@@ -664,7 +822,10 @@ struct RunStats {
                       _phase != BrawlerGamePhaseUpgrade);
 
     if (simActive) {
+        _world.set_scrap(_scrap);
         _world.update(dt, dt);
+        _renderer.scrapCount = _scrap;
+        [self _refreshShopPrompt];
 
         // Play hit sound/haptic once per frame regardless of how many enemies connected —
         // queuing one buffer per HitContact event causes sounds to pile up sequentially.
@@ -828,6 +989,35 @@ struct RunStats {
                                   color:(simd_float4){1.0f, 0.5f, 0.6f, 1.f}];
             }
             [_audio playRoomClearSound];
+        });
+
+        _world.events().for_each(EventType::ScrapCollected, [self](const Event& ev) {
+            _scrap += ev.scrapCollected.value;
+            _world.set_scrap(_scrap);
+            _renderer.scrapCount = _scrap;
+            [_audio playRoomClearSound];
+        });
+
+        _world.events().for_each(EventType::BoxBroken, [self](const Event& ev) {
+            [_renderer spawnBurstAt:(simd_float3){ev.boxBroken.x, ev.boxBroken.y, 35.f}
+                              count:12 speed:220.f size:13.f
+                              color:(simd_float4){0.55f, 0.38f, 0.20f, 1.f}];
+            [_audio playSwingSound];
+        });
+
+        _world.events().for_each(EventType::ShopPurchase, [self](const Event& ev) {
+            _scrap -= ev.shopPurchase.price;
+            if (_scrap < 0) _scrap = 0;
+            _world.set_scrap(_scrap);
+            _renderer.scrapCount = _scrap;
+            [self _applyShopPerk:(BrawlerPerk)ev.shopPurchase.perkID];
+            if (_world.has_component<PositionComponent>(ev.shopPurchase.itemEID)) {
+                const auto& p = _world.get_component<PositionComponent>(ev.shopPurchase.itemEID);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 70.f}
+                                  count:28 speed:380.f size:15.f
+                                  color:(simd_float4){1.0f, 0.82f, 0.25f, 1.f}];
+            }
+            [_audio playUIClickSound];
         });
 
         _world.events().for_each(EventType::SecondWindUsed, [self](const Event& ev) {

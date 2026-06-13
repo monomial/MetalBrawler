@@ -3,6 +3,7 @@
 #include "Platform/InputState.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/CombatHelpers.h"
+#include "Simulation/Systems/PickupSystem.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
 
@@ -154,6 +155,24 @@ void CombatSystem_update(World& world, float gameDt) {
 
         bool hitAnything = false;
         bool hitPlayer   = false;
+
+        if (atkFaction == FactionComponent::Player) {
+            for (EntityID boxID = 0; boxID < count; ++boxID) {
+                if (!world.boxes().present(boxID)) continue;
+                if (!world.has_component<PositionComponent>(boxID)) continue;
+                const PositionComponent& bPos = world.get_component<PositionComponent>(boxID);
+                float dx = bPos.x - atkPos.x;
+                float dy = bPos.y - atkPos.y;
+                float dist = sqrtf(dx * dx + dy * dy);
+                if (dist > kAttackRange) continue;
+                if (dist > 0.001f) {
+                    float dot = (dx / dist) * facingDx + (dy / dist) * facingDy;
+                    if (dot < kPunchArcCosine) continue;
+                }
+                PickupSystem_break_box(world, boxID);
+                hitAnything = true;
+            }
+        }
 
         for (EntityID targetID = 0; targetID < count; ++targetID) {
             if (targetID == attackerID) continue;

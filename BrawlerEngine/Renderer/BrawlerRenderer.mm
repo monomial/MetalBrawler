@@ -238,6 +238,12 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     id<MTLTexture>             _hudRoomTexture;
     CGSize                     _hudRoomTextureSize;
     NSString                  *_hudRoomText;
+    id<MTLTexture>             _hudScrapTexture;
+    CGSize                     _hudScrapTextureSize;
+    NSString                  *_hudScrapText;
+    id<MTLTexture>             _shopPromptTexture;
+    CGSize                     _shopPromptTextureSize;
+    NSString                  *_shopPromptText;
     BrawlerPerkSummary         _perkSummary[kBrawlerMaxPlayers];
 }
 
@@ -626,8 +632,11 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
 
     simd_float4x4 vp = simd_mul(_proj, make_look_at(eye, target, (simd_float3){0,0,1}));
 
-    const RoomPalette& pal = kRoomPalettes[
-        (_roomIndex % kNumRoomPalettes + kNumRoomPalettes) % kNumRoomPalettes];
+    int paletteIndex = (_roomIndex + 1 >= _totalRooms && _totalRooms > 0)
+                     ? (kNumRoomPalettes - 1)
+                     : ((_roomIndex % (kNumRoomPalettes - 1)) + (kNumRoomPalettes - 1))
+                        % (kNumRoomPalettes - 1);
+    const RoomPalette& pal = kRoomPalettes[paletteIndex];
 
     // Scene pass — renders into the offscreen texture for the post pass.
     MTLRenderPassDescriptor *rpd = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -820,6 +829,62 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             continue;
         }
 
+        if (world->scrap_pickups().present(eid)) {
+            float pulse = 1.0f + 0.12f * sinf((float)CACurrentMediaTime() * 7.f + (float)eid);
+            float bob = 3.f * sinf((float)CACurrentMediaTime() * 5.f + (float)eid);
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 14.f + bob,
+                                                 14.f * pulse, 14.f * pulse));
+            u.color = (simd_float4){1.0f, 0.85f, 0.25f, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            continue;
+        }
+
+        if (world->boxes().present(eid)) {
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 12.f, 50.f, 50.f));
+            u.color = (simd_float4){0.55f, 0.38f, 0.20f, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 13.f, 32.f, 32.f));
+            u.color = (simd_float4){0.30f, 0.18f, 0.09f, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            continue;
+        }
+
+        if (world->shop_items().present(eid)) {
+            const ShopItemComponent& item = world->get_component<ShopItemComponent>(eid);
+            static const simd_float4 kPerkColors[kBrawlerPerkTypeCount] = {
+                {0.95f, 0.12f, 0.16f, 1.f}, {0.00f, 0.85f, 0.95f, 1.f},
+                {0.15f, 0.90f, 0.30f, 1.f}, {1.00f, 0.75f, 0.18f, 1.f},
+                {1.00f, 0.42f, 0.12f, 1.f}, {0.20f, 0.45f, 1.00f, 1.f},
+                {1.00f, 0.92f, 0.10f, 1.f}, {0.92f, 0.92f, 0.92f, 1.f},
+            };
+            float pulse = 0.75f + 0.20f * sinf((float)CACurrentMediaTime() * 5.f + (float)eid);
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 10.f, 62.f, 42.f));
+            u.color = (simd_float4){0.42f, 0.42f, 0.45f, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 16.f, 42.f, 42.f));
+            u.color = kPerkColors[item.perkID % kBrawlerPerkTypeCount];
+            u.color.w = pulse;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            continue;
+        }
+
         // Exit arrow: flat cyan ground marker pointing toward the top-edge exit.
         if (world->exits().present(eid)) {
             float pulse = 1.0f + 0.18f * sinf((float)CACurrentMediaTime() * 6.f + (float)eid);
@@ -852,6 +917,7 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
 
         simd_float4 color = {1,1,1,1};
         FactionComponent::Type faction = FactionComponent::Player;
+        bool isShopkeeper = world->shopkeepers().present(eid);
         if (world->has_component<FactionComponent>(eid)) {
             faction = world->get_component<FactionComponent>(eid).type;
             switch (faction) {
@@ -859,6 +925,7 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
                 case FactionComponent::Enemy:  color = {1.0f,0.4f,0.3f,1.f}; break; // orange-red tint
             }
         }
+        if (isShopkeeper) color = {1.0f, 0.8f, 0.3f, 1.f};
 
         // Update facing angle from velocity when the entity is actually moving.
         if (eid < kMaxAnimEntities && world->has_component<VelocityComponent>(eid)) {
@@ -868,7 +935,8 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
                 _facingAngle[eid] = atan2f(vel.vy, vel.vx);
         }
 
-        LoadedCharacter* charData = (faction == FactionComponent::Player) ? _playerChar : _enemyChar;
+        LoadedCharacter* charData = isShopkeeper ? _enemyChar
+                                : (faction == FactionComponent::Player) ? _playerChar : _enemyChar;
         bool hasMesh = charData && charData->indexCount > 0 && _skinnedPipeline
                        && world->has_component<AnimationComponent>(eid);
 
@@ -916,7 +984,8 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             su.mvp   = simd_mul(vp, make_char_model(pos.x, pos.y, scale,
                                                     charData->meshYMin, facing, zOffset));
             su.color = color;
-            su.tintStrength = (faction == FactionComponent::Enemy) ? kEnemyTintStrength
+            su.tintStrength = isShopkeeper ? 0.55f
+                            : (faction == FactionComponent::Enemy) ? kEnemyTintStrength
                                                                    : kPlayerTintStrength;
             if (faction == FactionComponent::Enemy &&
                 world->has_component<EnemyAttackCooldownComponent>(eid) &&
@@ -1192,6 +1261,46 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
         }
 
+        NSString *scrapText = [NSString stringWithFormat:@"SCRAP %d", _scrapCount];
+        if (!_hudScrapTexture || ![_hudScrapText isEqualToString:scrapText]) {
+            _hudScrapText = [scrapText copy];
+            _hudScrapTexture = makeHUDLabelTexture(view.device, _hudScrapText, &_hudScrapTextureSize);
+        }
+        if (_hudScrapTexture && _texturePipeline) {
+            [enc setRenderPipelineState:_texturePipeline];
+            [enc setDepthStencilState:_noDepthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            TextureUniforms tu;
+            tu.mvp = simd_mul(ortho, make_model_rect(W * 0.5f + 205.f, 30.f, 0.f,
+                                                     (float)_hudScrapTextureSize.width,
+                                                     (float)_hudScrapTextureSize.height));
+            [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+            [enc setFragmentTexture:_hudScrapTexture atIndex:0];
+            [enc setFragmentSamplerState:_linearSampler atIndex:0];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
+
+        NSString *promptText = _shopPrompt ?: @"";
+        if (promptText.length > 0) {
+            if (!_shopPromptTexture || ![_shopPromptText isEqualToString:promptText]) {
+                _shopPromptText = [promptText copy];
+                _shopPromptTexture = makeHUDLabelTexture(view.device, _shopPromptText, &_shopPromptTextureSize);
+            }
+            if (_shopPromptTexture && _texturePipeline) {
+                [enc setRenderPipelineState:_texturePipeline];
+                [enc setDepthStencilState:_noDepthState];
+                [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+                TextureUniforms tu;
+                tu.mvp = simd_mul(ortho, make_model_rect(W * 0.5f, H - 42.f, 0.f,
+                                                         (float)_shopPromptTextureSize.width,
+                                                         (float)_shopPromptTextureSize.height));
+                [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+                [enc setFragmentTexture:_shopPromptTexture atIndex:0];
+                [enc setFragmentSamplerState:_linearSampler atIndex:0];
+                [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            }
+        }
+
         // Lives dots — row of small red squares, top-left corner.
         {
             static const float kDotSize   = 22.f;
@@ -1390,7 +1499,7 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
 }
 
 static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, CGSize *outSize) {
-    CGFloat wFloat = 190.f;
+    CGFloat wFloat = fmax(190.f, fmin(520.f, 24.f + (CGFloat)text.length * 9.0f));
     CGFloat hFloat = 38.f;
     NSUInteger w = (NSUInteger)ceil(wFloat);
     NSUInteger h = (NSUInteger)ceil(hFloat);

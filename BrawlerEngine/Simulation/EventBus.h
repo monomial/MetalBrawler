@@ -21,6 +21,9 @@ enum class EventType : uint8_t {
     SpawnLanded,   // spawn animation completed
     FinalKill,      // true last enemy of the room was killed
     ExitReached,    // post-upgrade exit portal was entered
+    ScrapCollected, // player collected scrap currency
+    BoxBroken,      // breakable crate was destroyed
+    ShopPurchase,   // shop pedestal bought
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -39,6 +42,9 @@ struct WaveStartedPayload   { uint8_t waveIndex; };
 struct SpawnLandedPayload   { uint32_t entityID; uint8_t style; };
 struct FinalKillPayload     { uint32_t killerID; uint32_t victimID; };
 struct ExitReachedPayload   { uint32_t entityID; };
+struct ScrapCollectedPayload { int value; };
+struct BoxBrokenPayload     { float x; float y; uint8_t hadScrap; };
+struct ShopPurchasePayload  { uint8_t perkID; int price; uint32_t itemEID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -60,6 +66,9 @@ struct Event {
         SpawnLandedPayload   spawnLanded;
         FinalKillPayload     finalKill;
         ExitReachedPayload   exitReached;
+        ScrapCollectedPayload scrapCollected;
+        BoxBrokenPayload     boxBroken;
+        ShopPurchasePayload  shopPurchase;
     };
 };
 
@@ -166,6 +175,21 @@ struct EventBus {
     void emit_exit_reached(uint32_t entityID) {
         Event e{}; e.type = EventType::ExitReached;
         e.exitReached = { entityID };
+        push(e);
+    }
+    void emit_scrap_collected(int value) {
+        Event e{}; e.type = EventType::ScrapCollected;
+        e.scrapCollected = { value };
+        push(e);
+    }
+    void emit_box_broken(float x, float y, uint8_t hadScrap) {
+        Event e{}; e.type = EventType::BoxBroken;
+        e.boxBroken = { x, y, hadScrap };
+        push(e);
+    }
+    void emit_shop_purchase(uint8_t perkID, int price, uint32_t itemEID) {
+        Event e{}; e.type = EventType::ShopPurchase;
+        e.shopPurchase = { perkID, price, itemEID };
         push(e);
     }
 
