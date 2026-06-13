@@ -1,6 +1,7 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
+#include "Simulation/Systems/CombatHelpers.h"
 
 static constexpr float kFixedDt = 1.0f / 120.0f;
 static constexpr float kAttackDur = 1.03f;
@@ -62,6 +63,71 @@ static int projectileCount(World& world) {
     world.update(kFixedDt, kFixedDt);
     XCTAssertEqual(projectileCount(world), 1);
     XCTAssertTrue(world.get_component<AnimationComponent>(spitter).hitApplied);
+}
+
+- (void)test_spitterTelegraphShortensAtObstacleAndProjectileUsesLockedAim {
+    World world;
+    EntityID player = spawnProjectilePlayer(world, 300.f, 0.f);
+    EntityID spitter = world.defer_create();
+    world.add_component<PositionComponent>(spitter) = {0.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(spitter) = {0.f, 0.f, 0.f};
+    world.add_component<FactionComponent>(spitter).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(spitter) = {2, 2};
+    world.add_component<FacingComponent>(spitter);
+    world.add_component<EnemyAttackCooldownComponent>(spitter);
+    world.add_component<EnemyArchetypeComponent>(spitter).type = (uint8_t)EnemyArchetype::Spitter;
+    world.add_component<AnimationComponent>(spitter);
+    EntityID obstacle = world.defer_create();
+    world.add_component<PositionComponent>(obstacle) = {100.f, 0.f, 0.f};
+    world.add_component<ObstacleComponent>(obstacle) = {10.f, 40.f};
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertTrue(world.telegraph_lines().present(spitter));
+    TelegraphLineComponent line = world.get_component<TelegraphLineComponent>(spitter);
+    XCTAssertEqualWithAccuracy(line.x2, 80.f, 0.01f);
+    XCTAssertEqualWithAccuracy(line.y2, 0.f, 0.01f);
+    XCTAssertEqualWithAccuracy(line.aimX, 1.f, 0.01f);
+    XCTAssertEqualWithAccuracy(line.aimY, 0.f, 0.01f);
+
+    world.get_component<PositionComponent>(player) = {0.f, 300.f, 0.f};
+    AnimationComponent& anim = world.get_component<AnimationComponent>(spitter);
+    anim.currentClip = AnimClipID::Attack;
+    anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime = kActiveMid;
+    anim.looping = false;
+    anim.hitApplied = false;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertFalse(world.telegraph_lines().present(spitter));
+    EntityID projectile = kInvalidEntity;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.projectiles().present(id)) projectile = id;
+    XCTAssertNotEqual(projectile, kInvalidEntity);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 420.f, 0.01f);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy, 0.f, 0.01f);
+}
+
+- (void)test_spitterTelegraphRemovedWhenKilledMidWindup {
+    World world;
+    spawnProjectilePlayer(world, 300.f, 0.f);
+    EntityID spitter = world.defer_create();
+    world.add_component<PositionComponent>(spitter) = {0.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(spitter) = {0.f, 0.f, 0.f};
+    world.add_component<FactionComponent>(spitter).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(spitter) = {2, 2};
+    world.add_component<FacingComponent>(spitter);
+    world.add_component<EnemyAttackCooldownComponent>(spitter);
+    world.add_component<EnemyArchetypeComponent>(spitter).type = (uint8_t)EnemyArchetype::Spitter;
+    world.add_component<AnimationComponent>(spitter);
+
+    world.update(kFixedDt, kFixedDt);
+    XCTAssertTrue(world.telegraph_lines().present(spitter));
+
+    Combat_apply_death(world, spitter);
+
+    XCTAssertFalse(world.telegraph_lines().present(spitter));
 }
 
 - (void)test_projectileTravelsDeterministicallyAndDamagesPlayer {

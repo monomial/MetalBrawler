@@ -12,6 +12,7 @@ enum class EnemyArchetype : uint8_t {
     Heavy  = 2, // slow tank, barely budges
     Boss   = 3, // the room-4 big bad
     Spitter = 4, // ranged back-line projectile thrower
+    Leaper = 5, // slow walker with a telegraphed jumping attack
     Count
 };
 
@@ -32,6 +33,7 @@ constexpr EnemyArchetypeDef kEnemyArchetypes[(int)EnemyArchetype::Count] = {
     {   90.f, 115.f, 3.0f,    8, 1.30f, 0.3f,  false }, // Heavy
     {  110.f, 120.f, 2.0f,   12, 2.00f, 0.25f, false }, // Boss
     {  120.f, 350.f, 2.6f,    2, 0.90f, 1.2f,  true  }, // Spitter
+    {   70.f, 140.f, 4.0f,    3, 1.05f, 0.8f,  false }, // Leaper
 };
 
 struct EnemyArchetypeComponent {

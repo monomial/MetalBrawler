@@ -122,6 +122,8 @@ public:
     ComponentStorage<HeartPickupComponent>&        heart_pickups()    { return _heartPickups; }
     ComponentStorage<ExitComponent>&               exits()            { return _exits; }
     ComponentStorage<ProjectileComponent>&         projectiles()      { return _projectiles; }
+    ComponentStorage<TelegraphLineComponent>&      telegraph_lines()  { return _telegraphLines; }
+    ComponentStorage<LeaperComponent>&             leapers()          { return _leapers; }
     ComponentStorage<WaveControllerComponent>&     wave_controllers() { return _waveControllers; }
     ComponentStorage<SpawnMarkerComponent>&        spawn_markers()    { return _spawnMarkers; }
     ComponentStorage<SpawnAnimComponent>&          spawn_anims()      { return _spawnAnims; }
@@ -169,6 +171,8 @@ private:
     ComponentStorage<HeartPickupComponent>        _heartPickups;
     ComponentStorage<ExitComponent>               _exits;
     ComponentStorage<ProjectileComponent>         _projectiles;
+    ComponentStorage<TelegraphLineComponent>      _telegraphLines;
+    ComponentStorage<LeaperComponent>             _leapers;
     ComponentStorage<WaveControllerComponent>     _waveControllers;
     ComponentStorage<SpawnMarkerComponent>        _spawnMarkers;
     ComponentStorage<SpawnAnimComponent>          _spawnAnims;
@@ -212,6 +216,8 @@ template<> ComponentStorage<SpecialMeterComponent>&       World::_pool<SpecialMe
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool<HeartPickupComponent>();
 template<> ComponentStorage<ExitComponent>&               World::_pool<ExitComponent>();
 template<> ComponentStorage<ProjectileComponent>&         World::_pool<ProjectileComponent>();
+template<> ComponentStorage<TelegraphLineComponent>&      World::_pool<TelegraphLineComponent>();
+template<> ComponentStorage<LeaperComponent>&             World::_pool<LeaperComponent>();
 template<> ComponentStorage<WaveControllerComponent>&     World::_pool<WaveControllerComponent>();
 template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool<SpawnMarkerComponent>();
 template<> ComponentStorage<SpawnAnimComponent>&          World::_pool<SpawnAnimComponent>();

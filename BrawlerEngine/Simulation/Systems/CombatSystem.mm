@@ -73,22 +73,34 @@ static EntityID nearest_living_player(World& world, const PositionComponent& ori
 static bool spawn_projectile_at_target(World& world, EntityID attackerID,
                                        const PositionComponent& atkPos,
                                        int damage) {
-    EntityID targetID = nearest_living_player(world, atkPos);
-    if (targetID == kInvalidEntity) return false;
-    const PositionComponent& tPos = world.get_component<PositionComponent>(targetID);
-    float dx = tPos.x - atkPos.x;
-    float dy = tPos.y - atkPos.y;
-    float dist = sqrtf(dx * dx + dy * dy);
-    if (dist <= 0.001f) {
-        dx = 0.f;
-        dy = 1.f;
-        dist = 1.f;
+    float dirX = 0.f;
+    float dirY = 1.f;
+    if (world.has_component<TelegraphLineComponent>(attackerID)) {
+        const TelegraphLineComponent& line = world.get_component<TelegraphLineComponent>(attackerID);
+        float len = sqrtf(line.aimX * line.aimX + line.aimY * line.aimY);
+        dirX = len > 0.001f ? line.aimX / len : 0.f;
+        dirY = len > 0.001f ? line.aimY / len : 1.f;
+        world.remove_component<TelegraphLineComponent>(attackerID);
+    } else {
+        EntityID targetID = nearest_living_player(world, atkPos);
+        if (targetID == kInvalidEntity) return false;
+        const PositionComponent& tPos = world.get_component<PositionComponent>(targetID);
+        float dx = tPos.x - atkPos.x;
+        float dy = tPos.y - atkPos.y;
+        float dist = sqrtf(dx * dx + dy * dy);
+        if (dist <= 0.001f) {
+            dx = 0.f;
+            dy = 1.f;
+            dist = 1.f;
+        }
+        dirX = dx / dist;
+        dirY = dy / dist;
     }
     EntityID proj = world.defer_create();
     world.add_component<PositionComponent>(proj) = {atkPos.x, atkPos.y, 12.f};
     ProjectileComponent& pc = world.add_component<ProjectileComponent>(proj);
-    pc.vx = (dx / dist) * kProjectileSpeed;
-    pc.vy = (dy / dist) * kProjectileSpeed;
+    pc.vx = dirX * kProjectileSpeed;
+    pc.vy = dirY * kProjectileSpeed;
     pc.damage = damage;
     return true;
 }
@@ -218,8 +230,10 @@ void CombatSystem_update(World& world, float gameDt) {
                 // Enemies react unless they're a boss; bosses react ~10% of the time.
                 bool isPlayer = world.has_component<PlayerTagComponent>(targetID);
                 bool isBoss   = world.has_component<BossTagComponent>(targetID);
-                if (!isPlayer && (!isBoss || world.rand_range(10) == 0))
+                if (!isPlayer && (!isBoss || world.rand_range(10) == 0)) {
+                    world.remove_component<TelegraphLineComponent>(targetID);
                     AnimationSystem_request_clip(world, targetID, AnimClipID::Hurt);
+                }
             }
         }
 

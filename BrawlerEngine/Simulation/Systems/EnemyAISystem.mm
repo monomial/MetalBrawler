@@ -1,5 +1,6 @@
 #include "EnemyAISystem.h"
 #include "Simulation/World.h"
+#include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include <math.h>
 
@@ -9,6 +10,37 @@ static constexpr float kEnemySpeed          = 150.0f; // units per second
 static constexpr float kStopRadius          = 110.0f; // stop chasing within this distance
 static constexpr float kEnemyAttackCooldown = 2.0f;   // seconds between attack initiations
 static constexpr float kEnemyAttackWindup   = 0.35f;  // committed warning before punch
+static constexpr float kRangedTelegraphWidth = 18.f;
+static constexpr float kRangedMaxDistance = 1050.f;
+static constexpr float kAimStep = 20.f;
+
+static bool point_blocked_by_obstacle(World& world, float x, float y) {
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (!world.obstacles().present(id)) continue;
+        if (!world.has_component<PositionComponent>(id)) continue;
+        const PositionComponent& p = world.get_component<PositionComponent>(id);
+        const ObstacleComponent& o = world.get_component<ObstacleComponent>(id);
+        if (x >= p.x - o.halfW && x <= p.x + o.halfW &&
+            y >= p.y - o.halfH && y <= p.y + o.halfH)
+            return true;
+    }
+    return false;
+}
+
+static float telegraph_distance_until_blocked(World& world, const PositionComponent& from,
+                                              float dirX, float dirY) {
+    float lastClear = 0.f;
+    for (float d = kAimStep; d <= kRangedMaxDistance; d += kAimStep) {
+        float x = from.x + dirX * d;
+        float y = from.y + dirY * d;
+        if (x < kRoomMinX || x > kRoomMaxX || y < kRoomMinY || y > kRoomMaxY)
+            return lastClear;
+        if (point_blocked_by_obstacle(world, x, y))
+            return lastClear;
+        lastClear = d;
+    }
+    return kRangedMaxDistance;
+}
 
 void EnemyAISystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // HitStop — enemies freeze
@@ -52,9 +84,17 @@ void EnemyAISystem_update(World& world, float gameDt) {
         float cooldown   = kEnemyAttackCooldown;
         bool isRusher = false;
         if (world.has_component<EnemyArchetypeComponent>(id)) {
-            isRusher = world.get_component<EnemyArchetypeComponent>(id).type == (uint8_t)EnemyArchetype::Rusher;
+            uint8_t archetype = world.get_component<EnemyArchetypeComponent>(id).type;
+            if (archetype == (uint8_t)EnemyArchetype::Leaper &&
+                world.has_component<LeaperComponent>(id) &&
+                world.get_component<LeaperComponent>(id).state != 0) {
+                if (world.has_component<VelocityComponent>(id))
+                    world.get_component<VelocityComponent>(id) = {0.f, 0.f, 0.f};
+                continue;
+            }
+            isRusher = archetype == (uint8_t)EnemyArchetype::Rusher;
             const EnemyArchetypeDef& def =
-                enemy_archetype_def(world.get_component<EnemyArchetypeComponent>(id).type);
+                enemy_archetype_def(archetype);
             moveSpeed  = def.moveSpeed;
             stopRadius = def.stopRadius;
             cooldown   = def.attackCooldown;
@@ -81,12 +121,19 @@ void EnemyAISystem_update(World& world, float gameDt) {
         }
 
         bool windupFinished = false;
+        bool windupCancelled = false;
 
         // Tick down attack cooldown and any committed wind-up.
         if (world.has_component<EnemyAttackCooldownComponent>(id)) {
             auto& cd = world.get_component<EnemyAttackCooldownComponent>(id);
             cd.remaining -= gameDt;
             if (cd.remaining < 0.f) cd.remaining = 0.f;
+            if (cd.windup > 0.f &&
+                world.has_component<AnimationComponent>(id) &&
+                world.get_component<AnimationComponent>(id).currentClip == AnimClipID::Hurt) {
+                cd.windup = 0.f;
+                windupCancelled = true;
+            }
             if (cd.windup > 0.f) {
                 cd.windup -= gameDt;
                 if (cd.windup <= 0.f) {
@@ -95,6 +142,8 @@ void EnemyAISystem_update(World& world, float gameDt) {
                 }
             }
         }
+        if (windupCancelled)
+            world.remove_component<TelegraphLineComponent>(id);
 
         if (!world.has_component<VelocityComponent>(id))
             world.add_component<VelocityComponent>(id) = {};
@@ -130,9 +179,24 @@ void EnemyAISystem_update(World& world, float gameDt) {
             nextClip = AnimClipID::Attack;
         } else if (!moving && world.has_component<EnemyAttackCooldownComponent>(id)) {
             auto& cd = world.get_component<EnemyAttackCooldownComponent>(id);
-            if (cd.windup <= 0.f && cd.remaining <= 0.f) {
+            bool isLeaper = world.has_component<EnemyArchetypeComponent>(id) &&
+                            world.get_component<EnemyArchetypeComponent>(id).type == (uint8_t)EnemyArchetype::Leaper;
+            if (!isLeaper && cd.windup <= 0.f && cd.remaining <= 0.f) {
                 cd.windup = kEnemyAttackWindup;
                 cd.remaining = cooldown;
+                if (world.has_component<EnemyArchetypeComponent>(id) &&
+                    enemy_archetype_def(world.get_component<EnemyArchetypeComponent>(id).type).ranged) {
+                    float len = dist > 0.001f ? telegraph_distance_until_blocked(world, ePos, dx / dist, dy / dist)
+                                               : 0.f;
+                    TelegraphLineComponent& line = world.has_component<TelegraphLineComponent>(id)
+                        ? world.get_component<TelegraphLineComponent>(id)
+                        : world.add_component<TelegraphLineComponent>(id);
+                    line.x2 = ePos.x + (dist > 0.001f ? dx / dist : 0.f) * len;
+                    line.y2 = ePos.y + (dist > 0.001f ? dy / dist : 1.f) * len;
+                    line.width = kRangedTelegraphWidth;
+                    line.aimX = dist > 0.001f ? dx / dist : 0.f;
+                    line.aimY = dist > 0.001f ? dy / dist : 1.f;
+                }
             }
         }
 

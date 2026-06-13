@@ -99,6 +99,8 @@ static void trigger_final_kill_if_needed(World& world, EntityID victimID, Entity
 
 static void Combat_apply_death_internal(World& world, EntityID victimID, EntityID killerID,
                                         bool allowHeartDrop, bool allowBossSweep) {
+    world.remove_component<TelegraphLineComponent>(victimID);
+
     if (world.player_tags().present(victimID) &&
         !world.has_component<DownedComponent>(victimID) &&
         has_living_teammate(world, victimID)) {

@@ -14,6 +14,7 @@
 #include "Systems/PickupSystem.h"
 #include "Systems/ExitSystem.h"
 #include "Systems/ProjectileSystem.h"
+#include "Systems/LeaperSystem.h"
 #include "Systems/WaveSystem.h"
 #include "Systems/ReviveSystem.h"
 #include <cassert>
@@ -44,6 +45,8 @@ template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { retur
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
 template<> ComponentStorage<ExitComponent>&               World::_pool() { return _exits; }
 template<> ComponentStorage<ProjectileComponent>&         World::_pool() { return _projectiles; }
+template<> ComponentStorage<TelegraphLineComponent>&      World::_pool() { return _telegraphLines; }
+template<> ComponentStorage<LeaperComponent>&             World::_pool() { return _leapers; }
 template<> ComponentStorage<WaveControllerComponent>&     World::_pool() { return _waveControllers; }
 template<> ComponentStorage<SpawnMarkerComponent>&        World::_pool() { return _spawnMarkers; }
 template<> ComponentStorage<SpawnAnimComponent>&          World::_pool() { return _spawnAnims; }
@@ -111,6 +114,8 @@ void World::flush() {
         _heartPickups.remove(id);
         _exits.remove(id);
         _projectiles.remove(id);
+        _telegraphLines.remove(id);
+        _leapers.remove(id);
         _waveControllers.remove(id);
         _spawnMarkers.remove(id);
         _spawnAnims.remove(id);
@@ -130,6 +135,8 @@ void World::tick(float gameDt) {
 
     // 1. InputSystem — reads current_input(), writes player velocity
     InputSystem_update(*this);
+    // 1.45. LeaperSystem — owns leaper telegraph/leap/recover states before AI.
+    LeaperSystem_update(*this, gameDt);
     // 1.5. EnemyAISystem — steers enemies toward player
     EnemyAISystem_update(*this, gameDt);
     // 1.6. BossSystem — charge state machine, overrides AI velocity/clip while

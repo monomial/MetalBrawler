@@ -137,6 +137,25 @@ static simd_float4x4 make_model_rect(float x, float y, float z, float w, float h
     return m;
 }
 
+static simd_float4x4 make_model_line(float x1, float y1, float x2, float y2,
+                                     float width, float z) {
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float len = sqrtf(dx * dx + dy * dy);
+    simd_float4x4 S = matrix_identity_float4x4;
+    S.columns[0].x = len;
+    S.columns[1].y = width;
+    S.columns[2].z = 1.f;
+    float a = atan2f(dy, dx);
+    float c = cosf(a), s = sinf(a);
+    simd_float4x4 R = matrix_identity_float4x4;
+    R.columns[0] = (simd_float4){ c, s, 0.f, 0.f};
+    R.columns[1] = (simd_float4){-s, c, 0.f, 0.f};
+    simd_float4x4 T = matrix_identity_float4x4;
+    T.columns[3] = (simd_float4){(x1 + x2) * 0.5f, (y1 + y2) * 0.5f, z, 1.f};
+    return simd_mul(T, simd_mul(R, S));
+}
+
 // Vertical wall quad standing in Z. alongX: quad x → world X (north/south
 // walls); otherwise quad x → world Y (east/west walls). Quad y → world Z.
 static simd_float4x4 make_model_wall(float cx, float cy, float length, float height, bool alongX) {
@@ -719,6 +738,24 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
 
     _frameIdx = (_frameIdx + 1) % 3;
 
+    // Telegraph lines are extra floor passes; holders can still render as meshes.
+    for (EntityID eid = 0; eid < world->entity_count(); ++eid) {
+        if (!world->telegraph_lines().present(eid)) continue;
+        if (!world->has_component<PositionComponent>(eid)) continue;
+        const auto& pos = world->get_component<PositionComponent>(eid);
+        const auto& line = world->get_component<TelegraphLineComponent>(eid);
+        float pulse = 0.475f + 0.125f * sinf((float)CACurrentMediaTime() * 8.f + (float)eid);
+        [enc setRenderPipelineState:_pipeline];
+        [enc setDepthStencilState:_depthState];
+        [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+        DrawUniforms u;
+        u.mvp = simd_mul(vp, make_model_line(pos.x, pos.y, line.x2, line.y2,
+                                             line.width, 2.0f));
+        u.color = (simd_float4){1.0f, 0.35f, 0.15f, pulse};
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+    }
+
     for (EntityID eid = 0; eid < world->entity_count(); ++eid) {
         if (!world->has_component<PositionComponent>(eid)) continue;
         auto& pos = world->get_component<PositionComponent>(eid);
@@ -867,6 +904,13 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
                     zOffset = -kTargetCharHeight * scale * (1.f - eased);
                 } else {
                     zOffset = 600.f * (1.f - t * t);
+                }
+            }
+            if (world->has_component<LeaperComponent>(eid)) {
+                const auto& leap = world->get_component<LeaperComponent>(eid);
+                if (leap.state == 2) {
+                    float t = clampf(leap.timer / 0.40f, 0.f, 1.f);
+                    zOffset += sinf(t * (float)M_PI) * 130.f;
                 }
             }
             su.mvp   = simd_mul(vp, make_char_model(pos.x, pos.y, scale,

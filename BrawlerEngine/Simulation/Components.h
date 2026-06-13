@@ -141,6 +141,24 @@ struct ProjectileComponent {
     float lifetime = 2.5f;
 };
 
+struct TelegraphLineComponent {
+    float x2 = 0.f;
+    float y2 = 0.f;
+    float width = 18.f;
+    float aimX = 0.f;
+    float aimY = 1.f;
+};
+
+struct LeaperComponent {
+    uint8_t state = 0; // 0 Walk, 1 Telegraph, 2 Leap, 3 Recover
+    float timer = 0.f;
+    float startX = 0.f;
+    float startY = 0.f;
+    float destX = 0.f;
+    float destY = 0.f;
+    float cooldown = 0.f;
+};
+
 struct PendingSpawn {
     uint8_t archetype = 0;
     uint8_t wave = 0;

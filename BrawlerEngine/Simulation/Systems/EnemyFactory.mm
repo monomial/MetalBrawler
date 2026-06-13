@@ -16,6 +16,8 @@ EntityID Enemy_spawn(World& world, uint8_t archetype, float x, float y) {
         world.add_component<BossTagComponent>(e);
         world.add_component<BossChargeComponent>(e);
     }
+    if (archetype == (uint8_t)EnemyArchetype::Leaper) {
+        world.add_component<LeaperComponent>(e).cooldown = 0.f;
+    }
     return e;
 }
-
