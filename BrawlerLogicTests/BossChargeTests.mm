@@ -37,6 +37,20 @@ static EntityID spawnBoss(World& world, float x, float y, float idleTimer) {
     return e;
 }
 
+static int hazardCount(World& world) {
+    int count = 0;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.hazards().present(id)) count++;
+    return count;
+}
+
+static int bossTestLavaLobCount(World& world) {
+    int count = 0;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.lava_lobs().present(id)) count++;
+    return count;
+}
+
 @interface BossChargeTests : XCTestCase
 @end
 
@@ -66,6 +80,76 @@ static EntityID spawnBoss(World& world, float x, float y, float idleTimer) {
     float y0 = world.get_component<PositionComponent>(boss).y;
     advance(world, 0.3f);
     XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(boss).y, y0, 0.01f);
+}
+
+- (void)test_bossAbilityPatternRotatesChargeLobChargeLeap {
+    World world;
+    spawnPlayer(world, 0, -100);
+    EntityID boss = spawnBoss(world, 0, 300, 0.01f);
+
+    advance(world, 0.02f);
+    XCTAssertEqual(world.get_component<BossChargeComponent>(boss).ability,
+                   (uint8_t)BossChargeComponent::AbilityCharge);
+    world.get_component<BossChargeComponent>(boss).state = BossChargeComponent::Idle;
+    world.get_component<BossChargeComponent>(boss).timer = 0.01f;
+
+    advance(world, 0.02f);
+    XCTAssertEqual(world.get_component<BossChargeComponent>(boss).ability,
+                   (uint8_t)BossChargeComponent::AbilityLobVolley);
+    world.get_component<BossChargeComponent>(boss).state = BossChargeComponent::Idle;
+    world.get_component<BossChargeComponent>(boss).timer = 0.01f;
+
+    advance(world, 0.02f);
+    XCTAssertEqual(world.get_component<BossChargeComponent>(boss).ability,
+                   (uint8_t)BossChargeComponent::AbilityCharge);
+    world.get_component<BossChargeComponent>(boss).state = BossChargeComponent::Idle;
+    world.get_component<BossChargeComponent>(boss).timer = 0.01f;
+
+    advance(world, 0.02f);
+    XCTAssertEqual(world.get_component<BossChargeComponent>(boss).ability,
+                   (uint8_t)BossChargeComponent::AbilityLeap);
+}
+
+- (void)test_bossLobVolleySpawnsTwoOrThreeLobs {
+    World world;
+    spawnPlayer(world, 0, -100);
+    EntityID boss = spawnBoss(world, 0, 300, 0.01f);
+    auto& charge = world.get_component<BossChargeComponent>(boss);
+    charge.abilityCounter = 1; // LobVolley
+
+    advance(world, 0.7f);
+    XCTAssertEqual(bossTestLavaLobCount(world), 2);
+
+    World enragedWorld;
+    spawnPlayer(enragedWorld, 0, -100);
+    EntityID enragedBoss = spawnBoss(enragedWorld, 0, 300, 0.01f);
+    auto& enraged = enragedWorld.get_component<BossChargeComponent>(enragedBoss);
+    enraged.abilityCounter = 1;
+    enragedWorld.get_component<HealthComponent>(enragedBoss).current = 6;
+    advance(enragedWorld, 0.8f);
+    XCTAssertEqual(bossTestLavaLobCount(enragedWorld), 3);
+}
+
+- (void)test_bossLeapMovesToDestDamagesAndSpawnsPool {
+    World world;
+    EntityID player = spawnPlayer(world, 0, -190);
+    EntityID boss = spawnBoss(world, 0, 0, 0.01f);
+    auto& charge = world.get_component<BossChargeComponent>(boss);
+    charge.state = BossChargeComponent::Leap;
+    charge.ability = BossChargeComponent::AbilityLeap;
+    charge.timer = 0.f;
+    charge.startX = 0.f;
+    charge.startY = 0.f;
+    charge.destX = 0.f;
+    charge.destY = -190.f;
+
+    advance(world, 0.5f);
+
+    const auto& c = world.get_component<BossChargeComponent>(boss);
+    XCTAssertEqual(c.state, (uint8_t)BossChargeComponent::Recover);
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(boss).y, c.destY, 0.01f);
+    XCTAssertLessThan(world.get_component<HealthComponent>(player).current, 10);
+    XCTAssertGreaterThanOrEqual(hazardCount(world), 1);
 }
 
 - (void)test_charge_movesTowardStoredPlayerDirection {
@@ -171,6 +255,15 @@ static EntityID spawnBoss(World& world, float x, float y, float idleTimer) {
     for (EntityID id = 0; id < world.entity_count(); ++id)
         if (world.hazards().present(id)) snakes++;
     XCTAssertEqual(snakes, 4, @"enraged charge end must spawn 4 snakes");
+}
+
+- (void)test_chargeStillSpawnsSnakesInExpandedPattern {
+    World world;
+    spawnPlayer(world, 0, -100);
+    EntityID boss = spawnBoss(world, 0, 300, 0.01f);
+    world.get_component<BossChargeComponent>(boss).abilityCounter = 0;
+    advance(world, 2.0f);
+    XCTAssertEqual(hazardCount(world), 3);
 }
 
 @end

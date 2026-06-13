@@ -70,6 +70,24 @@ unsigned int HazardSystem_spawn_snake(World& world, float x, float y,
     return e;
 }
 
+unsigned int HazardSystem_spawn_lava_lob(World& world, float sx, float sy,
+                                         float dx, float dy, int poolDamage,
+                                         float poolRadius, float poolLifetime) {
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {sx, sy, 0.f};
+    LavaLobComponent& lob = world.add_component<LavaLobComponent>(e);
+    lob.startX = sx;
+    lob.startY = sy;
+    lob.destX = clampf(dx, kRoomMinX + 40.f, kRoomMaxX - 40.f);
+    lob.destY = clampf(dy, kRoomMinY + 40.f, kRoomMaxY - 40.f);
+    lob.elapsed = 0.f;
+    lob.duration = 1.1f;
+    lob.poolDamage = poolDamage;
+    lob.poolRadius = poolRadius;
+    lob.poolLifetime = poolLifetime;
+    return e;
+}
+
 void HazardSystem_update(World& world, float gameDt) {
     if (gameDt == 0.f) return; // frozen during HitStop
 

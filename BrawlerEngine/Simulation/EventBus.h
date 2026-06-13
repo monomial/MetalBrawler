@@ -24,6 +24,7 @@ enum class EventType : uint8_t {
     ScrapCollected, // player collected scrap currency
     BoxBroken,      // breakable crate was destroyed
     ShopPurchase,   // shop pedestal bought
+    LavaPoolSpawned, // lob landed and created a lava pool
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -45,6 +46,7 @@ struct ExitReachedPayload   { uint32_t entityID; };
 struct ScrapCollectedPayload { int value; };
 struct BoxBrokenPayload     { float x; float y; uint8_t hadScrap; };
 struct ShopPurchasePayload  { uint8_t perkID; int price; uint32_t itemEID; };
+struct LavaPoolSpawnedPayload { float x; float y; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -69,6 +71,7 @@ struct Event {
         ScrapCollectedPayload scrapCollected;
         BoxBrokenPayload     boxBroken;
         ShopPurchasePayload  shopPurchase;
+        LavaPoolSpawnedPayload lavaPoolSpawned;
     };
 };
 
@@ -190,6 +193,11 @@ struct EventBus {
     void emit_shop_purchase(uint8_t perkID, int price, uint32_t itemEID) {
         Event e{}; e.type = EventType::ShopPurchase;
         e.shopPurchase = { perkID, price, itemEID };
+        push(e);
+    }
+    void emit_lava_pool_spawned(float x, float y) {
+        Event e{}; e.type = EventType::LavaPoolSpawned;
+        e.lavaPoolSpawned = { x, y };
         push(e);
     }
 

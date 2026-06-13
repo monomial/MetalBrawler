@@ -11,3 +11,7 @@ void HazardSystem_update(World& world, float gameDt);
 // a perpendicular offset. Returns its entity ID. Used by BossSystem and tests.
 unsigned int HazardSystem_spawn_snake(World& world, float x, float y,
                                       float outX, float outY);
+
+unsigned int HazardSystem_spawn_lava_lob(World& world, float sx, float sy,
+                                         float dx, float dy, int poolDamage,
+                                         float poolRadius, float poolLifetime);

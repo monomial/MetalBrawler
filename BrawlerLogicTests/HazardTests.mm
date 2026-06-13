@@ -1,6 +1,8 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
+#include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/HazardSystem.h"
+#include "Simulation/AutoPilot.h"
 #include "Platform/InputState.h"
 
 static constexpr float kFixedDt = 1.0f / 120.0f;
@@ -27,6 +29,24 @@ static EntityID spawnPlayer(World& world, float x, float y) {
 @end
 
 @implementation HazardTests
+
+- (void)test_autoPilotSteersAwayFromStandingHazard {
+    World world;
+    AutoPilot_reset();
+    spawnPlayer(world, 0.f, 0.f);
+    EntityID enemy = world.defer_create();
+    world.add_component<PositionComponent>(enemy) = {200.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(enemy) = {0.f, 0.f, 0.f};
+    world.add_component<FactionComponent>(enemy).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(enemy) = {2, 2};
+    world.add_component<AnimationComponent>(enemy);
+    EntityID lava = world.defer_create();
+    world.add_component<PositionComponent>(lava) = {40.f, 0.f, 0.f};
+    world.add_component<HazardComponent>(lava).radius = 70.f;
+
+    InputState in = AutoPilot_input(world, 0);
+    XCTAssertLessThan(in.moveX, 0.f, @"bot should avoid stepping into lava, not chase through it");
+}
 
 - (void)test_snake_followsLoopAndReturns {
     World world;
@@ -115,6 +135,59 @@ static EntityID spawnPlayer(World& world, float x, float y) {
     World world;
     EntityID snake = HazardSystem_spawn_snake(world, 0, 0, 300, 0);
     XCTAssertFalse(world.has_component<FactionComponent>(snake));
+}
+
+- (void)test_lavaLob_arcsLandsSpawnsStationaryPoolAndDamages {
+    World world;
+    EntityID player = spawnPlayer(world, 100.f, 0.f);
+    EntityID lob = HazardSystem_spawn_lava_lob(world, 0.f, 0.f, 100.f, 0.f,
+                                               1, 64.f, 0.35f);
+
+    advance(world, 0.55f);
+    XCTAssertTrue(world.lava_lobs().present(lob));
+    XCTAssertFalse(world.hazards().present(lob));
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 10,
+                   @"airborne lobs must not deal contact damage");
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(lob).x, 50.f, 2.f);
+
+    int spawnedEvents = 0;
+    for (int i = 0; i < 90 && world.lava_lobs().present(lob); ++i) {
+        world.update(kFixedDt, kFixedDt);
+        world.events().for_each(EventType::LavaPoolSpawned,
+                                [&spawnedEvents](const Event&){ spawnedEvents++; });
+    }
+    XCTAssertEqual(spawnedEvents, 1);
+    XCTAssertFalse(world.lava_lobs().present(lob));
+
+    EntityID pool = kInvalidEntity;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.hazards().present(id)) pool = id;
+    XCTAssertNotEqual(pool, kInvalidEntity);
+    XCTAssertFalse(world.paths().present(pool), @"lava pool must be stationary");
+    XCTAssertEqualWithAccuracy(world.get_component<PositionComponent>(pool).x, 100.f, 0.01f);
+
+    world.update(kFixedDt, kFixedDt);
+    XCTAssertLessThan(world.get_component<HealthComponent>(player).current, 10);
+    advance(world, 0.5f);
+    XCTAssertFalse(world.hazards().present(pool), @"pool must despawn after lifetime");
+}
+
+- (void)test_autoPilotSteersAwayFromHazard {
+    World world;
+    EntityID player = spawnPlayer(world, 0.f, 0.f);
+    (void)player;
+    EntityID enemy = world.defer_create();
+    world.add_component<PositionComponent>(enemy) = {200.f, 0.f, 0.f};
+    world.add_component<FactionComponent>(enemy).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(enemy) = {2, 2};
+    world.add_component<AnimationComponent>(enemy);
+    EntityID lava = world.defer_create();
+    world.add_component<PositionComponent>(lava) = {45.f, 0.f, 0.f};
+    world.add_component<HazardComponent>(lava).radius = 80.f;
+
+    AutoPilot_reset();
+    InputState input = AutoPilot_input(world, 0);
+    XCTAssertLessThan(input.moveX, 0.f, @"bot should steer away from lava in its next step");
 }
 
 @end

@@ -48,6 +48,13 @@ static int projectileCount(World& world) {
     return count;
 }
 
+static int projectileTestLavaLobCount(World& world) {
+    int count = 0;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.lava_lobs().present(id)) count++;
+    return count;
+}
+
 @interface ProjectileTests : XCTestCase
 @end
 
@@ -79,6 +86,26 @@ static int projectileCount(World& world) {
     XCTAssertNotEqual(projectile, kInvalidEntity);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 420.f * 1.14f, 0.01f);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy, 0.f, 0.01f);
+}
+
+- (void)test_spitterLobGateRequiresDifficultyAndThirdShot {
+    World lowWorld;
+    lowWorld.set_difficulty(2);
+    spawnProjectilePlayer(lowWorld, 300.f, 0.f);
+    EntityID lowSpitter = spawnSpitter(lowWorld, 0.f, 0.f);
+    lowWorld.add_component<EnemyAttackCooldownComponent>(lowSpitter).shotCount = 2;
+    lowWorld.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(projectileCount(lowWorld), 1);
+    XCTAssertEqual(projectileTestLavaLobCount(lowWorld), 0);
+
+    World highWorld;
+    highWorld.set_difficulty(3);
+    spawnProjectilePlayer(highWorld, 300.f, 0.f);
+    EntityID highSpitter = spawnSpitter(highWorld, 0.f, 0.f);
+    highWorld.add_component<EnemyAttackCooldownComponent>(highSpitter).shotCount = 2;
+    highWorld.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(projectileCount(highWorld), 0);
+    XCTAssertEqual(projectileTestLavaLobCount(highWorld), 1);
 }
 
 - (void)test_spitterTelegraphShortensAtObstacleAndProjectileUsesLockedAim {

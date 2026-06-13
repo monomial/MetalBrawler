@@ -122,6 +122,7 @@ public:
     ComponentStorage<BossChargeComponent>&         boss_charges()     { return _bossCharges; }
     ComponentStorage<StatsComponent>&              stats()            { return _stats; }
     ComponentStorage<HazardComponent>&             hazards()          { return _hazards; }
+    ComponentStorage<LavaLobComponent>&            lava_lobs()        { return _lavaLobs; }
     ComponentStorage<PathFollowComponent>&         paths()            { return _paths; }
     ComponentStorage<SpecialMeterComponent>&       special_meters()   { return _specialMeters; }
     ComponentStorage<HeartPickupComponent>&        heart_pickups()    { return _heartPickups; }
@@ -177,6 +178,7 @@ private:
     ComponentStorage<BossChargeComponent>         _bossCharges;
     ComponentStorage<StatsComponent>              _stats;
     ComponentStorage<HazardComponent>             _hazards;
+    ComponentStorage<LavaLobComponent>            _lavaLobs;
     ComponentStorage<PathFollowComponent>         _paths;
     ComponentStorage<SpecialMeterComponent>       _specialMeters;
     ComponentStorage<HeartPickupComponent>        _heartPickups;
@@ -226,6 +228,7 @@ template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool<EnemyArch
 template<> ComponentStorage<BossChargeComponent>&         World::_pool<BossChargeComponent>();
 template<> ComponentStorage<StatsComponent>&              World::_pool<StatsComponent>();
 template<> ComponentStorage<HazardComponent>&             World::_pool<HazardComponent>();
+template<> ComponentStorage<LavaLobComponent>&            World::_pool<LavaLobComponent>();
 template<> ComponentStorage<PathFollowComponent>&         World::_pool<PathFollowComponent>();
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool<SpecialMeterComponent>();
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool<HeartPickupComponent>();

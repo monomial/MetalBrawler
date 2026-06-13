@@ -1,4 +1,5 @@
 #include "BossSystem.h"
+#include "Simulation/Difficulty.h"
 #include "Simulation/World.h"
 #include "Simulation/RoomBounds.h"
 #include "Simulation/Systems/AnimationSystem.h"
@@ -19,6 +20,27 @@ static constexpr float kContactRange     = 95.f;  // body-slam radius during cha
 static constexpr int   kChargeDamage     = 2;
 static constexpr float kContactCooldown  = 0.8f;  // per-victim re-hit delay
 static constexpr float kWallMargin       = 30.f;  // ends the charge at a wall
+static constexpr float kBossLobTelegraph = 0.6f;
+static constexpr float kBossLobEnragedTelegraph = 0.4f;
+static constexpr float kBossLeapTelegraph = 0.7f;
+static constexpr float kBossLeapEnragedTelegraph = 0.55f;
+static constexpr float kLeapAoeRadius = 120.f;
+static constexpr uint8_t kBossPattern[] = {
+    BossChargeComponent::AbilityCharge,
+    BossChargeComponent::AbilityLobVolley,
+    BossChargeComponent::AbilityCharge,
+    BossChargeComponent::AbilityLeap,
+};
+static constexpr int kBossPatternLen = sizeof(kBossPattern) / sizeof(kBossPattern[0]);
+
+static float clampf(float v, float lo, float hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+static float smoothstep(float t) {
+    t = clampf(t, 0.f, 1.f);
+    return t * t * (3.f - 2.f * t);
+}
 
 // Nearest living player; returns false if none.
 static bool nearest_player(World& world, const PositionComponent& from,
@@ -40,6 +62,120 @@ static bool nearest_player(World& world, const PositionComponent& from,
     }
     if (found) *outDist = sqrtf(bestD2);
     return found;
+}
+
+static bool living_player(World& world, EntityID id) {
+    if (!world.player_tags().present(id)) return false;
+    if (!world.has_component<PositionComponent>(id)) return false;
+    if (!world.has_component<HealthComponent>(id)) return false;
+    if (world.get_component<HealthComponent>(id).current <= 0) return false;
+    if (world.has_component<DownedComponent>(id)) return false;
+    if (world.has_component<AnimationComponent>(id) &&
+        world.get_component<AnimationComponent>(id).dying) return false;
+    return true;
+}
+
+static int collect_living_players(World& world, EntityID outIDs[4]) {
+    int n = 0;
+    for (EntityID id = 0; id < world.entity_count() && n < 4; ++id) {
+        if (!living_player(world, id)) continue;
+        outIDs[n++] = id;
+    }
+    return n;
+}
+
+static void damage_players_in_radius(World& world, EntityID attackerID,
+                                     const PositionComponent& center,
+                                     float radius, int damage, int hitStop,
+                                     float shake) {
+    for (EntityID pid = 0; pid < world.entity_count(); ++pid) {
+        if (!living_player(world, pid)) continue;
+        if (world.has_component<DodgeComponent>(pid)) continue;
+        if (world.has_component<DamageCooldownComponent>(pid) &&
+            world.get_component<DamageCooldownComponent>(pid).remaining > 0.f)
+            continue;
+
+        const auto& pp = world.get_component<PositionComponent>(pid);
+        float dx = pp.x - center.x, dy = pp.y - center.y;
+        if (dx * dx + dy * dy > radius * radius) continue;
+
+        auto& hp = world.get_component<HealthComponent>(pid);
+        hp.current -= damage;
+        world.events().emit_hit_contact(attackerID, pid);
+        world.events().emit_damage(pid, damage);
+        world.trigger_hit_stop(hitStop);
+        ScreenShakeSystem_trigger(world, shake);
+        if (world.has_component<DamageCooldownComponent>(pid))
+            world.get_component<DamageCooldownComponent>(pid).remaining = kContactCooldown;
+        if (hp.current <= 0 &&
+            !Combat_try_second_wind(world, pid) &&
+            world.has_component<AnimationComponent>(pid)) {
+            Combat_apply_death(world, pid, attackerID);
+        }
+    }
+}
+
+static void start_charge_telegraph(World& world, EntityID id, BossChargeComponent& charge) {
+    charge.ability = BossChargeComponent::AbilityCharge;
+    charge.state = BossChargeComponent::Telegraph;
+    charge.timer = charge.enraged ? kEnragedTelegraphTime : kTelegraphTime;
+    world.events().emit_boss_telegraph(id);
+}
+
+static void start_lob_telegraph(World& world, EntityID id, BossChargeComponent& charge) {
+    charge.ability = BossChargeComponent::AbilityLobVolley;
+    charge.state = BossChargeComponent::Telegraph;
+    charge.timer = charge.enraged ? kBossLobEnragedTelegraph : kBossLobTelegraph;
+    world.events().emit_boss_telegraph(id);
+}
+
+static void start_leap_telegraph(World& world, EntityID id, BossChargeComponent& charge,
+                                 PositionComponent& pos) {
+    charge.ability = BossChargeComponent::AbilityLeap;
+    charge.state = BossChargeComponent::Telegraph;
+    charge.timer = charge.enraged ? kBossLeapEnragedTelegraph : kBossLeapTelegraph;
+    if (charge.timer < 0.55f) charge.timer = 0.55f;
+    EntityID pid; float dx, dy, dist;
+    if (!nearest_player(world, pos, &pid, &dx, &dy, &dist) || dist <= 0.001f) {
+        dx = charge.dirX;
+        dy = charge.dirY;
+        dist = 1.f;
+    }
+    float dirX = dx / dist;
+    float dirY = dy / dist;
+    float leapLen = fminf(dist + 80.f, 520.f);
+    charge.startX = pos.x;
+    charge.startY = pos.y;
+    charge.destX = clampf(pos.x + dirX * leapLen, kRoomMinX + 60.f, kRoomMaxX - 60.f);
+    charge.destY = clampf(pos.y + dirY * leapLen, kRoomMinY + 60.f, kRoomMaxY - 60.f);
+    charge.dirX = dirX;
+    charge.dirY = dirY;
+    TelegraphLineComponent& line = world.has_component<TelegraphLineComponent>(id)
+        ? world.get_component<TelegraphLineComponent>(id)
+        : world.add_component<TelegraphLineComponent>(id);
+    line.x2 = charge.destX;
+    line.y2 = charge.destY;
+    line.width = 90.f;
+    line.aimX = dirX;
+    line.aimY = dirY;
+    world.events().emit_boss_telegraph(id);
+}
+
+static void spawn_boss_lobs(World& world, const PositionComponent& pos, bool enraged) {
+    EntityID players[4] = {};
+    int playerCount = collect_living_players(world, players);
+    if (playerCount <= 0) return;
+    int lobCount = enraged ? 3 : 2;
+    for (int i = 0; i < lobCount; ++i) {
+        const PositionComponent& target = world.get_component<PositionComponent>(players[i % playerCount]);
+        float dx = target.x;
+        float dy = target.y;
+        if (playerCount == 1 && lobCount > 1) {
+            float offset = (i == 0) ? -90.f : (i == 1 ? 90.f : 0.f);
+            dx += offset;
+        }
+        HazardSystem_spawn_lava_lob(world, pos.x, pos.y, dx, dy, 1, 90.f, 3.5f);
+    }
 }
 
 void BossSystem_update(World& world, float gameDt) {
@@ -78,23 +214,31 @@ void BossSystem_update(World& world, float gameDt) {
             }
         }
 
-        charge.timer -= gameDt;
+        if (charge.state != BossChargeComponent::Leap)
+            charge.timer -= gameDt;
 
         switch (charge.state) {
             case BossChargeComponent::Idle: {
                 // EnemyAISystem drives normal chase/attack behavior here.
                 if (charge.timer <= 0.f) {
-                    charge.state = BossChargeComponent::Telegraph;
-                    charge.timer = charge.enraged ? kEnragedTelegraphTime : kTelegraphTime;
-                    world.events().emit_boss_telegraph(id);
+                    charge.ability = kBossPattern[charge.abilityCounter % kBossPatternLen];
+                    charge.abilityCounter += 1;
+                    if (charge.ability == BossChargeComponent::AbilityLobVolley) {
+                        start_lob_telegraph(world, id, charge);
+                    } else if (charge.ability == BossChargeComponent::AbilityLeap) {
+                        start_leap_telegraph(world, id, charge, pos);
+                    } else {
+                        start_charge_telegraph(world, id, charge);
+                    }
                 }
                 break;
             }
 
             case BossChargeComponent::Telegraph: {
-                // Plant and stare the target down; direction tracks until launch.
+                // Plant and stare the target down; charge/lob direction tracks until launch.
                 EntityID pid; float dx, dy, dist;
-                if (nearest_player(world, pos, &pid, &dx, &dy, &dist) && dist > 0.001f) {
+                if (charge.ability != BossChargeComponent::AbilityLeap &&
+                    nearest_player(world, pos, &pid, &dx, &dy, &dist) && dist > 0.001f) {
                     charge.dirX = dx / dist;
                     charge.dirY = dy / dist;
                     if (world.has_component<FacingComponent>(id)) {
@@ -107,8 +251,20 @@ void BossSystem_update(World& world, float gameDt) {
                 AnimationSystem_request_clip(world, id, AnimClipID::Idle);
 
                 if (charge.timer <= 0.f) {
-                    charge.state = BossChargeComponent::Charge;
-                    charge.timer = kChargeMaxTime;
+                    if (charge.ability == BossChargeComponent::AbilityLobVolley) {
+                        spawn_boss_lobs(world, pos, charge.enraged);
+                        charge.state = BossChargeComponent::Recover;
+                        charge.timer = kRecoverTime;
+                    } else if (charge.ability == BossChargeComponent::AbilityLeap) {
+                        charge.state = BossChargeComponent::Leap;
+                        charge.timer = 0.f;
+                        charge.startX = pos.x;
+                        charge.startY = pos.y;
+                        world.remove_component<TelegraphLineComponent>(id);
+                    } else {
+                        charge.state = BossChargeComponent::Charge;
+                        charge.timer = kChargeMaxTime;
+                    }
                 }
                 break;
             }
@@ -123,38 +279,8 @@ void BossSystem_update(World& world, float gameDt) {
                 vel.vz = 0.f;
                 AnimationSystem_request_clip(world, id, AnimClipID::Walk);
 
-                // Body slam: damage any player in contact range (re-hit gated
-                // by the player's DamageCooldownComponent).
-                for (EntityID pid = 0; pid < world.entity_count(); ++pid) {
-                    if (!world.player_tags().present(pid)) continue;
-                    if (!world.has_component<PositionComponent>(pid)) continue;
-                    if (!world.has_component<HealthComponent>(pid)) continue;
-                    if (world.has_component<DownedComponent>(pid)) continue;
-                    if (world.has_component<DodgeComponent>(pid)) continue; // i-frames
-                    if (world.has_component<AnimationComponent>(pid) &&
-                        world.get_component<AnimationComponent>(pid).dying) continue;
-                    if (world.has_component<DamageCooldownComponent>(pid) &&
-                        world.get_component<DamageCooldownComponent>(pid).remaining > 0.f)
-                        continue;
-
-                    const auto& pp = world.get_component<PositionComponent>(pid);
-                    float dx = pp.x - pos.x, dy = pp.y - pos.y;
-                    if (dx * dx + dy * dy > kContactRange * kContactRange) continue;
-
-                    auto& hp = world.get_component<HealthComponent>(pid);
-                    hp.current -= kChargeDamage;
-                    world.events().emit_hit_contact(id, pid);
-                    world.events().emit_damage(pid, kChargeDamage);
-                    world.trigger_hit_stop(6);
-                    ScreenShakeSystem_trigger(world, 26.f);
-                    if (world.has_component<DamageCooldownComponent>(pid))
-                        world.get_component<DamageCooldownComponent>(pid).remaining = kContactCooldown;
-                    if (hp.current <= 0 &&
-                        !Combat_try_second_wind(world, pid) &&
-                        world.has_component<AnimationComponent>(pid)) {
-                        Combat_apply_death(world, pid);
-                    }
-                }
+                // Body slam: damage any player in contact range.
+                damage_players_in_radius(world, id, pos, kContactRange, kChargeDamage, 6, 26.f);
 
                 // Stop at a wall (WallCollision clamps position next tick) or timeout.
                 bool hitWall = pos.x <= kRoomMinX + kWallMargin || pos.x >= kRoomMaxX - kWallMargin ||
@@ -180,13 +306,42 @@ void BossSystem_update(World& world, float gameDt) {
                 break;
             }
 
+            case BossChargeComponent::Leap: {
+                // Leap uses the shared timer as elapsed time (the outer
+                // decrement is skipped for this state, so just accumulate).
+                charge.timer += gameDt;
+                float t = clampf(charge.timer / charge.leapDuration, 0.f, 1.f);
+                float eased = smoothstep(t);
+                pos.x = charge.startX + (charge.destX - charge.startX) * eased;
+                pos.y = charge.startY + (charge.destY - charge.startY) * eased;
+                if (world.has_component<VelocityComponent>(id))
+                    world.get_component<VelocityComponent>(id) = {0, 0, 0};
+                AnimationSystem_request_clip(world, id, AnimClipID::Walk);
+                if (t >= 1.f) {
+                    pos.x = charge.destX;
+                    pos.y = charge.destY;
+                    damage_players_in_radius(world, id, pos, kLeapAoeRadius, 2, 6, 26.f);
+                    EntityID pool = world.defer_create();
+                    world.add_component<PositionComponent>(pool) = {pos.x, pos.y, 0.f};
+                    HazardComponent& hz = world.add_component<HazardComponent>(pool);
+                    hz.radius = 100.f;
+                    hz.damage = 1;
+                    hz.lifetime = 3.0f;
+                    world.events().emit_lava_pool_spawned(pos.x, pos.y);
+                    ScreenShakeSystem_trigger(world, 26.f);
+                    charge.state = BossChargeComponent::Recover;
+                    charge.timer = kRecoverTime;
+                }
+                break;
+            }
+
             case BossChargeComponent::Recover: {
                 if (world.has_component<VelocityComponent>(id))
                     world.get_component<VelocityComponent>(id) = {0, 0, 0};
                 AnimationSystem_request_clip(world, id, AnimClipID::Idle);
                 if (charge.timer <= 0.f) {
                     charge.state = BossChargeComponent::Idle;
-                    charge.timer = kChargeCooldown *
+                    charge.timer = kChargeCooldown * Difficulty_cooldown_mult(world.difficulty()) *
                                    (charge.enraged ? kEnragedChargeCooldownMult : 1.f);
                 }
                 break;

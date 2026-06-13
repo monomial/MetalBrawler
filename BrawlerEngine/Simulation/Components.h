@@ -109,6 +109,7 @@ struct DamageCooldownComponent {
 struct EnemyAttackCooldownComponent {
     float remaining = 0.f; // seconds until next attack is allowed (0 = ready)
     float windup    = 0.f; // seconds left before the committed Attack clip starts
+    uint8_t shotCount = 0; // deterministic ranged-shot counter for Spitter lobs
 };
 
 // Marks a boss enemy. CombatSystem uses this to suppress most hurt reactions.
@@ -124,6 +125,18 @@ struct HazardComponent {
     float radius   = 70.f;
     int   damage   = 1;
     float lifetime = 6.f; // seconds until despawn
+};
+
+struct LavaLobComponent {
+    float startX = 0.f;
+    float startY = 0.f;
+    float destX = 0.f;
+    float destY = 0.f;
+    float elapsed = 0.f;
+    float duration = 1.1f;
+    int poolDamage = 1;
+    float poolRadius = 80.f;
+    float poolLifetime = 3.5f;
 };
 
 struct HeartPickupComponent {
@@ -226,12 +239,20 @@ struct PathFollowComponent {
 // Boss charge-attack state machine, driven by BossSystem (runs after
 // EnemyAISystem and overrides its velocity/clip while not Idle).
 struct BossChargeComponent {
-    enum State : uint8_t { Idle = 0, Telegraph = 1, Charge = 2, Recover = 3 };
+    enum State : uint8_t { Idle = 0, Telegraph = 1, Charge = 2, Recover = 3, Leap = 4 };
+    enum Ability : uint8_t { AbilityCharge = 0, AbilityLobVolley = 1, AbilityLeap = 2 };
     uint8_t state = Idle;
+    uint8_t ability = AbilityCharge;
+    uint8_t abilityCounter = 0;
     bool    enraged = false;
     float   timer = 4.f;  // Idle: until next charge; other states: time left
     float   dirX  = 0.f;  // locked charge direction
     float   dirY  = 1.f;
+    float   destX = 0.f;
+    float   destY = 0.f;
+    float   startX = 0.f;
+    float   startY = 0.f;
+    float   leapDuration = 0.45f;
 };
 
 // Run-level player stat modifiers from between-room perk choices. Applied to

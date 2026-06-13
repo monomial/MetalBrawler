@@ -15,6 +15,7 @@
 #include "Systems/ShopSystem.h"
 #include "Systems/ExitSystem.h"
 #include "Systems/ProjectileSystem.h"
+#include "Systems/LavaLobSystem.h"
 #include "Systems/LeaperSystem.h"
 #include "Systems/WaveSystem.h"
 #include "Systems/ReviveSystem.h"
@@ -41,6 +42,7 @@ template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool() { retur
 template<> ComponentStorage<BossChargeComponent>&         World::_pool() { return _bossCharges; }
 template<> ComponentStorage<StatsComponent>&              World::_pool() { return _stats; }
 template<> ComponentStorage<HazardComponent>&             World::_pool() { return _hazards; }
+template<> ComponentStorage<LavaLobComponent>&            World::_pool() { return _lavaLobs; }
 template<> ComponentStorage<PathFollowComponent>&         World::_pool() { return _paths; }
 template<> ComponentStorage<SpecialMeterComponent>&       World::_pool() { return _specialMeters; }
 template<> ComponentStorage<HeartPickupComponent>&        World::_pool() { return _heartPickups; }
@@ -116,6 +118,7 @@ void World::flush() {
         _bossCharges.remove(id);
         _stats.remove(id);
         _hazards.remove(id);
+        _lavaLobs.remove(id);
         _paths.remove(id);
         _specialMeters.remove(id);
         _heartPickups.remove(id);
@@ -161,6 +164,8 @@ void World::tick(float gameDt) {
     KnockbackSystem_update(*this, gameDt);
     // 1.8. ProjectileSystem — ranged shots integrate after knockback, before physics.
     ProjectileSystem_update(*this, gameDt);
+    // 1.85. LavaLobSystem — airborne lava shots land into stationary hazards.
+    LavaLobSystem_update(*this, gameDt);
     // 2. PhysicsSystem
     PhysicsSystem_update(*this, gameDt);
     // 2.5. WallCollisionSystem — clamp entities to room bounds

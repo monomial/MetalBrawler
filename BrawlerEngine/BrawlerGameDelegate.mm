@@ -952,6 +952,13 @@ struct RunStats {
                 [_audio playDodgeSound];
         });
 
+        _world.events().for_each(EventType::LavaPoolSpawned, [self](const Event& ev) {
+            [_renderer spawnBurstAt:(simd_float3){ev.lavaPoolSpawned.x, ev.lavaPoolSpawned.y, 35.f}
+                              count:24 speed:330.f size:16.f
+                              color:(simd_float4){1.0f, 0.48f, 0.10f, 1.f}];
+            [_audio playFinisherSound];
+        });
+
         // Boss winding up a charge: warning burst + an audible cue.
         _world.events().for_each(EventType::BossTelegraph, [self](const Event& ev) {
             uint32_t bid = ev.bossTelegraph.entityID;

@@ -4,6 +4,7 @@
 #include "Platform/InputState.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/CombatHelpers.h"
+#include "Simulation/Systems/HazardSystem.h"
 #include "Simulation/Systems/PickupSystem.h"
 #include "Simulation/Systems/ScreenShakeSystem.h"
 #include <math.h>
@@ -75,6 +76,22 @@ static EntityID nearest_living_player(World& world, const PositionComponent& ori
 static bool spawn_projectile_at_target(World& world, EntityID attackerID,
                                        const PositionComponent& atkPos,
                                        int damage) {
+    bool lobShot = false;
+    if (world.has_component<EnemyAttackCooldownComponent>(attackerID)) {
+        EnemyAttackCooldownComponent& cd = world.get_component<EnemyAttackCooldownComponent>(attackerID);
+        lobShot = world.difficulty() >= 3 && (cd.shotCount % 3) == 2;
+        cd.shotCount += 1;
+    }
+    if (lobShot) {
+        EntityID targetID = nearest_living_player(world, atkPos);
+        if (targetID == kInvalidEntity) return false;
+        const PositionComponent& tPos = world.get_component<PositionComponent>(targetID);
+        HazardSystem_spawn_lava_lob(world, atkPos.x, atkPos.y, tPos.x, tPos.y,
+                                    damage, 64.f, 2.5f);
+        world.remove_component<TelegraphLineComponent>(attackerID);
+        return true;
+    }
+
     float dirX = 0.f;
     float dirY = 1.f;
     if (world.has_component<TelegraphLineComponent>(attackerID)) {

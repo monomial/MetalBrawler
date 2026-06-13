@@ -14,6 +14,51 @@ static int   s_sampleFrames[4] = {};
 static int   s_unstuckFrames[4] = {};
 static bool  s_hasSample[4] = {};
 
+static void add_hazard_avoidance(World& world, const PositionComponent& myPos,
+                                 float* moveX, float* moveY) {
+    float len = sqrtf((*moveX) * (*moveX) + (*moveY) * (*moveY));
+    float nextX = myPos.x + (len > 0.001f ? (*moveX / len) * 34.f : 0.f);
+    float nextY = myPos.y + (len > 0.001f ? (*moveY / len) * 34.f : 0.f);
+    bool found = false;
+    float bestD2 = 0.f;
+    float awayX = 0.f;
+    float awayY = 0.f;
+
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        float cx = 0.f, cy = 0.f, radius = 0.f;
+        if (world.hazards().present(id)) {
+            if (!world.has_component<PositionComponent>(id)) continue;
+            const PositionComponent& p = world.get_component<PositionComponent>(id);
+            const HazardComponent& hz = world.get_component<HazardComponent>(id);
+            cx = p.x; cy = p.y; radius = hz.radius + 30.f;
+        } else if (world.lava_lobs().present(id)) {
+            const LavaLobComponent& lob = world.get_component<LavaLobComponent>(id);
+            cx = lob.destX; cy = lob.destY; radius = lob.poolRadius + 30.f;
+        } else {
+            continue;
+        }
+        float ndx = nextX - cx, ndy = nextY - cy;
+        if (ndx * ndx + ndy * ndy > radius * radius) continue;
+        float dx = myPos.x - cx, dy = myPos.y - cy;
+        float d2 = dx * dx + dy * dy;
+        if (!found || d2 < bestD2) {
+            found = true;
+            bestD2 = d2;
+            float d = sqrtf(d2);
+            awayX = d > 0.001f ? dx / d : 0.f;
+            awayY = d > 0.001f ? dy / d : -1.f;
+        }
+    }
+    if (!found) return;
+    *moveX += awayX * 1.8f;
+    *moveY += awayY * 1.8f;
+    float outLen = sqrtf((*moveX) * (*moveX) + (*moveY) * (*moveY));
+    if (outLen > 0.001f) {
+        *moveX /= outLen;
+        *moveY /= outLen;
+    }
+}
+
 void AutoPilot_reset() {
     for (int i = 0; i < 4; ++i) {
         s_lastX[i] = 0.f;
@@ -191,6 +236,8 @@ InputState AutoPilot_input(World& world, int playerIndex) {
         in.moveY = py;
         s_unstuckFrames[slot] -= 1;
     }
+
+    add_hazard_avoidance(world, myPos, &in.moveX, &in.moveY);
 
     if (dist <= kEngageDist) {
         // Hold attack through the first punch (which both starts the swing and

@@ -770,6 +770,38 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
         if (!world->has_component<PositionComponent>(eid)) continue;
         auto& pos = world->get_component<PositionComponent>(eid);
 
+        // Lava lobs: airborne orb plus persistent landing target ring.
+        if (world->lava_lobs().present(eid)) {
+            const auto& lob = world->get_component<LavaLobComponent>(eid);
+            float t = clampf(lob.elapsed / lob.duration, 0.f, 1.f);
+            float pulse = 0.85f + 0.15f * sinf((float)CACurrentMediaTime() * 12.f + (float)eid);
+            float arcZ = 20.f + sinf(t * (float)M_PI) * 220.f;
+            [enc setRenderPipelineState:_pipeline];
+            [enc setDepthStencilState:_depthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            DrawUniforms u;
+            u.mvp = simd_mul(vp, make_model_rect(lob.destX, lob.destY, 2.f,
+                                                 lob.poolRadius * 2.f * pulse,
+                                                 lob.poolRadius * 2.f * pulse));
+            u.color = (simd_float4){1.0f, 0.30f, 0.10f, 0.42f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+            u.mvp = simd_mul(vp, make_model_rect(lob.destX, lob.destY, 2.2f,
+                                                 lob.poolRadius * 1.2f,
+                                                 lob.poolRadius * 1.2f));
+            u.color = (simd_float4){0.16f, 0.04f, 0.02f, 0.65f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, arcZ,
+                                                 18.f * pulse, 18.f * pulse));
+            u.color = (simd_float4){1.0f, 0.55f, 0.12f, 1.f};
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            continue;
+        }
+
         // Hazards (lava snakes): pulsing molten quad on the floor, no mesh.
         if (world->hazards().present(eid)) {
             const auto& hz = world->get_component<HazardComponent>(eid);
@@ -980,6 +1012,13 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
                 if (leap.state == 2) {
                     float t = clampf(leap.timer / Difficulty_leap_duration(world->difficulty()), 0.f, 1.f);
                     zOffset += sinf(t * (float)M_PI) * 130.f;
+                }
+            }
+            if (world->has_component<BossChargeComponent>(eid)) {
+                const auto& boss = world->get_component<BossChargeComponent>(eid);
+                if (boss.state == BossChargeComponent::Leap) {
+                    float t = clampf(boss.timer / boss.leapDuration, 0.f, 1.f);
+                    zOffset += sinf(t * (float)M_PI) * 150.f;
                 }
             }
             su.mvp   = simd_mul(vp, make_char_model(pos.x, pos.y, scale,
