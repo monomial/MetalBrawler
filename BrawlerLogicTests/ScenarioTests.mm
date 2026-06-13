@@ -284,6 +284,83 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     XCTAssertTrue(advanceUntilRoom(d, 2, 20.f));
 }
 
+- (void)test_upgradeOffers_areDeterministicAndDistinct {
+    BrawlerGameDelegate *a = [self makeDelegateWithSeed:4242];
+    BrawlerGameDelegate *b = [self makeDelegateWithSeed:4242];
+    a.autoPilotEnabled = YES;
+    b.autoPilotEnabled = YES;
+    [a startGameWithPlayers:1];
+    [b startGameWithPlayers:1];
+    XCTAssertTrue(advanceUntilPhase(a, BrawlerGamePhaseUpgrade, 120.f));
+    XCTAssertTrue(advanceUntilPhase(b, BrawlerGamePhaseUpgrade, 120.f));
+
+    XCTAssertNotEqualObjects([a upgradeChoiceLabel:0], [a upgradeChoiceLabel:1]);
+    XCTAssertEqualObjects([a upgradeChoiceLabel:0], [b upgradeChoiceLabel:0]);
+    XCTAssertEqualObjects([a upgradeChoiceLabel:1], [b upgradeChoiceLabel:1]);
+}
+
+- (void)test_shopPedestals_haveDistinctPerks {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:42];
+    d.autoPilotEnabled = YES;
+    [d startGameWithPlayers:1];
+
+    XCTAssertTrue(advanceUntilRoom(d, 4, 240.f), @"AutoPilot must reach the shop room");
+    XCTAssertEqual([d shopItemEntityCount], 3);
+    XCTAssertTrue([d debugShopItemsHaveDistinctPerks]);
+}
+
+- (void)test_applyPerk_setsNewRareAndEpicFields {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:1];
+    [d debugApplyPerkID:8 toPlayer:0];  // Heavy Hitter
+    [d debugApplyPerkID:9 toPlayer:0];  // Toughness
+    [d debugApplyPerkID:10 toPlayer:0]; // Lifesteal
+    [d debugApplyPerkID:11 toPlayer:0]; // Thorns
+    [d debugApplyPerkID:12 toPlayer:0]; // Whirlwind
+    [d debugApplyPerkID:13 toPlayer:0]; // Adrenaline
+
+    XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 2);
+    XCTAssertEqual([d debugPerkMaxHPBonusForPlayer:0], 6);
+    XCTAssertEqual([d debugPerkLifestealForPlayer:0], 6);
+    XCTAssertTrue([d debugPerkThornsForPlayer:0]);
+    XCTAssertTrue([d debugPerkWhirlwindForPlayer:0]);
+    XCTAssertTrue([d debugPerkPassiveSpecialForPlayer:0]);
+
+    [d debugApplyPerkID:14 toPlayer:0]; // Vampire
+    XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 3);
+    XCTAssertEqual([d debugPerkLifestealForPlayer:0], 3);
+}
+
+- (void)test_comboScore_incrementsResetsExpiresAndTracksMax {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:1];
+    [d debugRegisterEnemyDamage:1];
+    [d debugRegisterEnemyDamage:1];
+    [d debugRegisterEnemyDamage:1];
+
+    XCTAssertEqual([d comboCount], 3);
+    XCTAssertEqual([d maxCombo], 3);
+    XCTAssertEqual([d scoreValue], 60);
+
+    [d debugRegisterPlayerDamage:1];
+    XCTAssertEqual([d comboCount], 0);
+    XCTAssertEqual([d maxCombo], 3);
+
+    [d debugRegisterEnemyDamage:1];
+    [d debugAdvanceComboTimer:2.6f];
+    XCTAssertEqual([d comboCount], 0);
+}
+
+- (void)test_comboScore_resetsOnNewRun {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:1];
+    [d debugRegisterEnemyDamage:1];
+    XCTAssertGreaterThan([d scoreValue], 0);
+
+    [d startGameWithPlayers:1];
+
+    XCTAssertEqual([d comboCount], 0);
+    XCTAssertEqual([d maxCombo], 0);
+    XCTAssertEqual([d scoreValue], 0);
+}
+
 // --- Determinism -------------------------------------------------------------
 
 - (void)test_sameSeed_identicalPhaseTranscript {

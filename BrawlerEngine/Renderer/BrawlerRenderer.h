@@ -3,7 +3,7 @@ class World;
 struct LoadedCharacter;
 
 static constexpr int kBrawlerMaxPlayers = 4;
-static constexpr int kBrawlerPerkTypeCount = 8;
+static constexpr int kBrawlerPerkTypeCount = 15;
 
 struct BrawlerPerkSummary {
     uint8_t counts[kBrawlerPerkTypeCount];
@@ -30,6 +30,8 @@ struct BrawlerPerkSummary {
 @property (nonatomic) int roomIndex;
 @property (nonatomic) int totalRooms;
 @property (nonatomic) int scrapCount;
+@property (nonatomic) int comboCount;
+@property (nonatomic) int scoreValue;
 @property (nonatomic, copy) NSString *shopPrompt;
 
 // Shared phase overlay rendered into the Metal drawable, so macOS/iOS/tvOS

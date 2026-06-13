@@ -43,6 +43,10 @@ static constexpr float kHitShake             = 7.f;
 static constexpr float kFinisherShake        = 30.f;
 static constexpr float kPlayerHitShake       = 22.f;
 static constexpr float kProjectileSpeed      = 420.f;
+static constexpr float kHeavyRadius          = 150.f;
+static constexpr int   kHeavyBaseDamage      = 3;
+static constexpr int   kHeavyHitStopTicks    = 8;
+static constexpr float kHeavyShake           = 30.f;
 
 static bool is_ranged_attacker(World& world, EntityID attackerID) {
     if (!world.has_component<EnemyArchetypeComponent>(attackerID)) return false;
@@ -125,10 +129,116 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
     return true;
 }
 
+static void apply_lifesteal_if_needed(World& world, EntityID attackerID) {
+    if (!world.player_tags().present(attackerID)) return;
+    if (!world.has_component<StatsComponent>(attackerID)) return;
+    if (!world.has_component<HealthComponent>(attackerID)) return;
+    StatsComponent& stats = world.get_component<StatsComponent>(attackerID);
+    if (stats.lifestealPerHits <= 0) return;
+    stats.hitsSinceHeal += 1;
+    if (stats.hitsSinceHeal < stats.lifestealPerHits) return;
+    stats.hitsSinceHeal = 0;
+    HealthComponent& hp = world.get_component<HealthComponent>(attackerID);
+    if (hp.current < hp.max) hp.current += 1;
+}
+
+static void trigger_thorns_if_needed(World& world, EntityID attackerID, EntityID playerID) {
+    if (!world.has_component<StatsComponent>(playerID)) return;
+    if (!world.get_component<StatsComponent>(playerID).thorns) return;
+    if (!world.has_component<HealthComponent>(attackerID)) return;
+    HealthComponent& hp = world.get_component<HealthComponent>(attackerID);
+    hp.current -= 1;
+    world.events().emit_damage(attackerID, 1);
+    if (hp.current <= 0)
+        Combat_apply_death(world, attackerID, playerID);
+}
+
+static void resolve_charged_slam(World& world, EntityID playerID, ChargeAttackComponent& charge) {
+    if (charge.held >= 0.f) return;
+    charge.held = 0.f;
+    if (!world.has_component<PositionComponent>(playerID)) return;
+    if (world.has_component<DownedComponent>(playerID)) return;
+    if (world.has_component<AnimationComponent>(playerID) &&
+        world.get_component<AnimationComponent>(playerID).dying) return;
+
+    const PositionComponent& ppos = world.get_component<PositionComponent>(playerID);
+    int damage = kHeavyBaseDamage;
+    float knockbackMult = 1.f;
+    if (world.has_component<StatsComponent>(playerID)) {
+        const StatsComponent& stats = world.get_component<StatsComponent>(playerID);
+        damage += stats.damageBonus;
+        knockbackMult = stats.knockbackMult;
+    }
+
+    bool hitAnything = false;
+    for (EntityID targetID = 0; targetID < world.entity_count(); ++targetID) {
+        if (targetID == playerID) continue;
+        if (!world.has_component<FactionComponent>(targetID)) continue;
+        if (world.get_component<FactionComponent>(targetID).type != FactionComponent::Enemy) continue;
+        if (!world.has_component<PositionComponent>(targetID)) continue;
+        if (!world.has_component<HealthComponent>(targetID)) continue;
+        if (world.has_component<SpawnAnimComponent>(targetID)) continue;
+        if (world.has_component<AnimationComponent>(targetID) &&
+            world.get_component<AnimationComponent>(targetID).dying) continue;
+
+        const PositionComponent& tpos = world.get_component<PositionComponent>(targetID);
+        float dx = tpos.x - ppos.x;
+        float dy = tpos.y - ppos.y;
+        float dist = sqrtf(dx * dx + dy * dy);
+        if (dist > kHeavyRadius) continue;
+
+        HealthComponent& hp = world.get_component<HealthComponent>(targetID);
+        hp.current -= damage;
+        hitAnything = true;
+        apply_lifesteal_if_needed(world, playerID);
+        world.events().emit_hit_contact(playerID, targetID);
+        world.events().emit_damage(targetID, damage);
+
+        if (hp.current <= 0) {
+            if (!Combat_try_second_wind(world, targetID))
+                Combat_apply_death(world, targetID, playerID);
+            continue;
+        }
+
+        if (dist > 0.001f) {
+            float scale = world.has_component<BossTagComponent>(targetID)
+                        ? kCombatBossKnockbackScale : 1.f;
+            if (world.has_component<EnemyArchetypeComponent>(targetID))
+                scale = enemy_archetype_def(
+                    world.get_component<EnemyArchetypeComponent>(targetID).type).knockbackScale;
+            KnockbackComponent& kb = world.has_component<KnockbackComponent>(targetID)
+                ? world.get_component<KnockbackComponent>(targetID)
+                : world.add_component<KnockbackComponent>(targetID);
+            kb.velX = (dx / dist) * kCombatKnockbackSpeed * 1.6f * scale * knockbackMult;
+            kb.velY = (dy / dist) * kCombatKnockbackSpeed * 1.6f * scale * knockbackMult;
+            kb.elapsed = 0.f;
+            kb.duration = kCombatKnockbackDuration;
+        }
+
+        if (world.has_component<AnimationComponent>(targetID)) {
+            bool isBoss = world.has_component<BossTagComponent>(targetID);
+            if (!isBoss || world.rand_range(10) == 0)
+                AnimationSystem_request_clip(world, targetID, AnimClipID::Hurt);
+        }
+    }
+
+    world.events().emit_charged_slam(ppos.x, ppos.y);
+    if (hitAnything) {
+        world.trigger_hit_stop(kHeavyHitStopTicks);
+        ScreenShakeSystem_trigger(world, kHeavyShake);
+    }
+}
+
 void CombatSystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return; // frozen during HitStop
 
     uint32_t count = world.entity_count();
+
+    for (EntityID playerID = 0; playerID < count; ++playerID) {
+        if (!world.charge_attacks().present(playerID)) continue;
+        ChargeAttackComponent& charge = world.get_component<ChargeAttackComponent>(playerID);
+        resolve_charged_slam(world, playerID, charge);
+    }
 
     // Iterate every entity that can deal damage this frame.
     // Both player→enemy and enemy→player are handled symmetrically.
@@ -183,10 +293,17 @@ void CombatSystem_update(World& world, float gameDt) {
                 float dx = bPos.x - atkPos.x;
                 float dy = bPos.y - atkPos.y;
                 float dist = sqrtf(dx * dx + dy * dy);
-                if (dist > kAttackRange) continue;
+                float attackRange = kAttackRange;
+                bool whirlwind = false;
+                if (world.has_component<StatsComponent>(attackerID)) {
+                    const StatsComponent& stats = world.get_component<StatsComponent>(attackerID);
+                    whirlwind = stats.whirlwind;
+                    if (whirlwind) attackRange += 25.f;
+                }
+                if (dist > attackRange) continue;
                 if (dist > 0.001f) {
                     float dot = (dx / dist) * facingDx + (dy / dist) * facingDy;
-                    if (dot < kPunchArcCosine) continue;
+                    if (!whirlwind && dot < kPunchArcCosine) continue;
                 }
                 PickupSystem_break_box(world, boxID);
                 hitAnything = true;
@@ -209,12 +326,20 @@ void CombatSystem_update(World& world, float gameDt) {
             float dx   = tPos.x - atkPos.x;
             float dy   = tPos.y - atkPos.y;
             float dist = sqrtf(dx * dx + dy * dy);
-            if (dist > kAttackRange) continue;
+            float attackRange = kAttackRange;
+            bool whirlwind = false;
+            if (atkFaction == FactionComponent::Player &&
+                world.has_component<StatsComponent>(attackerID)) {
+                const StatsComponent& stats = world.get_component<StatsComponent>(attackerID);
+                whirlwind = stats.whirlwind;
+                if (whirlwind) attackRange += 25.f;
+            }
+            if (dist > attackRange) continue;
 
             // Arc check: target must be within ±70° of attacker's facing direction.
             if (dist > 0.001f) {
                 float dot = (dx / dist) * facingDx + (dy / dist) * facingDy;
-                if (dot < kPunchArcCosine) continue;
+                if (!whirlwind && dot < kPunchArcCosine) continue;
             }
 
             // Perk-modified damage: players carry a StatsComponent with run-level bonuses.
@@ -226,6 +351,8 @@ void CombatSystem_update(World& world, float gameDt) {
             hp.current -= damage;
             hitAnything = true;
             hitPlayer  |= world.has_component<PlayerTagComponent>(targetID);
+            if (atkFaction == FactionComponent::Player)
+                apply_lifesteal_if_needed(world, attackerID);
 
             if (world.has_component<PlayerTagComponent>(attackerID) &&
                 world.has_component<SpecialMeterComponent>(attackerID)) {
@@ -239,6 +366,8 @@ void CombatSystem_update(World& world, float gameDt) {
 
             world.events().emit_hit_contact(attackerID, targetID);
             world.events().emit_damage(targetID, damage);
+            if (atkFaction == FactionComponent::Enemy && world.player_tags().present(targetID))
+                trigger_thorns_if_needed(world, attackerID, targetID);
 
             // Knockback: shove the target away from the attacker. Players are
             // exempt (no stun, no shove); heavies/bosses barely budge.

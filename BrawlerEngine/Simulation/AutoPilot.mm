@@ -12,6 +12,8 @@ static float s_lastX[4] = {};
 static float s_lastY[4] = {};
 static int   s_sampleFrames[4] = {};
 static int   s_unstuckFrames[4] = {};
+static int   s_chargeFrames[4] = {};
+static int   s_chargeCooldown[4] = {};
 static bool  s_hasSample[4] = {};
 
 static void add_hazard_avoidance(World& world, const PositionComponent& myPos,
@@ -65,6 +67,8 @@ void AutoPilot_reset() {
         s_lastY[i] = 0.f;
         s_sampleFrames[i] = 0;
         s_unstuckFrames[i] = 0;
+        s_chargeFrames[i] = 0;
+        s_chargeCooldown[i] = 0;
         s_hasSample[i] = false;
     }
 }
@@ -238,6 +242,55 @@ InputState AutoPilot_input(World& world, int playerIndex) {
     }
 
     add_hazard_avoidance(world, myPos, &in.moveX, &in.moveY);
+
+    if (s_chargeCooldown[slot] > 0) s_chargeCooldown[slot] -= 1;
+    if (s_chargeFrames[slot] > 0) {
+        in.moveX = 0.f;
+        in.moveY = 0.f;
+        s_chargeFrames[slot] -= 1;
+        in.attack = s_chargeFrames[slot] > 0;
+        if (!in.attack) s_chargeCooldown[slot] = 900;
+        return in;
+    }
+
+    int enemiesInHeavy = 0;
+    bool nearbyThreat = false;
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (world.hazards().present(id)) {
+            if (!world.has_component<PositionComponent>(id)) continue;
+            const PositionComponent& p = world.get_component<PositionComponent>(id);
+            const HazardComponent& hz = world.get_component<HazardComponent>(id);
+            float dx = p.x - myPos.x, dy = p.y - myPos.y;
+            nearbyThreat |= dx * dx + dy * dy < (hz.radius + 50.f) * (hz.radius + 50.f);
+            continue;
+        }
+        if (!world.has_component<FactionComponent>(id)) continue;
+        if (world.get_component<FactionComponent>(id).type != FactionComponent::Enemy) continue;
+        if (!world.has_component<PositionComponent>(id)) continue;
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) continue;
+        const PositionComponent& p = world.get_component<PositionComponent>(id);
+        float dx = p.x - myPos.x, dy = p.y - myPos.y;
+        float d2 = dx * dx + dy * dy;
+        if (d2 <= 150.f * 150.f) enemiesInHeavy += 1;
+        bool attacking = world.has_component<AnimationComponent>(id) &&
+                         world.get_component<AnimationComponent>(id).currentClip == AnimClipID::Attack;
+        nearbyThreat |= attacking && d2 <= 135.f * 135.f;
+    }
+    bool canCharge = world.has_component<AnimationComponent>(me) &&
+                     world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Idle &&
+                     s_chargeCooldown[slot] <= 0 &&
+                     enemiesInHeavy >= 2 &&
+                     !nearbyThreat &&
+                     dist <= 145.f &&
+                     world.rand_range(300) == 0;
+    if (canCharge) {
+        s_chargeFrames[slot] = 42;
+        in.moveX = 0.f;
+        in.moveY = 0.f;
+        in.attack = true;
+        return in;
+    }
 
     if (dist <= kEngageDist) {
         // Hold attack through the first punch (which both starts the swing and

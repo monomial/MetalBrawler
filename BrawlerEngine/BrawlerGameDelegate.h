@@ -70,6 +70,20 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 - (int)exitEntityCount;
 - (int)shopkeeperEntityCount;
 - (int)shopItemEntityCount;
+- (int)comboCount;
+- (int)maxCombo;
+- (int)scoreValue;
+- (int)debugPerkDamageBonusForPlayer:(int)playerIndex;
+- (int)debugPerkMaxHPBonusForPlayer:(int)playerIndex;
+- (int)debugPerkLifestealForPlayer:(int)playerIndex;
+- (BOOL)debugPerkThornsForPlayer:(int)playerIndex;
+- (BOOL)debugPerkWhirlwindForPlayer:(int)playerIndex;
+- (BOOL)debugPerkPassiveSpecialForPlayer:(int)playerIndex;
+- (void)debugApplyPerkID:(int)perkID toPlayer:(int)playerIndex;
+- (void)debugRegisterEnemyDamage:(int)amount;
+- (void)debugRegisterPlayerDamage:(int)amount;
+- (void)debugAdvanceComboTimer:(float)dt;
+- (BOOL)debugShopItemsHaveDistinctPerks;
 
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.

@@ -8,6 +8,7 @@
 static constexpr float kSpecialRadius       = 220.0f;
 static constexpr int   kSpecialHitStopTicks = 7;
 static constexpr float kSpecialShake        = 30.0f;
+static constexpr float kPassiveSpecialPerSecond = 0.06f;
 
 void SpecialSystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return;
@@ -26,6 +27,11 @@ void SpecialSystem_update(World& world, float gameDt) {
         const PlayerTagComponent& tag = world.get_component<PlayerTagComponent>(playerID);
         InputState input = world.current_input(tag.playerIndex);
         SpecialMeterComponent& meter = world.get_component<SpecialMeterComponent>(playerID);
+        if (world.has_component<StatsComponent>(playerID) &&
+            world.get_component<StatsComponent>(playerID).passiveSpecial) {
+            meter.charge += kPassiveSpecialPerSecond * gameDt;
+            if (meter.charge > 1.f) meter.charge = 1.f;
+        }
         if (!input.special || meter.charge < 1.f) continue;
 
         meter.charge = 0.f;

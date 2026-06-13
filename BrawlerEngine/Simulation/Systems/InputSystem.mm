@@ -5,6 +5,7 @@
 #include <math.h>
 
 static constexpr float kPlayerSpeed = 300.0f; // units per second
+static constexpr float kChargeThreshold = 0.5f;
 
 void InputSystem_update(World& world) {
     uint32_t count = world.entity_count();
@@ -59,6 +60,8 @@ void InputSystem_update(World& world) {
         if (world.has_component<AnimationComponent>(id)) {
             bool moving = (mx * mx + my * my) > 0.01f;
             AnimationComponent& anim = world.get_component<AnimationComponent>(id);
+            ChargeAttackComponent *charge = world.has_component<ChargeAttackComponent>(id)
+                ? &world.get_component<ChargeAttackComponent>(id) : nullptr;
 
             // Combo: an attack press while the first punch is past 35% of its
             // clip queues the finisher — AnimationSystem chains into Attack2
@@ -69,14 +72,50 @@ void InputSystem_update(World& world) {
                     anim.comboQueued = true;
             }
 
+            bool attackPressed = input.attack && (!charge || !charge->prevAttack);
+            bool attackReleased = !input.attack && charge && charge->prevAttack;
+            bool idle = (anim.currentClip == AnimClipID::Idle) ||
+                        ((anim.currentClip == AnimClipID::Attack ||
+                          anim.currentClip == AnimClipID::Attack2) && anim.clipDone);
+            bool cancelCharge = moving ||
+                                anim.currentClip == AnimClipID::Dodge ||
+                                anim.currentClip == AnimClipID::Hurt ||
+                                anim.currentClip == AnimClipID::Death;
+            bool suppressHeldAttack = input.attack && !attackPressed &&
+                                      (anim.currentClip == AnimClipID::Attack ||
+                                       anim.currentClip == AnimClipID::Attack2);
+            bool fireHeavy = false;
+            if (charge) {
+                if (cancelCharge) {
+                    charge->held = 0.f;
+                    charge->charging = false;
+                } else if (input.attack && idle && !moving && !attackPressed) {
+                    charge->held += 1.0f / 120.0f;
+                    suppressHeldAttack = true;
+                    if (!charge->charging && charge->held >= kChargeThreshold) {
+                        charge->charging = true;
+                        world.events().emit_charge_ready(id);
+                    }
+                }
+                if (attackReleased) {
+                    fireHeavy = charge->charging;
+                    charge->held = 0.f;
+                    charge->charging = false;
+                }
+                charge->prevAttack = input.attack;
+            }
+
             // Dodge: allowed from Idle or Walk (not mid-attack, hurt, death, or another dodge).
             bool canDodge = input.dodge &&
                             (anim.currentClip == AnimClipID::Idle ||
                              anim.currentClip == AnimClipID::Walk);
             AnimClipID want = canDodge      ? AnimClipID::Dodge
-                            : input.attack  ? AnimClipID::Attack
+                            : fireHeavy     ? AnimClipID::Attack2
+                            : (input.attack && !suppressHeldAttack) ? AnimClipID::Attack
                             : moving        ? AnimClipID::Walk
                                             : AnimClipID::Idle;
+            if (fireHeavy && charge)
+                charge->held = -1.f;
             AnimationSystem_request_clip(world, id, want);
         }
     }

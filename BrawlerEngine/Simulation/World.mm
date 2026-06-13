@@ -58,6 +58,7 @@ template<> ComponentStorage<ObstacleComponent>&           World::_pool() { retur
 template<> ComponentStorage<BoxComponent>&                World::_pool() { return _boxes; }
 template<> ComponentStorage<ShopkeeperComponent>&         World::_pool() { return _shopkeepers; }
 template<> ComponentStorage<ShopItemComponent>&           World::_pool() { return _shopItems; }
+template<> ComponentStorage<ChargeAttackComponent>&       World::_pool() { return _chargeAttacks; }
 
 // ----
 
@@ -134,6 +135,7 @@ void World::flush() {
         _boxes.remove(id);
         _shopkeepers.remove(id);
         _shopItems.remove(id);
+        _chargeAttacks.remove(id);
     }
     _deferredDestroyCount = 0;
 }

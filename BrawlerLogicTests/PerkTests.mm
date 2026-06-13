@@ -80,6 +80,59 @@ static int countEvents(World& world, EventType type) {
                                0.225f, 0.001f);
 }
 
+- (void)test_lifesteal_healsAfterConfiguredHitCount {
+    World world;
+    EntityID player = spawnPlayer(world);
+    world.get_component<HealthComponent>(player) = {5, 10};
+    world.add_component<StatsComponent>(player).lifestealPerHits = 3;
+    spawnEnemy(world, 50.f, 0.f, 20);
+
+    for (int hit = 0; hit < 3; ++hit) {
+        setAttacking(world, player);
+        world.update(kFixedDt, kFixedDt);
+        for (int i = 0; i < 5; ++i) world.update(kFixedDt, kFixedDt);
+    }
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 6);
+    XCTAssertEqual(world.get_component<StatsComponent>(player).hitsSinceHeal, 0);
+}
+
+- (void)test_thorns_damagesMeleeAttacker {
+    World world;
+    EntityID player = spawnPlayer(world, 50.f, 0.f);
+    world.add_component<StatsComponent>(player).thorns = true;
+    EntityID enemy = spawnEnemy(world, 0.f, 0.f, 5, 1.f, 0.f);
+    setAttacking(world, enemy);
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 4);
+}
+
+- (void)test_whirlwind_hitsEnemyBehindPlayer {
+    World world;
+    EntityID player = spawnPlayer(world, 0.f, 0.f, 1.f, 0.f);
+    world.add_component<StatsComponent>(player).whirlwind = true;
+    EntityID enemy = spawnEnemy(world, -50.f, 0.f, 5);
+    setAttacking(world, player);
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 4);
+}
+
+- (void)test_passiveSpecial_risesWithoutHits {
+    World world;
+    EntityID player = spawnPlayer(world);
+    world.add_component<SpecialMeterComponent>(player).charge = 0.f;
+    world.add_component<StatsComponent>(player).passiveSpecial = true;
+
+    for (int i = 0; i < 60; ++i)
+        world.update(kFixedDt, kFixedDt);
+
+    XCTAssertGreaterThan(world.get_component<SpecialMeterComponent>(player).charge, 0.025f);
+}
+
 - (void)test_dodgeCooldownMult_shortensDodgeRecovery {
     auto ticksUntilDodgeEnds = [](float cooldownMult) {
         World world;

@@ -138,6 +138,7 @@ public:
     ComponentStorage<BoxComponent>&                boxes()            { return _boxes; }
     ComponentStorage<ShopkeeperComponent>&         shopkeepers()      { return _shopkeepers; }
     ComponentStorage<ShopItemComponent>&           shop_items()       { return _shopItems; }
+    ComponentStorage<ChargeAttackComponent>&       charge_attacks()   { return _chargeAttacks; }
 
 private:
     void flush();
@@ -194,6 +195,7 @@ private:
     ComponentStorage<BoxComponent>                _boxes;
     ComponentStorage<ShopkeeperComponent>         _shopkeepers;
     ComponentStorage<ShopItemComponent>           _shopItems;
+    ComponentStorage<ChargeAttackComponent>       _chargeAttacks;
 };
 
 // Template method bodies — inline here so all translation units can instantiate them.
@@ -244,3 +246,4 @@ template<> ComponentStorage<ObstacleComponent>&           World::_pool<ObstacleC
 template<> ComponentStorage<BoxComponent>&                World::_pool<BoxComponent>();
 template<> ComponentStorage<ShopkeeperComponent>&         World::_pool<ShopkeeperComponent>();
 template<> ComponentStorage<ShopItemComponent>&           World::_pool<ShopItemComponent>();
+template<> ComponentStorage<ChargeAttackComponent>&       World::_pool<ChargeAttackComponent>();

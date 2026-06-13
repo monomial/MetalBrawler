@@ -242,6 +242,14 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     id<MTLTexture>             _hudScrapTexture;
     CGSize                     _hudScrapTextureSize;
     NSString                  *_hudScrapText;
+    id<MTLTexture>             _hudScoreTexture;
+    CGSize                     _hudScoreTextureSize;
+    NSString                  *_hudScoreText;
+    id<MTLTexture>             _hudComboTexture;
+    CGSize                     _hudComboTextureSize;
+    NSString                  *_hudComboText;
+    int                        _lastComboCount;
+    float                      _comboPop;
     id<MTLTexture>             _shopPromptTexture;
     CGSize                     _shopPromptTextureSize;
     NSString                  *_shopPromptText;
@@ -555,6 +563,9 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     _lastParticleTime = now;
     _hitBlur     *= expf(-pdt / 0.06f);  // sharp: gone ~0.15s after a hit
     _damageFlash *= expf(-pdt / 0.14f);  // softer: ~0.35s red bleed
+    if (_comboCount > _lastComboCount) _comboPop = 0.18f;
+    _lastComboCount = _comboCount;
+    if (_comboPop > 0.f) _comboPop = fmaxf(0.f, _comboPop - pdt);
     if (_finalKillZoomTime > 0.f)
         _finalKillZoomTime = fmaxf(0.f, _finalKillZoomTime - pdt);
     if (_hitBlur     < 0.01f) _hitBlur     = 0.f;
@@ -900,6 +911,10 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
                 {0.15f, 0.90f, 0.30f, 1.f}, {1.00f, 0.75f, 0.18f, 1.f},
                 {1.00f, 0.42f, 0.12f, 1.f}, {0.20f, 0.45f, 1.00f, 1.f},
                 {1.00f, 0.92f, 0.10f, 1.f}, {0.92f, 0.92f, 0.92f, 1.f},
+                {0.20f, 0.52f, 1.00f, 1.f}, {0.20f, 0.52f, 1.00f, 1.f},
+                {0.20f, 0.52f, 1.00f, 1.f}, {0.20f, 0.52f, 1.00f, 1.f},
+                {1.00f, 0.72f, 0.16f, 1.f}, {1.00f, 0.72f, 0.16f, 1.f},
+                {1.00f, 0.72f, 0.16f, 1.f},
             };
             float pulse = 0.75f + 0.20f * sinf((float)CACurrentMediaTime() * 5.f + (float)eid);
             [enc setRenderPipelineState:_pipeline];
@@ -1045,6 +1060,11 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             if (world->has_component<DownedComponent>(eid)) {
                 su.color = (simd_float4){0.22f, 0.24f, 0.27f, su.color.w};
                 su.tintStrength = 0.85f;
+            }
+            if (world->has_component<ChargeAttackComponent>(eid) &&
+                world->get_component<ChargeAttackComponent>(eid).charging) {
+                su.color = (simd_float4){0.35f, 0.70f, 1.0f, su.color.w};
+                su.tintStrength = fmaxf(su.tintStrength, 0.72f);
             }
             [enc setVertexBytes:&su length:sizeof(su) atIndex:2];
 
@@ -1243,6 +1263,13 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
                     {0.20f, 0.45f, 1.00f, 1.f}, // dodge
                     {1.00f, 0.92f, 0.10f, 1.f}, // special charge
                     {0.92f, 0.92f, 0.92f, 1.f}, // second wind
+                    {0.20f, 0.52f, 1.00f, 1.f}, // heavy hitter
+                    {0.20f, 0.52f, 1.00f, 1.f}, // toughness
+                    {0.20f, 0.52f, 1.00f, 1.f}, // lifesteal
+                    {0.20f, 0.52f, 1.00f, 1.f}, // thorns
+                    {1.00f, 0.72f, 0.16f, 1.f}, // whirlwind
+                    {1.00f, 0.72f, 0.16f, 1.f}, // adrenaline
+                    {1.00f, 0.72f, 0.16f, 1.f}, // vampire
                 };
                 int pipIndex = 0;
                 float pipY = meterY + kSpecialBarH + 7.f;
@@ -1318,6 +1345,47 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             [enc setFragmentTexture:_hudScrapTexture atIndex:0];
             [enc setFragmentSamplerState:_linearSampler atIndex:0];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
+
+        NSString *scoreText = [NSString stringWithFormat:@"SCORE %d", _scoreValue];
+        if (!_hudScoreTexture || ![_hudScoreText isEqualToString:scoreText]) {
+            _hudScoreText = [scoreText copy];
+            _hudScoreTexture = makeHUDLabelTexture(view.device, _hudScoreText, &_hudScoreTextureSize);
+        }
+        if (_hudScoreTexture && _texturePipeline) {
+            [enc setRenderPipelineState:_texturePipeline];
+            [enc setDepthStencilState:_noDepthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            TextureUniforms tu;
+            tu.mvp = simd_mul(ortho, make_model_rect(W - 96.f, 30.f, 0.f,
+                                                     (float)_hudScoreTextureSize.width,
+                                                     (float)_hudScoreTextureSize.height));
+            [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+            [enc setFragmentTexture:_hudScoreTexture atIndex:0];
+            [enc setFragmentSamplerState:_linearSampler atIndex:0];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
+
+        if (_comboCount >= 2) {
+            NSString *comboText = [NSString stringWithFormat:@"COMBO x%d", _comboCount];
+            if (!_hudComboTexture || ![_hudComboText isEqualToString:comboText]) {
+                _hudComboText = [comboText copy];
+                _hudComboTexture = makeHUDLabelTexture(view.device, _hudComboText, &_hudComboTextureSize);
+            }
+            if (_hudComboTexture && _texturePipeline) {
+                float scale = 1.f + 0.18f * (_comboPop / 0.18f);
+                [enc setRenderPipelineState:_texturePipeline];
+                [enc setDepthStencilState:_noDepthState];
+                [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+                TextureUniforms tu;
+                tu.mvp = simd_mul(ortho, make_model_rect(W * 0.5f, 68.f, 0.f,
+                                                         (float)_hudComboTextureSize.width * scale,
+                                                         (float)_hudComboTextureSize.height * scale));
+                [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+                [enc setFragmentTexture:_hudComboTexture atIndex:0];
+                [enc setFragmentSamplerState:_linearSampler atIndex:0];
+                [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            }
         }
 
         NSString *promptText = _shopPrompt ?: @"";

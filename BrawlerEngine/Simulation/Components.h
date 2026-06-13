@@ -227,6 +227,12 @@ struct ShopItemComponent {
     bool prevAttack[4] = {};
 };
 
+struct ChargeAttackComponent {
+    float held = 0.f;
+    bool charging = false;
+    bool prevAttack = false;
+};
+
 // Looping waypoint path. HazardSystem moves the entity along the closed
 // polyline pts[0..count-1] → pts[0] at `speed`, wrapping forever.
 struct PathFollowComponent {
@@ -265,6 +271,11 @@ struct StatsComponent {
     float dodgeCooldownMult = 1.f; // multiplies Dodge clip/recovery duration
     float specialChargeMult = 1.f; // multiplies meter gained from landed hits
     int   secondWinds       = 0;   // one-time saves at 1 HP before death
+    int   lifestealPerHits  = 0;   // 0 = off, otherwise heal after N landed hits
+    bool  thorns            = false;
+    bool  whirlwind         = false;
+    bool  passiveSpecial    = false;
+    int   hitsSinceHeal     = 0;
 };
 
 struct SpecialMeterComponent {

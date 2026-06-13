@@ -171,7 +171,20 @@ typedef NS_ENUM(int, BrawlerPerk) {
     BrawlerPerkQuickDodge,
     BrawlerPerkSpecialCharge,
     BrawlerPerkSecondWind,
+    BrawlerPerkHeavyHitter,
+    BrawlerPerkToughness,
+    BrawlerPerkLifesteal,
+    BrawlerPerkThorns,
+    BrawlerPerkWhirlwind,
+    BrawlerPerkAdrenaline,
+    BrawlerPerkVampire,
     BrawlerPerkCount
+};
+
+typedef NS_ENUM(int, BrawlerPerkRarity) {
+    BrawlerRarityCommon = 0,
+    BrawlerRarityRare   = 1,
+    BrawlerRarityEpic   = 2,
 };
 
 static NSString *const kPerkLabels[BrawlerPerkCount] = {
@@ -183,6 +196,31 @@ static NSString *const kPerkLabels[BrawlerPerkCount] = {
     @"Quick Dodge",
     @"+50% Special Charge",
     @"Second Wind",
+    @"Heavy Hitter",
+    @"Toughness",
+    @"Lifesteal",
+    @"Thorns",
+    @"Whirlwind",
+    @"Adrenaline",
+    @"Vampire",
+};
+
+static const BrawlerPerkRarity kPerkRarity[BrawlerPerkCount] = {
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityCommon,
+    BrawlerRarityRare,
+    BrawlerRarityRare,
+    BrawlerRarityRare,
+    BrawlerRarityRare,
+    BrawlerRarityEpic,
+    BrawlerRarityEpic,
+    BrawlerRarityEpic,
 };
 
 struct PlayerPerks {
@@ -193,6 +231,10 @@ struct PlayerPerks {
     float dodgeCooldownMult = 1.f;
     float specialChargeMult = 1.f;
     int   secondWinds = 0;
+    int   lifestealPerHits = 0;
+    bool  thorns = false;
+    bool  whirlwind = false;
+    bool  passiveSpecial = false;
     uint8_t counts[BrawlerPerkCount] = {};
 };
 
@@ -203,8 +245,30 @@ struct RunStats {
     int heartsCollected = 0;
     int specialsUsed    = 0;
     int perksTaken      = 0;
+    int maxCombo        = 0;
+    int score           = 0;
     float runTime       = 0.f;
 };
+
+static NSString *rarity_prefix(BrawlerPerk perk) {
+    if (perk < 0 || perk >= BrawlerPerkCount) return @"";
+    switch (kPerkRarity[perk]) {
+        case BrawlerRarityRare: return @"★ ";
+        case BrawlerRarityEpic: return @"★★ ";
+        case BrawlerRarityCommon: return @"";
+    }
+    return @"";
+}
+
+static int rarity_price(BrawlerPerk perk) {
+    if (perk < 0 || perk >= BrawlerPerkCount) return 25;
+    switch (kPerkRarity[perk]) {
+        case BrawlerRarityRare: return 40;
+        case BrawlerRarityEpic: return 60;
+        case BrawlerRarityCommon: return 25;
+    }
+    return 25;
+}
 
 // ---------------------------------------------------------------------------
 
@@ -230,6 +294,8 @@ struct RunStats {
     PlayerPerks          _perks[kMaxPlayers]; // per-player run-level, reset each run
     RunStats             _runStats;
     int                  _scrap;
+    int                  _combo;
+    float                _comboTimer;
     int                  _upgradePlayerIndex; // active picker during Upgrade, -1 otherwise
     int                  _upgradeChoice[2];   // BrawlerPerk indices on offer
     int                  _middleOrder[kNumMiddleRooms]; // seeded shuffle per run
@@ -241,6 +307,9 @@ struct RunStats {
 - (int)currentRoom               { return _currentRoom + 1; } // 1-indexed for UI
 - (int)livesRemaining            { return _lives; }
 - (int)currentUpgradePlayerIndex { return (_phase == BrawlerGamePhaseUpgrade) ? _upgradePlayerIndex : -1; }
+- (int)comboCount                { return _combo; }
+- (int)maxCombo                  { return _runStats.maxCombo; }
+- (int)scoreValue                { return _runStats.score; }
 
 - (int)exitEntityCount {
     int count = 0;
@@ -261,6 +330,82 @@ struct RunStats {
     for (EntityID id = 0; id < _world.entity_count(); ++id)
         if (_world.shop_items().present(id)) count++;
     return count;
+}
+
+- (int)debugPerkDamageBonusForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return 0;
+    return _perks[playerIndex].bonusDamage;
+}
+
+- (int)debugPerkMaxHPBonusForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return 0;
+    return _perks[playerIndex].bonusMaxHP;
+}
+
+- (int)debugPerkLifestealForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return 0;
+    return _perks[playerIndex].lifestealPerHits;
+}
+
+- (BOOL)debugPerkThornsForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return NO;
+    return _perks[playerIndex].thorns ? YES : NO;
+}
+
+- (BOOL)debugPerkWhirlwindForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return NO;
+    return _perks[playerIndex].whirlwind ? YES : NO;
+}
+
+- (BOOL)debugPerkPassiveSpecialForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return NO;
+    return _perks[playerIndex].passiveSpecial ? YES : NO;
+}
+
+- (void)debugApplyPerkID:(int)perkID toPlayer:(int)playerIndex {
+    if (perkID < 0 || perkID >= BrawlerPerkCount) return;
+    [self _applyPerk:(BrawlerPerk)perkID toPlayer:playerIndex];
+}
+
+- (void)_recordEnemyDamage:(int)amount {
+    _runStats.damageDealt += amount;
+    _combo += 1;
+    _comboTimer = 2.5f;
+    if (_combo > _runStats.maxCombo) _runStats.maxCombo = _combo;
+    _runStats.score += 10 * _combo;
+}
+
+- (void)_recordPlayerDamage:(int)amount {
+    _runStats.damageTaken += amount;
+    _combo = 0;
+    _comboTimer = 0.f;
+}
+
+- (void)_advanceComboTimerOnly:(float)dt {
+    if (_combo <= 0) return;
+    _comboTimer -= dt;
+    if (_comboTimer <= 0.f) {
+        _combo = 0;
+        _comboTimer = 0.f;
+    }
+}
+
+- (void)debugRegisterEnemyDamage:(int)amount { [self _recordEnemyDamage:amount]; }
+- (void)debugRegisterPlayerDamage:(int)amount { [self _recordPlayerDamage:amount]; }
+- (void)debugAdvanceComboTimer:(float)dt { [self _advanceComboTimerOnly:dt]; }
+
+- (BOOL)debugShopItemsHaveDistinctPerks {
+    uint8_t seen[3] = {};
+    int count = 0;
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.shop_items().present(id)) continue;
+        uint8_t perk = _world.get_component<ShopItemComponent>(id).perkID;
+        for (int i = 0; i < count; ++i)
+            if (seen[i] == perk) return NO;
+        if (count < 3) seen[count] = perk;
+        count += 1;
+    }
+    return count == 3;
 }
 
 - (void)_refreshOverlay {
@@ -325,6 +470,8 @@ struct RunStats {
         [NSString stringWithFormat:@"Damage taken  %d", _runStats.damageTaken],
         [NSString stringWithFormat:@"Hearts  %d", _runStats.heartsCollected],
         [NSString stringWithFormat:@"Specials  %d", _runStats.specialsUsed],
+        [NSString stringWithFormat:@"Max combo  %d", _runStats.maxCombo],
+        [NSString stringWithFormat:@"Score  %d", _runStats.score],
     ];
 }
 
@@ -335,6 +482,46 @@ struct RunStats {
             summary.counts[i] = _perks[p].counts[i];
         [_renderer setPerkSummary:summary forPlayer:p];
     }
+}
+
+- (BrawlerPerk)_rollPerkByRarity {
+    uint32_t roll = _world.rand_range(100);
+    BrawlerPerkRarity rarity = (roll < 60) ? BrawlerRarityCommon
+                               : (roll < 90) ? BrawlerRarityRare
+                                             : BrawlerRarityEpic;
+    uint8_t matches[BrawlerPerkCount] = {};
+    int matchCount = 0;
+    for (int i = 0; i < BrawlerPerkCount; ++i) {
+        if (kPerkRarity[i] == rarity)
+            matches[matchCount++] = (uint8_t)i;
+    }
+    if (matchCount <= 0) return BrawlerPerkDamage;
+    return (BrawlerPerk)matches[_world.rand_range((uint32_t)matchCount)];
+}
+
+- (BrawlerPerk)_rollDistinctPerkAvoiding:(const uint8_t *)existing count:(int)existingCount {
+    for (int attempt = 0; attempt < 32; ++attempt) {
+        BrawlerPerk perk = [self _rollPerkByRarity];
+        bool unique = true;
+        for (int i = 0; i < existingCount; ++i) {
+            if (existing[i] == (uint8_t)perk) {
+                unique = false;
+                break;
+            }
+        }
+        if (unique) return perk;
+    }
+    for (int i = 0; i < BrawlerPerkCount; ++i) {
+        bool unique = true;
+        for (int j = 0; j < existingCount; ++j) {
+            if (existing[j] == (uint8_t)i) {
+                unique = false;
+                break;
+            }
+        }
+        if (unique) return (BrawlerPerk)i;
+    }
+    return BrawlerPerkDamage;
 }
 
 // ---------------------------------------------------------------------------
@@ -458,6 +645,8 @@ struct RunStats {
         _perks[i] = PlayerPerks{};
     _runStats = RunStats{};
     _scrap = 0;
+    _combo = 0;
+    _comboTimer = 0.f;
     [self _refreshPerkHUD];
     _upgradePlayerIndex = -1;
 
@@ -491,14 +680,17 @@ struct RunStats {
 // Roll two distinct perks from the pool using the (seeded) world RNG so
 // deterministic runs offer deterministic choices.
 - (void)_rollUpgradeChoices {
-    _upgradeChoice[0] = (int)_world.rand_range(BrawlerPerkCount);
-    _upgradeChoice[1] = (_upgradeChoice[0] + 1 +
-                         (int)_world.rand_range(BrawlerPerkCount - 1)) % BrawlerPerkCount;
+    uint8_t picks[2] = {};
+    picks[0] = (uint8_t)[self _rollDistinctPerkAvoiding:picks count:0];
+    picks[1] = (uint8_t)[self _rollDistinctPerkAvoiding:picks count:1];
+    _upgradeChoice[0] = picks[0];
+    _upgradeChoice[1] = picks[1];
 }
 
 - (NSString *)upgradeChoiceLabel:(int)index {
     if (index < 0 || index > 1) return @"";
-    return kPerkLabels[_upgradeChoice[index]];
+    BrawlerPerk perk = (BrawlerPerk)_upgradeChoice[index];
+    return [NSString stringWithFormat:@"%@%@", rarity_prefix(perk), kPerkLabels[perk]];
 }
 
 - (void)_applyPerk:(BrawlerPerk)chosen toPlayer:(int)playerIndex {
@@ -513,6 +705,16 @@ struct RunStats {
         case BrawlerPerkQuickDodge:    perks.dodgeCooldownMult *= 0.7f; break;
         case BrawlerPerkSpecialCharge: perks.specialChargeMult *= 1.5f; break;
         case BrawlerPerkSecondWind:    perks.secondWinds += 1; break;
+        case BrawlerPerkHeavyHitter:   perks.bonusDamage += 2; break;
+        case BrawlerPerkToughness:     perks.bonusMaxHP += 6; break;
+        case BrawlerPerkLifesteal:     perks.lifestealPerHits = 6; break;
+        case BrawlerPerkThorns:        perks.thorns = true; break;
+        case BrawlerPerkWhirlwind:     perks.whirlwind = true; break;
+        case BrawlerPerkAdrenaline:    perks.passiveSpecial = true; break;
+        case BrawlerPerkVampire:
+            perks.lifestealPerHits = 3;
+            perks.bonusDamage += 1;
+            break;
         case BrawlerPerkCount:  break;
     }
     if (chosen >= 0 && chosen < BrawlerPerkCount) {
@@ -601,6 +803,7 @@ struct RunStats {
     _world.add_component<AnimationComponent>(e);
     _world.add_component<FacingComponent>(e);
     _world.add_component<SpecialMeterComponent>(e);
+    _world.add_component<ChargeAttackComponent>(e);
     auto& stats = _world.add_component<StatsComponent>(e);
     stats.damageBonus = perks.bonusDamage;
     stats.speedMult   = perks.speedMult;
@@ -608,6 +811,10 @@ struct RunStats {
     stats.dodgeCooldownMult = perks.dodgeCooldownMult;
     stats.specialChargeMult = perks.specialChargeMult;
     stats.secondWinds = perks.secondWinds;
+    stats.lifestealPerHits = perks.lifestealPerHits;
+    stats.thorns = perks.thorns;
+    stats.whirlwind = perks.whirlwind;
+    stats.passiveSpecial = perks.passiveSpecial;
 }
 
 - (void)_spawnWaveControllerForCurrentRoom {
@@ -669,28 +876,15 @@ struct RunStats {
 - (void)_spawnShopItems {
     uint8_t picks[3] = {};
     for (int i = 0; i < 3; ++i) {
-        uint8_t perk = 0;
-        bool unique = false;
-        while (!unique) {
-            perk = (uint8_t)_world.rand_range(BrawlerPerkCount);
-            unique = true;
-            for (int j = 0; j < i; ++j) {
-                if (picks[j] == perk) {
-                    unique = false;
-                    break;
-                }
-            }
-        }
-        picks[i] = perk;
+        picks[i] = (uint8_t)[self _rollDistinctPerkAvoiding:picks count:i];
     }
-    int expensiveSlot = (int)_world.rand_range(3);
     static const float kShopX[3] = {-250.f, 0.f, 250.f};
     for (int i = 0; i < 3; ++i) {
         EntityID e = _world.defer_create();
         _world.add_component<PositionComponent>(e) = {kShopX[i], 150.f, 0.f};
         ShopItemComponent& item = _world.add_component<ShopItemComponent>(e);
         item.perkID = picks[i];
-        item.price = (i == expensiveSlot) ? 40 : 25;
+        item.price = rarity_price((BrawlerPerk)picks[i]);
     }
 }
 
@@ -733,8 +927,9 @@ struct RunStats {
     }
     const ShopItemComponent& item = _world.get_component<ShopItemComponent>(nearestItem);
     NSString *label = (item.perkID < BrawlerPerkCount) ? kPerkLabels[item.perkID] : @"Perk";
-    _renderer.shopPrompt = [NSString stringWithFormat:@"%@ - %d SCRAP (PUNCH TO BUY)",
-                            label, item.price];
+    NSString *prefix = (item.perkID < BrawlerPerkCount) ? rarity_prefix((BrawlerPerk)item.perkID) : @"";
+    _renderer.shopPrompt = [NSString stringWithFormat:@"%@%@ - %d SCRAP (PUNCH TO BUY)",
+                            prefix, label, item.price];
 }
 
 // Returns YES when no enemy entities remain in the world — i.e. all death
@@ -814,6 +1009,8 @@ struct RunStats {
 - (void)advanceFrame:(float)dt {
     if (_phase == BrawlerGamePhasePlaying)
         _runStats.runTime += dt;
+    if (_phase == BrawlerGamePhasePlaying)
+        [self _advanceComboTimerOnly:dt];
 
     // AutoPilot (scenario tests, --autotest): bot input replaces human input.
     if (self.autoPilotEnabled && _phase == BrawlerGamePhasePlaying) {
@@ -840,6 +1037,8 @@ struct RunStats {
         _world.set_scrap(_scrap);
         _world.update(dt, dt);
         _renderer.scrapCount = _scrap;
+        _renderer.comboCount = _combo;
+        _renderer.scoreValue = _runStats.score;
         [self _refreshShopPrompt];
 
         // Play hit sound/haptic once per frame regardless of how many enemies connected —
@@ -906,6 +1105,26 @@ struct RunStats {
                                   count:36 speed:520.f size:16.f
                                   color:(simd_float4){1.0f, 0.8f, 0.2f, 1.f}];
             }
+            [_renderer triggerHitBlur:1.f];
+            [_audio playFinisherSound];
+            [_haptics playFinisherHaptic];
+        });
+
+        _world.events().for_each(EventType::ChargeReady, [self](const Event& ev) {
+            uint32_t pid = ev.chargeReady.playerID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 105.f}
+                                  count:18 speed:180.f size:14.f
+                                  color:(simd_float4){0.35f, 0.70f, 1.0f, 1.f}];
+            }
+            [_audio playSwingSound];
+        });
+
+        _world.events().for_each(EventType::ChargedSlam, [self](const Event& ev) {
+            [_renderer spawnBurstAt:(simd_float3){ev.chargedSlam.x, ev.chargedSlam.y, 95.f}
+                              count:44 speed:560.f size:18.f
+                              color:(simd_float4){1.0f, 0.82f, 0.25f, 1.f}];
             [_renderer triggerHitBlur:1.f];
             [_audio playFinisherSound];
             [_haptics playFinisherHaptic];
@@ -1055,6 +1274,8 @@ struct RunStats {
         });
 
         _world.events().for_each(EventType::PlayerDowned, [self](const Event& ev) {
+            _combo = 0;
+            _comboTimer = 0.f;
             uint32_t pid = ev.playerDowned.playerID;
             if (_world.has_component<PositionComponent>(pid)) {
                 const auto& p = _world.get_component<PositionComponent>(pid);
@@ -1081,10 +1302,11 @@ struct RunStats {
             uint32_t tid = ev.damageDealt.targetID;
             if (_world.has_component<FactionComponent>(tid)) {
                 FactionComponent::Type targetFaction = _world.get_component<FactionComponent>(tid).type;
-                if (targetFaction == FactionComponent::Enemy)
-                    _runStats.damageDealt += ev.damageDealt.amount;
-                else if (targetFaction == FactionComponent::Player)
-                    _runStats.damageTaken += ev.damageDealt.amount;
+                if (targetFaction == FactionComponent::Enemy) {
+                    [self _recordEnemyDamage:ev.damageDealt.amount];
+                } else if (targetFaction == FactionComponent::Player) {
+                    [self _recordPlayerDamage:ev.damageDealt.amount];
+                }
             }
             if (_world.player_tags().present(tid) &&
                 _world.has_component<HealthComponent>(tid) &&
@@ -1095,6 +1317,8 @@ struct RunStats {
                     dispatch_async(dispatch_get_main_queue(), self.onPlayerDamaged);
             }
         });
+        _renderer.comboCount = _combo;
+        _renderer.scoreValue = _runStats.score;
 
         _world.events().for_each(EventType::FinalKill, [self](const Event& ev) {
             uint32_t killer = ev.finalKill.killerID;
