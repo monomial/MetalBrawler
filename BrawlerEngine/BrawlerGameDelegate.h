@@ -1,5 +1,6 @@
 #pragma once
 #import <MetalKit/MetalKit.h>
+#import "MetaProgressStore.h"
 #include "Platform/InputState.h"
 
 typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
@@ -11,6 +12,7 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
     BrawlerGamePhaseLose         = 5, // all lives exhausted
     BrawlerGamePhasePaused       = 6, // mid-game pause
     BrawlerGamePhaseUpgrade      = 7, // pick a perk before the next room
+    BrawlerGamePhaseMetaShop     = 8, // persistent upgrades before a run
 };
 
 // Shared game delegate used by all three platform targets (macOS, iOS, tvOS).
@@ -57,6 +59,12 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 
 // Start the game with a specific player count. Call from the player-select UI.
 - (void)startGameWithPlayers:(int)playerCount;
+- (void)enterMetaShop;
+- (void)exitMetaShop;
+- (void)metaShopMove:(int)delta;
+- (BOOL)buySelectedMetaUpgrade;
+- (NSString *)metaShopLine:(int)index;
+- (int)currentMetaShopIndex;
 
 // Upgrade phase: label for choice 0 or 1 (shown by the platform overlay).
 // In-phase input also picks directly: attack pulse → 0, dodge pulse → 1.
@@ -87,6 +95,11 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 - (float)debugCurseMult;
 - (int)debugCurseStacks;
 - (int)debugRunCoins;
+- (int)debugScrap;
+- (int)debugFirstPlayerMaxHP;
+- (int)debugFirstPlayerSecondWinds;
+- (MetaProgressStore *)debugMetaStore;
+- (void)setMetaStoreOverride:(MetaProgressStore *)store;
 - (int)debugCursedExitType;
 - (int)debugFirstEnemyMaxHP;
 - (void)debugForceCurseMult:(float)mult stacks:(int)stacks;

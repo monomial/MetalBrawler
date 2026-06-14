@@ -504,8 +504,8 @@ static int exit_label_index(const ExitComponent& exit) {
     choiceA = choiceA ?: @"";
     choiceB = choiceB ?: @"";
     NSArray<NSString*> *lines = statLines ?: @[];
-    if (lines.count > 6)
-        lines = [lines subarrayWithRange:NSMakeRange(0, 6)];
+    if (lines.count > 9)
+        lines = [lines subarrayWithRange:NSMakeRange(0, 9)];
     BOOL changed = _overlayVisible != visible ||
                    ![_overlayTitle isEqualToString:title] ||
                    ![_overlaySubtitle isEqualToString:subtitle] ||

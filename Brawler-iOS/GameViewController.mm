@@ -99,7 +99,20 @@
     for (UITouch *t in touches) {
         CGPoint loc = [t locationInView:_mtkView];
         if (_delegate.gamePhase == BrawlerGamePhaseTitle) {
-            [_delegate triggerAttack];
+            if (loc.x > _mtkView.bounds.size.width * 0.5)
+                [_delegate enterMetaShop];
+            else
+                [_delegate triggerAttack];
+            return;
+        }
+        if (_delegate.gamePhase == BrawlerGamePhaseMetaShop) {
+            if (loc.x > _mtkView.bounds.size.width * 0.72) {
+                [_delegate exitMetaShop];
+            } else if (loc.x < _mtkView.bounds.size.width * 0.28) {
+                [_delegate buySelectedMetaUpgrade];
+            } else {
+                [_delegate metaShopMove:(loc.y < _mtkView.bounds.size.height * 0.5 ? -1 : 1)];
+            }
             return;
         }
         if (_delegate.gamePhase == BrawlerGamePhasePlayerSelect) {

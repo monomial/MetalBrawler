@@ -1,5 +1,6 @@
 #import <XCTest/XCTest.h>
 #import "BrawlerGameDelegate.h"
+#import "MetaProgressStore.h"
 #include "Simulation/World.h"
 #include "Simulation/Systems/CombatHelpers.h"
 #include "Simulation/Systems/ShopSystem.h"
@@ -62,6 +63,27 @@ static int eventCount(World& world, EventType type) {
     int count = 0;
     world.events().for_each(type, [&count](const Event&) { ++count; });
     return count;
+}
+
+static void chooseUpgradesIfNeeded(BrawlerGameDelegate *d) {
+    if (d.gamePhase != BrawlerGamePhaseUpgrade) return;
+    NSString *a = [d upgradeChoiceLabel:0];
+    NSString *b = [d upgradeChoiceLabel:1];
+    if      ([a containsString:@"Damage"]) [d triggerAttack];
+    else if ([b containsString:@"Damage"]) [d triggerDodge];
+    else if ([a containsString:@"Health"]) [d triggerAttack];
+    else if ([b containsString:@"Health"]) [d triggerDodge];
+    else                                   [d triggerAttack];
+}
+
+static BOOL advanceDelegateUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase, float seconds) {
+    int maxFrames = (int)(seconds / kFrameDt);
+    for (int i = 0; i < maxFrames; ++i) {
+        if (d.gamePhase == phase) return YES;
+        chooseUpgradesIfNeeded(d);
+        [d advanceFrame:kFrameDt];
+    }
+    return d.gamePhase == phase;
 }
 
 @interface Part2EconomyShopTests : XCTestCase
@@ -218,6 +240,121 @@ static int eventCount(World& world, EventType type) {
         }
     }
     XCTAssertTrue(advanced, @"ExitReached in the shop should advance to the next middle room");
+}
+
+- (void)test_metaProgressInMemoryStoreSaveLoadRoundTripsWithoutDefaults {
+    MetaProgressStore *store = [MetaProgressStore inMemoryStore];
+    store.coins = 123;
+    store.hpLevel = 4;
+    store.livesLevel = 2;
+    store.scrapLevel = 3;
+    store.secondWindLevel = 1;
+    [store save];
+
+    store.coins = 0;
+    store.hpLevel = 0;
+    store.livesLevel = 0;
+    store.scrapLevel = 0;
+    store.secondWindLevel = 0;
+    [store load];
+
+    XCTAssertEqual(store.coins, 123);
+    XCTAssertEqual(store.hpLevel, 4);
+    XCTAssertEqual(store.livesLevel, 2);
+    XCTAssertEqual(store.scrapLevel, 3);
+    XCTAssertEqual(store.secondWindLevel, 1);
+}
+
+- (void)test_metaShopBuyingRespectsCostsCapsAndNavigation {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    MetaProgressStore *store = d.debugMetaStore;
+    store.coins = 200;
+    [store save];
+
+    [d enterMetaShop];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhaseMetaShop);
+    XCTAssertEqual([d currentMetaShopIndex], 0);
+    XCTAssertTrue([[d metaShopLine:0] containsString:@"Vitality"]);
+
+    XCTAssertTrue([d buySelectedMetaUpgrade]);
+    XCTAssertEqual(store.hpLevel, 1);
+    XCTAssertEqual(store.coins, 180);
+    XCTAssertTrue([d buySelectedMetaUpgrade]);
+    XCTAssertTrue([d buySelectedMetaUpgrade]);
+    XCTAssertTrue([d buySelectedMetaUpgrade]);
+    XCTAssertEqual(store.hpLevel, 4);
+    XCTAssertEqual(store.coins, 10);
+    XCTAssertFalse([d buySelectedMetaUpgrade]);
+    XCTAssertEqual(store.hpLevel, 4);
+    XCTAssertEqual(store.coins, 10);
+
+    [d metaShopMove:1];
+    XCTAssertEqual([d currentMetaShopIndex], 1);
+    XCTAssertFalse([d buySelectedMetaUpgrade]);
+    XCTAssertEqual(store.livesLevel, 0);
+    [d exitMetaShop];
+    XCTAssertEqual(d.gamePhase, BrawlerGamePhaseTitle);
+}
+
+- (void)test_metaUpgradesApplyAtRunStartBeforePlayersSpawn {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    MetaProgressStore *store = d.debugMetaStore;
+    store.hpLevel = 4;
+    store.livesLevel = 2;
+    store.scrapLevel = 3;
+    store.secondWindLevel = 1;
+    [store save];
+
+    [d startGameWithPlayers:1];
+    XCTAssertEqual(d.livesRemaining, 5);
+    XCTAssertEqual([d debugScrap], 45);
+    XCTAssertEqual([d debugFirstPlayerMaxHP], 14);
+    XCTAssertEqual([d debugFirstPlayerSecondWinds], 1);
+}
+
+- (void)test_metaDefaultsAreZeroForHeadlessRuns {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    XCTAssertEqual(d.debugMetaStore.coins, 0);
+    XCTAssertEqual(d.debugMetaStore.hpLevel, 0);
+    XCTAssertEqual(d.debugMetaStore.livesLevel, 0);
+    XCTAssertEqual(d.debugMetaStore.scrapLevel, 0);
+    XCTAssertEqual(d.debugMetaStore.secondWindLevel, 0);
+
+    [d startGameWithPlayers:1];
+    XCTAssertEqual(d.livesRemaining, 3);
+    XCTAssertEqual([d debugScrap], 0);
+    XCTAssertEqual([d debugFirstPlayerMaxHP], 10);
+    XCTAssertEqual([d debugFirstPlayerSecondWinds], 0);
+}
+
+- (void)test_runCoinsAccruePerRoomBankOnWinAndResetNextRun {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    d.rngSeedOverride = 42;
+    d.autoPilotEnabled = YES;
+    MetaProgressStore *store = d.debugMetaStore;
+
+    [d startGameWithPlayers:1];
+    XCTAssertTrue(advanceDelegateUntilPhase(d, BrawlerGamePhaseWin, 510.f),
+                  @"AutoPilot should still win at meta level 0");
+
+    XCTAssertEqual([d debugRunCoins], 46);
+    XCTAssertEqual(store.coins, 46);
+
+    [d startGameWithPlayers:1];
+    XCTAssertEqual([d debugRunCoins], 0);
+    XCTAssertEqual(store.coins, 46);
+}
+
+- (void)test_runCoinsBankOnLoseIncludingCurseRewards {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    d.rngSeedOverride = 42;
+    [d startGameWithPlayers:1];
+    [d debugApplyCurseRewardType:0];
+    XCTAssertEqual([d debugRunCoins], 8);
+
+    XCTAssertTrue(advanceDelegateUntilPhase(d, BrawlerGamePhaseLose, 300.f),
+                  @"Idle player should eventually lose and bank run coins");
+    XCTAssertEqual(d.debugMetaStore.coins, 8);
 }
 
 @end

@@ -123,10 +123,25 @@
 
 - (void)keyDown:(NSEvent *)event {
     if (event.isARepeat) return;
-    // Title screen: any key advances to player select.
     if (_delegate.gamePhase == BrawlerGamePhaseTitle) {
-        [_delegate triggerAttack];
-        return;
+        if (event.keyCode == 12 || event.keyCode == 125) {
+            [_delegate enterMetaShop];
+            return;
+        }
+        if (event.keyCode != 53) {
+            [_delegate triggerAttack];
+            return;
+        }
+    }
+    if (_delegate.gamePhase == BrawlerGamePhaseMetaShop) {
+        switch (event.keyCode) {
+            case 126: [_delegate metaShopMove:-1]; return; // up
+            case 125: [_delegate metaShopMove:1]; return;  // down
+            case 49:  [_delegate buySelectedMetaUpgrade]; return;
+            case 12:
+            case 53:  [_delegate exitMetaShop]; return;
+            default: break;
+        }
     }
     switch (event.keyCode) {
         case 0:   _left   = YES; break; // A

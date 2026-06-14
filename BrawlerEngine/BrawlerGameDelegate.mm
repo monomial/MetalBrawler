@@ -1,6 +1,7 @@
 #import "BrawlerGameDelegate.h"
 #import <MetalKit/MetalKit.h>
 #import "BrawlerStrings.h"
+#import "MetaProgressStore.h"
 #include "Simulation/World.h"
 #include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/AnimationSystem.h"
@@ -157,6 +158,14 @@ static const float kRoomClearDuration = 2.0f;
 static const float kWinDuration       = 5.0f;
 static const float kLoseDuration      = 3.5f;
 static const float kUpgradeGrace      = 0.35f; // ignore held buttons right after entering Upgrade
+static const int kMetaUpgradeCount    = 4;
+
+typedef NS_ENUM(int, BrawlerMetaUpgrade) {
+    BrawlerMetaUpgradeVitality = 0,
+    BrawlerMetaUpgradeExtraLife,
+    BrawlerMetaUpgradeProspector,
+    BrawlerMetaUpgradeResolve,
+};
 
 // ---------------------------------------------------------------------------
 // Perk pool — two distinct picks are offered between rooms; the chosen perk
@@ -282,6 +291,60 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     return coins;
 }
 
+static int meta_level_for_upgrade(MetaProgressStore *store, BrawlerMetaUpgrade upgrade) {
+    switch (upgrade) {
+        case BrawlerMetaUpgradeVitality:   return store.hpLevel;
+        case BrawlerMetaUpgradeExtraLife:  return store.livesLevel;
+        case BrawlerMetaUpgradeProspector: return store.scrapLevel;
+        case BrawlerMetaUpgradeResolve:    return store.secondWindLevel;
+    }
+    return 0;
+}
+
+static int meta_max_level(BrawlerMetaUpgrade upgrade) {
+    switch (upgrade) {
+        case BrawlerMetaUpgradeVitality:   return 4;
+        case BrawlerMetaUpgradeExtraLife:  return 2;
+        case BrawlerMetaUpgradeProspector: return 3;
+        case BrawlerMetaUpgradeResolve:    return 1;
+    }
+    return 0;
+}
+
+static int meta_cost(BrawlerMetaUpgrade upgrade, int level) {
+    static const int vitality[] = {20, 35, 55, 80};
+    static const int lives[] = {60, 120};
+    static const int scrap[] = {15, 25, 40};
+    static const int resolve[] = {100};
+    switch (upgrade) {
+        case BrawlerMetaUpgradeVitality:   return (level >= 0 && level < 4) ? vitality[level] : 0;
+        case BrawlerMetaUpgradeExtraLife:  return (level >= 0 && level < 2) ? lives[level] : 0;
+        case BrawlerMetaUpgradeProspector: return (level >= 0 && level < 3) ? scrap[level] : 0;
+        case BrawlerMetaUpgradeResolve:    return (level == 0) ? resolve[0] : 0;
+    }
+    return 0;
+}
+
+static NSString *meta_name(BrawlerMetaUpgrade upgrade) {
+    switch (upgrade) {
+        case BrawlerMetaUpgradeVitality:   return @"Vitality";
+        case BrawlerMetaUpgradeExtraLife:  return @"Extra Life";
+        case BrawlerMetaUpgradeProspector: return @"Prospector";
+        case BrawlerMetaUpgradeResolve:    return @"Resolve";
+    }
+    return @"Upgrade";
+}
+
+static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
+    switch (upgrade) {
+        case BrawlerMetaUpgradeVitality:   return @"+1 HP";
+        case BrawlerMetaUpgradeExtraLife:  return @"+1 life";
+        case BrawlerMetaUpgradeProspector: return @"+15 scrap";
+        case BrawlerMetaUpgradeResolve:    return @"+1 second wind";
+    }
+    return @"";
+}
+
 // ---------------------------------------------------------------------------
 
 @implementation BrawlerGameDelegate {
@@ -309,6 +372,9 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     float                _curseMult;
     int                  _curseStacks;
     int                  _runCoins;
+    BOOL                 _runCoinsBanked;
+    MetaProgressStore   *_metaStore;
+    int                  _metaShopIndex;
     int                  _combo;
     float                _comboTimer;
     int                  _upgradePlayerIndex; // active picker during Upgrade, -1 otherwise
@@ -426,6 +492,27 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
 - (float)debugCurseMult { return _curseMult; }
 - (int)debugCurseStacks { return _curseStacks; }
 - (int)debugRunCoins { return _runCoins; }
+- (int)debugScrap { return _scrap; }
+- (int)debugFirstPlayerMaxHP {
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.player_tags().present(id)) continue;
+        if (!_world.has_component<HealthComponent>(id)) continue;
+        return _world.get_component<HealthComponent>(id).max;
+    }
+    return 0;
+}
+- (int)debugFirstPlayerSecondWinds {
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.player_tags().present(id)) continue;
+        if (!_world.has_component<StatsComponent>(id)) continue;
+        return _world.get_component<StatsComponent>(id).secondWinds;
+    }
+    return 0;
+}
+- (MetaProgressStore *)debugMetaStore { return _metaStore; }
+- (void)setMetaStoreOverride:(MetaProgressStore *)store {
+    _metaStore = store ?: [MetaProgressStore inMemoryStore];
+}
 - (int)debugCursedExitType {
     for (EntityID id = 0; id < _world.entity_count(); ++id) {
         if (!_world.exits().present(id)) continue;
@@ -461,7 +548,7 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
         case BrawlerGamePhaseTitle:
             [_renderer setOverlayVisible:YES
                                    title:kBrawlerStringTitle
-                                subtitle:kBrawlerStringPressToStart
+                                subtitle:@"Attack  PLAY     Dodge  UPGRADES"
                                  choiceA:nil choiceB:nil];
             break;
         case BrawlerGamePhasePlayerSelect:
@@ -504,6 +591,14 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
                                  choiceA:[NSString stringWithFormat:@"Attack  %@", [self upgradeChoiceLabel:0]]
                                  choiceB:[NSString stringWithFormat:@"Dodge   %@", [self upgradeChoiceLabel:1]]];
             break;
+        case BrawlerGamePhaseMetaShop:
+            [_renderer setOverlayVisible:YES
+                                   title:@"UPGRADES"
+                                subtitle:[NSString stringWithFormat:@"Coins %d", _metaStore.coins]
+                                 choiceA:[self _metaShopChoiceA]
+                                 choiceB:[self _metaShopChoiceB]
+                               statLines:[self _metaShopLines]];
+            break;
     }
 }
 
@@ -520,7 +615,23 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
         [NSString stringWithFormat:@"Specials  %d", _runStats.specialsUsed],
         [NSString stringWithFormat:@"Max combo  %d", _runStats.maxCombo],
         [NSString stringWithFormat:@"Score  %d", _runStats.score],
+        [NSString stringWithFormat:@"Coins earned  %d", _runCoins],
     ];
+}
+
+- (NSArray<NSString*> *)_metaShopLines {
+    NSMutableArray<NSString*> *lines = [NSMutableArray arrayWithCapacity:kMetaUpgradeCount];
+    for (int i = 0; i < kMetaUpgradeCount; ++i)
+        [lines addObject:[self metaShopLine:i]];
+    return lines;
+}
+
+- (NSString *)_metaShopChoiceA {
+    return @"Attack  Buy";
+}
+
+- (NSString *)_metaShopChoiceB {
+    return @"Dodge/Pause  Back";
 }
 
 - (void)_refreshPerkHUD {
@@ -588,6 +699,7 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     [_haptics startupInit];
     _audio    = [[AudioEngine alloc] init];
     [_audio startupInit];
+    _metaStore = [MetaProgressStore defaultsStore];
 
     [self _loadCharacters:device];
     _numPlayers = 1; // default; overridden at player-select
@@ -606,6 +718,7 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     _lastTime   = CACurrentMediaTime();
     _numPlayers = 1;
     _phase      = BrawlerGamePhaseTitle;
+    _metaStore  = [MetaProgressStore inMemoryStore];
 
     return self;
 }
@@ -655,6 +768,11 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
             [self resetInput]; // clear any button that triggered the title→select transition
             [_audio playUIClickSound];
             break;
+        case BrawlerGamePhaseMetaShop:
+            [self resetInput];
+            _phaseTimer = kUpgradeGrace;
+            [_audio playUIClickSound];
+            break;
         case BrawlerGamePhasePlaying:
             [_audio resumeMusic];
             [_audio startBattleMusic];
@@ -667,10 +785,13 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
         case BrawlerGamePhaseWin:
             [_audio stopMusic];
             _phaseTimer = kWinDuration;
+            _runCoins += 25;
+            [self _bankRunCoinsIfNeeded];
             break;
         case BrawlerGamePhaseLose:
             [_audio stopMusic];
             _phaseTimer = kLoseDuration;
+            [self _bankRunCoinsIfNeeded];
             break;
         case BrawlerGamePhasePaused:
             [_audio pauseMusic];
@@ -688,14 +809,19 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
 - (void)_startNewRun {
     AutoPilot_reset();
     _currentRoom = 0;
-    _lives       = kStartingLives;
+    _lives       = kStartingLives + _metaStore.livesLevel;
     for (int i = 0; i < kMaxPlayers; ++i)
         _perks[i] = PlayerPerks{};
+    for (int i = 0; i < kMaxPlayers; ++i) {
+        _perks[i].bonusMaxHP += _metaStore.hpLevel;
+        _perks[i].secondWinds += _metaStore.secondWindLevel;
+    }
     _runStats = RunStats{};
-    _scrap = 0;
+    _scrap = _metaStore.scrapLevel * 15;
     _curseMult = 1.f;
     _curseStacks = 0;
     _runCoins = 0;
+    _runCoinsBanked = NO;
     _combo = 0;
     _comboTimer = 0.f;
     [self _refreshPerkHUD];
@@ -716,6 +842,67 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     _phase = (BrawlerGamePhase)-1; // sentinel: force the first transition to fire
     [self _loadRoom];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
+}
+
+- (void)_bankRunCoinsIfNeeded {
+    if (_runCoinsBanked) return;
+    _runCoinsBanked = YES;
+    if (_runCoins <= 0) return;
+    _metaStore.coins += _runCoins;
+    [_metaStore save];
+}
+
+- (void)enterMetaShop {
+    if (_phase != BrawlerGamePhaseTitle) return;
+    _metaShopIndex = 0;
+    [self _transitionToPhase:BrawlerGamePhaseMetaShop];
+}
+
+- (void)exitMetaShop {
+    if (_phase != BrawlerGamePhaseMetaShop) return;
+    [self _transitionToPhase:BrawlerGamePhaseTitle];
+}
+
+- (void)metaShopMove:(int)delta {
+    if (_phase != BrawlerGamePhaseMetaShop || delta == 0) return;
+    _metaShopIndex += delta;
+    if (_metaShopIndex < 0) _metaShopIndex = kMetaUpgradeCount - 1;
+    if (_metaShopIndex >= kMetaUpgradeCount) _metaShopIndex = 0;
+    [self _refreshOverlay];
+}
+
+- (int)currentMetaShopIndex { return _metaShopIndex; }
+
+- (NSString *)metaShopLine:(int)index {
+    if (index < 0 || index >= kMetaUpgradeCount) return @"";
+    BrawlerMetaUpgrade upgrade = (BrawlerMetaUpgrade)index;
+    int level = meta_level_for_upgrade(_metaStore, upgrade);
+    int maxLevel = meta_max_level(upgrade);
+    NSString *prefix = (index == _metaShopIndex) ? @"> " : @"  ";
+    if (level >= maxLevel)
+        return [NSString stringWithFormat:@"%@%@ %d/%d %@ MAX", prefix, meta_name(upgrade), level, maxLevel, meta_effect(upgrade)];
+    return [NSString stringWithFormat:@"%@%@ %d/%d %@ cost %d", prefix, meta_name(upgrade), level, maxLevel, meta_effect(upgrade), meta_cost(upgrade, level)];
+}
+
+- (BOOL)buySelectedMetaUpgrade {
+    if (_phase != BrawlerGamePhaseMetaShop) return NO;
+    BrawlerMetaUpgrade upgrade = (BrawlerMetaUpgrade)_metaShopIndex;
+    int level = meta_level_for_upgrade(_metaStore, upgrade);
+    int maxLevel = meta_max_level(upgrade);
+    if (level >= maxLevel) return NO;
+    int cost = meta_cost(upgrade, level);
+    if (_metaStore.coins < cost) return NO;
+    _metaStore.coins -= cost;
+    switch (upgrade) {
+        case BrawlerMetaUpgradeVitality:   _metaStore.hpLevel += 1; break;
+        case BrawlerMetaUpgradeExtraLife:  _metaStore.livesLevel += 1; break;
+        case BrawlerMetaUpgradeProspector: _metaStore.scrapLevel += 1; break;
+        case BrawlerMetaUpgradeResolve:    _metaStore.secondWindLevel += 1; break;
+    }
+    [_metaStore save];
+    [_audio playUIClickSound];
+    [self _refreshOverlay];
+    return YES;
 }
 
 - (const RoomDef&)_currentRoomDef {
@@ -1122,7 +1309,6 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     }
 
     // Single-frame pulses (touch tap / flick / pause).
-    BOOL anyActionPulse = _attackPulse || _dodgePulse || _pausePulse || _specialPulse;
     if (_attackPulse || _dodgePulse || _specialPulse) {
         InputState s = _world.current_input(0);
         if (_attackPulse) s.attack = true;
@@ -1134,7 +1320,8 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
     // Title, Paused, and Upgrade phases freeze the simulation.
     BOOL simActive = (_phase != BrawlerGamePhaseTitle &&
                       _phase != BrawlerGamePhasePaused &&
-                      _phase != BrawlerGamePhaseUpgrade);
+                      _phase != BrawlerGamePhaseUpgrade &&
+                      _phase != BrawlerGamePhaseMetaShop);
 
     if (simActive) {
         _world.set_scrap(_scrap);
@@ -1456,8 +1643,26 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
 
         case BrawlerGamePhaseTitle: {
             InputState s0 = _world.current_input(0);
-            if (anyActionPulse || s0.attack || s0.dodge)
+            if (_dodgePulse || s0.dodge)
+                [self enterMetaShop];
+            else if (_attackPulse || s0.attack || _pausePulse || _specialPulse)
                 [self _transitionToPhase:BrawlerGamePhasePlayerSelect];
+            break;
+        }
+
+        case BrawlerGamePhaseMetaShop: {
+            _phaseTimer -= dt;
+            if (_phaseTimer > 0.f) break;
+            InputState s0 = _world.current_input(0);
+            if (_pausePulse || _dodgePulse || s0.dodge) {
+                [self exitMetaShop];
+            } else if (_attackPulse || s0.attack) {
+                [self buySelectedMetaUpgrade];
+            } else if (s0.moveY > 0.35f) {
+                [self metaShopMove:-1];
+            } else if (s0.moveY < -0.35f) {
+                [self metaShopMove:1];
+            }
             break;
         }
 
@@ -1508,6 +1713,7 @@ static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
         case BrawlerGamePhaseRoomClear: {
             _phaseTimer -= dt;
             if (_phaseTimer <= 0.f) {
+                _runCoins += 3;
                 if (_currentRoom + 1 >= kNumRooms) {
                     [self _transitionToPhase:BrawlerGamePhaseWin];
                 } else {

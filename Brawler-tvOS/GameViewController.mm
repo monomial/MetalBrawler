@@ -110,8 +110,34 @@ static const int kMaxPlayers = 4;
 
     UIKeyboardHIDUsage keyCode = press.key.keyCode;
     if (began && _delegate.gamePhase == BrawlerGamePhaseTitle) {
-        [_delegate triggerAttack];
+        if (keyCode == UIKeyboardHIDUsageKeyboardQ ||
+            keyCode == UIKeyboardHIDUsageKeyboardDownArrow) {
+            [_delegate enterMetaShop];
+        } else {
+            [_delegate triggerAttack];
+        }
         return YES;
+    }
+    if (began && _delegate.gamePhase == BrawlerGamePhaseMetaShop) {
+        switch (keyCode) {
+            case UIKeyboardHIDUsageKeyboardUpArrow:
+            case UIKeyboardHIDUsageKeyboardW:
+                [_delegate metaShopMove:-1];
+                return YES;
+            case UIKeyboardHIDUsageKeyboardDownArrow:
+            case UIKeyboardHIDUsageKeyboardS:
+                [_delegate metaShopMove:1];
+                return YES;
+            case UIKeyboardHIDUsageKeyboardSpacebar:
+                [_delegate buySelectedMetaUpgrade];
+                return YES;
+            case UIKeyboardHIDUsageKeyboardQ:
+            case UIKeyboardHIDUsageKeyboardEscape:
+                [_delegate exitMetaShop];
+                return YES;
+            default:
+                return YES;
+        }
     }
 
     switch (keyCode) {
