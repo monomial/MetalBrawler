@@ -7,6 +7,56 @@
 
 static constexpr float kProjectileRehit = 0.8f;
 
+static EntityID nearest_living_player(World& world, const PositionComponent& origin) {
+    EntityID best = kInvalidEntity;
+    float bestD2 = 0.f;
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (!world.player_tags().present(id)) continue;
+        if (!world.has_component<PositionComponent>(id)) continue;
+        if (!world.has_component<HealthComponent>(id)) continue;
+        if (world.get_component<HealthComponent>(id).current <= 0) continue;
+        if (world.has_component<DownedComponent>(id)) continue;
+        if (world.has_component<AnimationComponent>(id) &&
+            world.get_component<AnimationComponent>(id).dying) continue;
+        const PositionComponent& p = world.get_component<PositionComponent>(id);
+        float dx = p.x - origin.x;
+        float dy = p.y - origin.y;
+        float d2 = dx * dx + dy * dy;
+        if (best == kInvalidEntity || d2 < bestD2) {
+            best = id;
+            bestD2 = d2;
+        }
+    }
+    return best;
+}
+
+static float clampf_local(float v, float lo, float hi) {
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+static void steer_projectile_toward_player(World& world, ProjectileComponent& proj,
+                                           const PositionComponent& pos,
+                                           float gameDt) {
+    if (proj.homing <= 0.f) return;
+    float speed = sqrtf(proj.vx * proj.vx + proj.vy * proj.vy);
+    if (speed <= 0.001f) return;
+    EntityID target = nearest_living_player(world, pos);
+    if (target == kInvalidEntity) return;
+    const PositionComponent& tp = world.get_component<PositionComponent>(target);
+    float dx = tp.x - pos.x;
+    float dy = tp.y - pos.y;
+    if (dx * dx + dy * dy <= 0.001f) return;
+    float current = atan2f(proj.vy, proj.vx);
+    float desired = atan2f(dy, dx);
+    float delta = desired - current;
+    while (delta > (float)M_PI) delta -= (float)M_PI * 2.f;
+    while (delta < -(float)M_PI) delta += (float)M_PI * 2.f;
+    float maxTurn = proj.homing * gameDt;
+    float next = current + clampf_local(delta, -maxTurn, maxTurn);
+    proj.vx = cosf(next) * speed;
+    proj.vy = sinf(next) * speed;
+}
+
 static bool point_in_obstacle(World& world, const PositionComponent& pos) {
     for (EntityID oid = 0; oid < world.entity_count(); ++oid) {
         if (!world.obstacles().present(oid)) continue;
@@ -31,6 +81,7 @@ void ProjectileSystem_update(World& world, float gameDt) {
         ProjectileComponent& proj = world.get_component<ProjectileComponent>(id);
         PositionComponent& pos = world.get_component<PositionComponent>(id);
         proj.lifetime -= gameDt;
+        steer_projectile_toward_player(world, proj, pos, gameDt);
         pos.x += proj.vx * gameDt;
         pos.y += proj.vy * gameDt;
 

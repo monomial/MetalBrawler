@@ -28,12 +28,12 @@ struct EnemyArchetypeDef {
 
 constexpr EnemyArchetypeDef kEnemyArchetypes[(int)EnemyArchetype::Count] = {
     // speed  stop   cooldn  HP  scale  knock  ranged
-    {  150.f, 110.f, 2.0f,    3, 1.00f, 1.0f,  false }, // Grunt — original constants
-    {  260.f, 100.f, 1.2f,    2, 0.85f, 1.3f,  false }, // Rusher
-    {   90.f, 115.f, 3.0f,    8, 1.30f, 0.3f,  false }, // Heavy
-    {  110.f, 120.f, 2.0f,   12, 2.00f, 0.25f, false }, // Boss
-    {  120.f, 350.f, 2.6f,    2, 0.90f, 1.2f,  true  }, // Spitter
-    {   70.f, 140.f, 4.0f,    3, 1.05f, 0.8f,  false }, // Leaper
+    {  150.f, 110.f, 2.0f,    4, 1.00f, 1.0f,  false }, // Grunt — original constants
+    {  260.f, 100.f, 1.2f,    3, 0.85f, 1.3f,  false }, // Rusher
+    {   90.f, 115.f, 3.0f,   10, 1.30f, 0.3f,  false }, // Heavy
+    {  110.f, 120.f, 2.0f,   30, 2.00f, 0.25f, false }, // Boss
+    {  120.f, 350.f, 2.6f,    4, 0.90f, 1.2f,  true  }, // Spitter
+    {   70.f, 140.f, 4.0f,    4, 1.05f, 0.8f,  false }, // Leaper
 };
 
 struct EnemyArchetypeComponent {

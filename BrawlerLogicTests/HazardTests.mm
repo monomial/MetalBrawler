@@ -48,6 +48,45 @@ static EntityID spawnPlayer(World& world, float x, float y) {
     XCTAssertLessThan(in.moveX, 0.f, @"bot should avoid stepping into lava, not chase through it");
 }
 
+- (void)test_autoPilotDodgesIncomingProjectile {
+    World world;
+    AutoPilot_reset();
+    spawnPlayer(world, 0.f, 0.f);
+    EntityID enemy = world.defer_create();
+    world.add_component<PositionComponent>(enemy) = {220.f, 0.f, 0.f};
+    world.add_component<VelocityComponent>(enemy) = {0.f, 0.f, 0.f};
+    world.add_component<FactionComponent>(enemy).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(enemy) = {4, 4};
+    world.add_component<AnimationComponent>(enemy);
+    EntityID projectile = world.defer_create();
+    world.add_component<PositionComponent>(projectile) = {-120.f, 0.f, 0.f};
+    world.add_component<ProjectileComponent>(projectile) = {420.f, 0.f, 1, 2.5f, 2.2f};
+
+    InputState in = AutoPilot_input(world, 0);
+    XCTAssertTrue(in.dodge);
+    XCTAssertNotEqualWithAccuracy(in.moveY, 0.f, 0.001f);
+}
+
+- (void)test_autoPilotDodgesLeaperTelegraphDestination {
+    World world;
+    AutoPilot_reset();
+    spawnPlayer(world, 0.f, 0.f);
+    EntityID leaper = world.defer_create();
+    world.add_component<PositionComponent>(leaper) = {0.f, 200.f, 0.f};
+    world.add_component<VelocityComponent>(leaper) = {0.f, 0.f, 0.f};
+    world.add_component<FactionComponent>(leaper).type = FactionComponent::Enemy;
+    world.add_component<HealthComponent>(leaper) = {4, 4};
+    world.add_component<AnimationComponent>(leaper);
+    LeaperComponent& leap = world.add_component<LeaperComponent>(leaper);
+    leap.state = 1;
+    leap.destX = 20.f;
+    leap.destY = 0.f;
+
+    InputState in = AutoPilot_input(world, 0);
+    XCTAssertTrue(in.dodge);
+    XCTAssertLessThan(in.moveX, 0.f);
+}
+
 - (void)test_snake_followsLoopAndReturns {
     World world;
     EntityID snake = HazardSystem_spawn_snake(world, 0, 0, 300, 0);

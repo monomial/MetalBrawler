@@ -698,22 +698,21 @@ static int rarity_price(BrawlerPerk perk) {
     PlayerPerks& perks = _perks[playerIndex];
     switch (chosen) {
         case BrawlerPerkDamage: perks.bonusDamage += 1;    break;
-        case BrawlerPerkSpeed:  perks.speedMult   += 0.2f; break;
+        case BrawlerPerkSpeed:  perks.speedMult   += 0.1f; break;
         case BrawlerPerkMaxHP:  perks.bonusMaxHP  += 3;    break;
         case BrawlerPerkLife:   _lives += 1;               break;
-        case BrawlerPerkKnockback:     perks.knockbackMult *= 1.3f; break;
+        case BrawlerPerkKnockback:     perks.knockbackMult *= 1.2f; break;
         case BrawlerPerkQuickDodge:    perks.dodgeCooldownMult *= 0.7f; break;
-        case BrawlerPerkSpecialCharge: perks.specialChargeMult *= 1.5f; break;
+        case BrawlerPerkSpecialCharge: perks.specialChargeMult += 0.25f; break;
         case BrawlerPerkSecondWind:    perks.secondWinds += 1; break;
-        case BrawlerPerkHeavyHitter:   perks.bonusDamage += 2; break;
-        case BrawlerPerkToughness:     perks.bonusMaxHP += 6; break;
-        case BrawlerPerkLifesteal:     perks.lifestealPerHits = 6; break;
+        case BrawlerPerkHeavyHitter:   perks.bonusDamage += 1; break;
+        case BrawlerPerkToughness:     perks.bonusMaxHP += 4; break;
+        case BrawlerPerkLifesteal:     perks.lifestealPerHits = 10; break;
         case BrawlerPerkThorns:        perks.thorns = true; break;
         case BrawlerPerkWhirlwind:     perks.whirlwind = true; break;
         case BrawlerPerkAdrenaline:    perks.passiveSpecial = true; break;
         case BrawlerPerkVampire:
-            perks.lifestealPerHits = 3;
-            perks.bonusDamage += 1;
+            perks.lifestealPerHits = 6;
             break;
         case BrawlerPerkCount:  break;
     }

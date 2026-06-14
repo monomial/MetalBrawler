@@ -8,7 +8,7 @@
 static constexpr float kSpecialRadius       = 220.0f;
 static constexpr int   kSpecialHitStopTicks = 7;
 static constexpr float kSpecialShake        = 30.0f;
-static constexpr float kPassiveSpecialPerSecond = 0.06f;
+static constexpr float kPassiveSpecialPerSecond = 0.03f;
 
 void SpecialSystem_update(World& world, float gameDt) {
     if (gameDt == 0.0f) return;

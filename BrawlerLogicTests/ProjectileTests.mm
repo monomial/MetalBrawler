@@ -88,24 +88,40 @@ static int projectileTestLavaLobCount(World& world) {
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy, 0.f, 0.01f);
 }
 
-- (void)test_spitterLobGateRequiresDifficultyAndThirdShot {
+- (void)test_spitterLobGateRequiresDifficultyTwoAndEveryOtherShot {
     World lowWorld;
-    lowWorld.set_difficulty(2);
+    lowWorld.set_difficulty(1);
     spawnProjectilePlayer(lowWorld, 300.f, 0.f);
     EntityID lowSpitter = spawnSpitter(lowWorld, 0.f, 0.f);
-    lowWorld.add_component<EnemyAttackCooldownComponent>(lowSpitter).shotCount = 2;
+    lowWorld.add_component<EnemyAttackCooldownComponent>(lowSpitter).shotCount = 1;
     lowWorld.update(kFixedDt, kFixedDt);
     XCTAssertEqual(projectileCount(lowWorld), 1);
     XCTAssertEqual(projectileTestLavaLobCount(lowWorld), 0);
 
     World highWorld;
-    highWorld.set_difficulty(3);
+    highWorld.set_difficulty(2);
     spawnProjectilePlayer(highWorld, 300.f, 0.f);
     EntityID highSpitter = spawnSpitter(highWorld, 0.f, 0.f);
-    highWorld.add_component<EnemyAttackCooldownComponent>(highSpitter).shotCount = 2;
+    highWorld.add_component<EnemyAttackCooldownComponent>(highSpitter).shotCount = 1;
     highWorld.update(kFixedDt, kFixedDt);
     XCTAssertEqual(projectileCount(highWorld), 0);
     XCTAssertEqual(projectileTestLavaLobCount(highWorld), 1);
+}
+
+- (void)test_straightSpitterProjectileGetsDifficultyScaledHoming {
+    World world;
+    world.set_difficulty(4);
+    spawnProjectilePlayer(world, 300.f, 0.f);
+    spawnSpitter(world, 0.f, 0.f);
+
+    world.update(kFixedDt, kFixedDt);
+
+    EntityID projectile = kInvalidEntity;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.projectiles().present(id)) projectile = id;
+    XCTAssertNotEqual(projectile, kInvalidEntity);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).homing,
+                               3.2f, 0.001f);
 }
 
 - (void)test_spitterTelegraphShortensAtObstacleAndProjectileUsesLockedAim {
@@ -150,6 +166,44 @@ static int projectileTestLavaLobCount(World& world) {
     XCTAssertNotEqual(projectile, kInvalidEntity);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 420.f, 0.01f);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy, 0.f, 0.01f);
+}
+
+- (void)test_homingProjectileCurvesTowardMovingPlayerAndZeroHomingFliesStraight {
+    World homingWorld;
+    spawnProjectilePlayer(homingWorld, 100.f, 100.f);
+    EntityID homing = homingWorld.defer_create();
+    homingWorld.add_component<PositionComponent>(homing) = {0.f, 0.f, 0.f};
+    homingWorld.add_component<ProjectileComponent>(homing) = {420.f, 0.f, 1, 2.5f, 2.2f};
+    advance(homingWorld, 12);
+    XCTAssertGreaterThan(homingWorld.get_component<ProjectileComponent>(homing).vy, 0.f);
+    XCTAssertEqualWithAccuracy(
+        sqrtf(homingWorld.get_component<ProjectileComponent>(homing).vx *
+              homingWorld.get_component<ProjectileComponent>(homing).vx +
+              homingWorld.get_component<ProjectileComponent>(homing).vy *
+              homingWorld.get_component<ProjectileComponent>(homing).vy),
+        420.f, 0.01f);
+
+    World straightWorld;
+    spawnProjectilePlayer(straightWorld, 100.f, 100.f);
+    EntityID straight = straightWorld.defer_create();
+    straightWorld.add_component<PositionComponent>(straight) = {0.f, 0.f, 0.f};
+    straightWorld.add_component<ProjectileComponent>(straight) = {420.f, 0.f, 1, 2.5f, 0.f};
+    advance(straightWorld, 12);
+    XCTAssertEqualWithAccuracy(straightWorld.get_component<ProjectileComponent>(straight).vy, 0.f, 0.01f);
+}
+
+- (void)test_homingProjectileCanBeDodgedPerpendicular {
+    World world;
+    EntityID player = spawnProjectilePlayer(world, 70.f, 0.f);
+    world.add_component<DodgeComponent>(player);
+    EntityID projectile = world.defer_create();
+    world.add_component<PositionComponent>(projectile) = {0.f, 0.f, 0.f};
+    world.add_component<ProjectileComponent>(projectile) = {420.f, 0.f, 1, 2.5f, 2.2f};
+    for (int i = 0; i < 30; ++i) {
+        world.get_component<PositionComponent>(player).y += 6.f;
+        world.update(kFixedDt, kFixedDt);
+    }
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 10);
 }
 
 - (void)test_spitterTelegraphRemovedWhenKilledMidWindup {

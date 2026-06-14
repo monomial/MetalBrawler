@@ -9,3 +9,4 @@ class World;
 // randomness — so a seeded World replays identically.
 InputState AutoPilot_input(World& world, int playerIndex);
 void AutoPilot_reset();
+void AutoPilot_set_dodge_enabled(bool enabled);

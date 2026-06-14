@@ -43,8 +43,9 @@ static constexpr float kHitShake             = 7.f;
 static constexpr float kFinisherShake        = 30.f;
 static constexpr float kPlayerHitShake       = 22.f;
 static constexpr float kProjectileSpeed      = 420.f;
-static constexpr float kHeavyRadius          = 150.f;
-static constexpr int   kHeavyBaseDamage      = 3;
+static constexpr float kProjectileHoming     = 3.2f;
+static constexpr float kHeavyRadius          = 130.f;
+static constexpr int   kHeavyBaseDamage      = 2;
 static constexpr int   kHeavyHitStopTicks    = 8;
 static constexpr float kHeavyShake           = 30.f;
 
@@ -83,7 +84,7 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
     bool lobShot = false;
     if (world.has_component<EnemyAttackCooldownComponent>(attackerID)) {
         EnemyAttackCooldownComponent& cd = world.get_component<EnemyAttackCooldownComponent>(attackerID);
-        lobShot = world.difficulty() >= 3 && (cd.shotCount % 3) == 2;
+        lobShot = world.difficulty() >= 2 && (cd.shotCount % 2) == 1;
         cd.shotCount += 1;
     }
     if (lobShot) {
@@ -125,7 +126,8 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
     float speed = kProjectileSpeed * Difficulty_projectile_mult(world.difficulty());
     pc.vx = dirX * speed;
     pc.vy = dirY * speed;
-    pc.damage = damage;
+    pc.damage = damage + 2; // straight shots sting more than a melee jab — must be dodged
+    pc.homing = kProjectileHoming * fminf(1.f, 0.6f + 0.15f * world.difficulty());
     return true;
 }
 
@@ -298,12 +300,13 @@ void CombatSystem_update(World& world, float gameDt) {
                 if (world.has_component<StatsComponent>(attackerID)) {
                     const StatsComponent& stats = world.get_component<StatsComponent>(attackerID);
                     whirlwind = stats.whirlwind;
-                    if (whirlwind) attackRange += 25.f;
+                    if (whirlwind) attackRange += 15.f;
                 }
                 if (dist > attackRange) continue;
                 if (dist > 0.001f) {
                     float dot = (dx / dist) * facingDx + (dy / dist) * facingDy;
-                    if (!whirlwind && dot < kPunchArcCosine) continue;
+                    float arcCosine = whirlwind ? -0.342f : kPunchArcCosine;
+                    if (dot < arcCosine) continue;
                 }
                 PickupSystem_break_box(world, boxID);
                 hitAnything = true;
@@ -332,14 +335,15 @@ void CombatSystem_update(World& world, float gameDt) {
                 world.has_component<StatsComponent>(attackerID)) {
                 const StatsComponent& stats = world.get_component<StatsComponent>(attackerID);
                 whirlwind = stats.whirlwind;
-                if (whirlwind) attackRange += 25.f;
+                if (whirlwind) attackRange += 15.f;
             }
             if (dist > attackRange) continue;
 
             // Arc check: target must be within ±70° of attacker's facing direction.
             if (dist > 0.001f) {
                 float dot = (dx / dist) * facingDx + (dy / dist) * facingDy;
-                if (!whirlwind && dot < kPunchArcCosine) continue;
+                float arcCosine = whirlwind ? -0.342f : kPunchArcCosine;
+                if (dot < arcCosine) continue;
             }
 
             // Perk-modified damage: players carry a StatsComponent with run-level bonuses.

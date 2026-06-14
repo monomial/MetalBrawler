@@ -177,7 +177,7 @@ static int bossTestLavaLobCount(World& world) {
 
     int hp = world.get_component<HealthComponent>(player).current;
     XCTAssertLessThan(hp, 10, @"charge must connect");
-    XCTAssertGreaterThanOrEqual(hp, 10 - 2 - 2, @"re-hit gated by DamageCooldown");
+    XCTAssertGreaterThanOrEqual(hp, 10 - 5, @"re-hit gated by DamageCooldown");
     (void)boss;
 }
 

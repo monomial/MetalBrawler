@@ -1,5 +1,6 @@
 #import <XCTest/XCTest.h>
 #import "BrawlerGameDelegate.h"
+#include "Simulation/AutoPilot.h"
 
 // Full-game integration tests: a headless BrawlerGameDelegate driven at a
 // fixed 60Hz frame rate, with AutoPilot standing in for human input. These are
@@ -20,6 +21,15 @@ static void pickPerk(BrawlerGameDelegate *d) {
     else                                   [d triggerAttack];
 }
 
+static void pickLowEffortPerk(BrawlerGameDelegate *d) {
+    NSString *a = [d upgradeChoiceLabel:0];
+    NSString *b = [d upgradeChoiceLabel:1];
+    bool aPriority = [a containsString:@"Damage"] || [a containsString:@"Health"];
+    bool bPriority = [b containsString:@"Damage"] || [b containsString:@"Health"];
+    if (aPriority && !bPriority) [d triggerDodge];
+    else                         [d triggerAttack];
+}
+
 // Advance until the delegate reaches `phase` or `maxSimSeconds` of simulated
 // time elapses. Returns YES if the phase was reached.
 static BOOL advanceUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
@@ -29,6 +39,18 @@ static BOOL advanceUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
         if (d.gamePhase == phase) return YES;
         if (d.gamePhase == BrawlerGamePhaseUpgrade && phase != BrawlerGamePhaseUpgrade)
             pickPerk(d);
+        [d advanceFrame:kFrameDt];
+    }
+    return d.gamePhase == phase;
+}
+
+static BOOL advanceLowEffortUntilPhase(BrawlerGameDelegate *d, BrawlerGamePhase phase,
+                                       float maxSimSeconds) {
+    int maxFrames = (int)(maxSimSeconds / kFrameDt);
+    for (int i = 0; i < maxFrames; ++i) {
+        if (d.gamePhase == phase) return YES;
+        if (d.gamePhase == BrawlerGamePhaseUpgrade && phase != BrawlerGamePhaseUpgrade)
+            pickLowEffortPerk(d);
         [d advanceFrame:kFrameDt];
     }
     return d.gamePhase == phase;
@@ -68,6 +90,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
 // --- Full win run -----------------------------------------------------------
 
 - (void)test_autoPilot_1P_winsFullRun {
+    AutoPilot_set_dodge_enabled(true);
     BrawlerGameDelegate *d = [self makeDelegateWithSeed:42];
     d.autoPilotEnabled = YES;
 
@@ -96,6 +119,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
 }
 
 - (void)test_autoPilot_2P_winsFullRun {
+    AutoPilot_set_dodge_enabled(true);
     BrawlerGameDelegate *d = [self makeDelegateWithSeed:1337];
     d.autoPilotEnabled = YES;
 
@@ -106,6 +130,29 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     XCTAssertTrue(won, @"2P AutoPilot failed to win (phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
     XCTAssertEqual(d.currentRoom, 8);
+}
+
+- (void)test_autoPilot_noDodgeRunFailsToWin {
+    uint32_t seeds[] = {42, 7, 1337, 2026, 9001};
+    for (uint32_t seed : seeds) {
+        AutoPilot_set_dodge_enabled(true);
+        BrawlerGameDelegate *dodging = [self makeDelegateWithSeed:seed];
+        dodging.autoPilotEnabled = YES;
+        [dodging startGameWithPlayers:1];
+        BOOL dodgingWon = advanceUntilPhase(dodging, BrawlerGamePhaseWin, 510.f);
+        if (!dodgingWon) continue;
+
+        AutoPilot_set_dodge_enabled(false);
+        BrawlerGameDelegate *noDodge = [self makeDelegateWithSeed:seed];
+        noDodge.autoPilotEnabled = YES;
+        [noDodge startGameWithPlayers:1];
+        BOOL noDodgeWon = advanceLowEffortUntilPhase(noDodge, BrawlerGamePhaseWin, 510.f);
+        AutoPilot_set_dodge_enabled(true);
+
+        if (!noDodgeWon) return;
+    }
+    AutoPilot_set_dodge_enabled(true);
+    XCTFail(@"no-dodge AutoPilot won every checked seed where dodging AutoPilot won");
 }
 
 - (void)test_singleBossRoomOffersUpgradeAndWinWaitsForTwinBoss {
@@ -318,16 +365,16 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d debugApplyPerkID:12 toPlayer:0]; // Whirlwind
     [d debugApplyPerkID:13 toPlayer:0]; // Adrenaline
 
-    XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 2);
-    XCTAssertEqual([d debugPerkMaxHPBonusForPlayer:0], 6);
-    XCTAssertEqual([d debugPerkLifestealForPlayer:0], 6);
+    XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 1);
+    XCTAssertEqual([d debugPerkMaxHPBonusForPlayer:0], 4);
+    XCTAssertEqual([d debugPerkLifestealForPlayer:0], 10);
     XCTAssertTrue([d debugPerkThornsForPlayer:0]);
     XCTAssertTrue([d debugPerkWhirlwindForPlayer:0]);
     XCTAssertTrue([d debugPerkPassiveSpecialForPlayer:0]);
 
     [d debugApplyPerkID:14 toPlayer:0]; // Vampire
-    XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 3);
-    XCTAssertEqual([d debugPerkLifestealForPlayer:0], 3);
+    XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 1);
+    XCTAssertEqual([d debugPerkLifestealForPlayer:0], 6);
 }
 
 - (void)test_comboScore_incrementsResetsExpiresAndTracksMax {

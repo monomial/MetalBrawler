@@ -101,9 +101,9 @@ static void damage_players_under_leaper(World& world, EntityID leaperID, const P
         if (dx * dx + dy * dy > kHitRadius * kHitRadius) continue;
 
         HealthComponent& hp = world.get_component<HealthComponent>(pid);
-        hp.current -= 1;
+        hp.current -= 3;
         world.events().emit_hit_contact(leaperID, pid);
-        world.events().emit_damage(pid, 1);
+        world.events().emit_damage(pid, 3);
         ScreenShakeSystem_trigger(world, 12.f);
         if (world.has_component<DamageCooldownComponent>(pid))
             world.get_component<DamageCooldownComponent>(pid).remaining = kLeaperRehit;

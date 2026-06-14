@@ -144,7 +144,7 @@ static int countEvents(World& world, EventType type) {
     setAttack(world, false);
     world.update(kFixedDt, kFixedDt);
 
-    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 5);
+    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 6);
     XCTAssertGreaterThanOrEqual(countEvents(world, EventType::ChargedSlam), 1);
 }
 

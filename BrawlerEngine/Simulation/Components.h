@@ -157,6 +157,7 @@ struct ProjectileComponent {
     float vy = 0.f;
     int damage = 1;
     float lifetime = 2.5f;
+    float homing = 0.f;
 };
 
 struct TelegraphLineComponent {

@@ -15,6 +15,7 @@ static int   s_unstuckFrames[4] = {};
 static int   s_chargeFrames[4] = {};
 static int   s_chargeCooldown[4] = {};
 static bool  s_hasSample[4] = {};
+static bool  s_dodgeEnabled = true;
 
 static void add_hazard_avoidance(World& world, const PositionComponent& myPos,
                                  float* moveX, float* moveY) {
@@ -71,6 +72,11 @@ void AutoPilot_reset() {
         s_chargeCooldown[i] = 0;
         s_hasSample[i] = false;
     }
+    s_dodgeEnabled = true;
+}
+
+void AutoPilot_set_dodge_enabled(bool enabled) {
+    s_dodgeEnabled = enabled;
 }
 
 InputState AutoPilot_input(World& world, int playerIndex) {
@@ -172,13 +178,50 @@ InputState AutoPilot_input(World& world, int playerIndex) {
 
     float dist = sqrtf(bestD2);
 
-    // Defense: dodge ONLY boss threats (its swing, its charge telegraph/rush —
-    // the 2-damage hits). Normal enemy hits are traded through: dodging costs
-    // ~1.2s of attack time, which loses the war of attrition in crowded rooms.
+    // Defense: dodge deliberate incoming threats while continuing to trade
+    // ordinary melee pressure.
     bool meCanDodge = world.has_component<AnimationComponent>(me) &&
                       (world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Idle ||
                        world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Walk);
-    if (meCanDodge) {
+    if (s_dodgeEnabled && meCanDodge) {
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (!world.projectiles().present(id)) continue;
+            if (!world.has_component<PositionComponent>(id)) continue;
+            const PositionComponent& pp = world.get_component<PositionComponent>(id);
+            const ProjectileComponent& proj = world.get_component<ProjectileComponent>(id);
+            float dx = myPos.x - pp.x;
+            float dy = myPos.y - pp.y;
+            float d2 = dx * dx + dy * dy;
+            if (d2 > 160.f * 160.f || d2 <= 0.001f) continue;
+            float speed = sqrtf(proj.vx * proj.vx + proj.vy * proj.vy);
+            if (speed <= 0.001f) continue;
+            float distToPath = fabsf(dx * proj.vy - dy * proj.vx) / speed;
+            float closing = dx * proj.vx + dy * proj.vy;
+            if (closing > 0.f && distToPath <= 55.f) {
+                float side = (dx * proj.vy - dy * proj.vx) >= 0.f ? 1.f : -1.f;
+                in.moveX = (-proj.vy / speed) * side;
+                in.moveY = ( proj.vx / speed) * side;
+                in.dodge = true;
+                return in;
+            }
+        }
+        for (EntityID id = 0; id < world.entity_count(); ++id) {
+            if (!world.leapers().present(id)) continue;
+            if (!world.has_component<PositionComponent>(id)) continue;
+            if (world.has_component<AnimationComponent>(id) &&
+                world.get_component<AnimationComponent>(id).dying) continue;
+            const LeaperComponent& leap = world.get_component<LeaperComponent>(id);
+            if (leap.state != 1 && leap.state != 2) continue;
+            float dx = myPos.x - leap.destX;
+            float dy = myPos.y - leap.destY;
+            if (dx * dx + dy * dy < 140.f * 140.f) {
+                float d = sqrtf(dx * dx + dy * dy);
+                in.moveX = d > 0.001f ? dx / d : 0.f;
+                in.moveY = d > 0.001f ? dy / d : -1.f;
+                in.dodge = true;
+                return in;
+            }
+        }
         for (EntityID id = 0; id < world.entity_count(); ++id) {
             if (!world.boss_tags().present(id)) continue;
             if (!world.has_component<PositionComponent>(id)) continue;
@@ -241,7 +284,8 @@ InputState AutoPilot_input(World& world, int playerIndex) {
         s_unstuckFrames[slot] -= 1;
     }
 
-    add_hazard_avoidance(world, myPos, &in.moveX, &in.moveY);
+    if (s_dodgeEnabled)
+        add_hazard_avoidance(world, myPos, &in.moveX, &in.moveY);
 
     if (s_chargeCooldown[slot] > 0) s_chargeCooldown[slot] -= 1;
     if (s_chargeFrames[slot] > 0) {

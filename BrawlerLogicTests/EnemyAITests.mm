@@ -143,6 +143,12 @@ static EntityID spawnEnemy(World& world, float x, float y) {
     XCTAssertEqual(kEnemyArchetypes[0].moveSpeed, 150.f);
     XCTAssertEqual(kEnemyArchetypes[0].stopRadius, 110.f);
     XCTAssertEqual(kEnemyArchetypes[0].attackCooldown, 2.f);
+    XCTAssertEqual(kEnemyArchetypes[(int)EnemyArchetype::Grunt].maxHP, 4);
+    XCTAssertEqual(kEnemyArchetypes[(int)EnemyArchetype::Rusher].maxHP, 3);
+    XCTAssertEqual(kEnemyArchetypes[(int)EnemyArchetype::Heavy].maxHP, 10);
+    XCTAssertEqual(kEnemyArchetypes[(int)EnemyArchetype::Boss].maxHP, 30);
+    XCTAssertEqual(kEnemyArchetypes[(int)EnemyArchetype::Spitter].maxHP, 4);
+    XCTAssertEqual(kEnemyArchetypes[(int)EnemyArchetype::Leaper].maxHP, 4);
 }
 
 - (void)test_rusher_closesFasterThanGrunt {
@@ -202,7 +208,7 @@ static EntityID spawnEnemy(World& world, float x, float y) {
     anim.hitApplied  = false;
 
     EntityID heavy = spawnEnemy(world, 50, 0);
-    world.add_component<HealthComponent>(heavy) = {8, 8};
+    world.add_component<HealthComponent>(heavy) = {10, 10};
     world.add_component<EnemyArchetypeComponent>(heavy).type = (uint8_t)EnemyArchetype::Heavy;
 
     world.update(kFixedDt, kFixedDt);

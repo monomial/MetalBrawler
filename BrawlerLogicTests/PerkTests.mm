@@ -109,16 +109,18 @@ static int countEvents(World& world, EventType type) {
     XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 4);
 }
 
-- (void)test_whirlwind_hitsEnemyBehindPlayer {
+- (void)test_whirlwindWidensArcButDoesNotHitBehindPlayer {
     World world;
     EntityID player = spawnPlayer(world, 0.f, 0.f, 1.f, 0.f);
     world.add_component<StatsComponent>(player).whirlwind = true;
-    EntityID enemy = spawnEnemy(world, -50.f, 0.f, 5);
+    EntityID widenedArc = spawnEnemy(world, -20.f, 113.f, 5);
+    EntityID behind = spawnEnemy(world, -50.f, 0.f, 5);
     setAttacking(world, player);
 
     world.update(kFixedDt, kFixedDt);
 
-    XCTAssertEqual(world.get_component<HealthComponent>(enemy).current, 4);
+    XCTAssertEqual(world.get_component<HealthComponent>(widenedArc).current, 4);
+    XCTAssertEqual(world.get_component<HealthComponent>(behind).current, 5);
 }
 
 - (void)test_passiveSpecial_risesWithoutHits {
@@ -130,7 +132,8 @@ static int countEvents(World& world, EventType type) {
     for (int i = 0; i < 60; ++i)
         world.update(kFixedDt, kFixedDt);
 
-    XCTAssertGreaterThan(world.get_component<SpecialMeterComponent>(player).charge, 0.025f);
+    XCTAssertGreaterThan(world.get_component<SpecialMeterComponent>(player).charge, 0.012f);
+    XCTAssertLessThan(world.get_component<SpecialMeterComponent>(player).charge, 0.020f);
 }
 
 - (void)test_dodgeCooldownMult_shortensDodgeRecovery {

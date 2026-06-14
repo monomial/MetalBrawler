@@ -17,7 +17,7 @@ static constexpr float kEnragedTelegraphTime = 0.45f;
 static constexpr float kEnragedChargeSpeedMult = 1.25f;
 static constexpr float kEnragedChargeCooldownMult = 0.65f;
 static constexpr float kContactRange     = 95.f;  // body-slam radius during charge
-static constexpr int   kChargeDamage     = 2;
+static constexpr int   kChargeDamage     = 4;
 static constexpr float kContactCooldown  = 0.8f;  // per-victim re-hit delay
 static constexpr float kWallMargin       = 30.f;  // ends the charge at a wall
 static constexpr float kBossLobTelegraph = 0.6f;
@@ -320,7 +320,7 @@ void BossSystem_update(World& world, float gameDt) {
                 if (t >= 1.f) {
                     pos.x = charge.destX;
                     pos.y = charge.destY;
-                    damage_players_in_radius(world, id, pos, kLeapAoeRadius, 2, 6, 26.f);
+                    damage_players_in_radius(world, id, pos, kLeapAoeRadius, 4, 6, 26.f);
                     EntityID pool = world.defer_create();
                     world.add_component<PositionComponent>(pool) = {pos.x, pos.y, 0.f};
                     HazardComponent& hz = world.add_component<HazardComponent>(pool);

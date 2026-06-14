@@ -58,11 +58,11 @@ static EntityID spawnPlayer(World& world, float x, float y, int hp = 10) {
 
     XCTAssertEqual(world.get_component<LeaperComponent>(leaper).state, 2);
     XCTAssertFalse(world.telegraph_lines().present(leaper));
-    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9);
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 7);
     XCTAssertGreaterThan(world.get_component<DamageCooldownComponent>(player).remaining, 0.f);
 
     advanceUntilState(world, leaper, 3, 100);
-    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9);
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 7);
 
     advanceUntilState(world, leaper, 0, 120);
     XCTAssertEqual(world.get_component<LeaperComponent>(leaper).state, 0);
