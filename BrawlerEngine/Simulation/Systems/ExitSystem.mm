@@ -7,6 +7,7 @@ void ExitSystem_update(World& world, float gameDt) {
     for (EntityID exitID = 0; exitID < world.entity_count(); ++exitID) {
         if (!world.exits().present(exitID)) continue;
         if (!world.has_component<PositionComponent>(exitID)) continue;
+        const ExitComponent& exit = world.get_component<ExitComponent>(exitID);
         const PositionComponent& exitPos = world.get_component<PositionComponent>(exitID);
 
         for (EntityID pid = 0; pid < world.entity_count(); ++pid) {
@@ -23,7 +24,7 @@ void ExitSystem_update(World& world, float gameDt) {
             float dy = p.y - exitPos.y;
             if (dx * dx + dy * dy > kExitRadius * kExitRadius) continue;
 
-            world.events().emit_exit_reached(exitID);
+            world.events().emit_exit_reached(exitID, exit.cursed, exit.curseType);
             world.defer_destroy(exitID);
             return;
         }

@@ -200,6 +200,25 @@ static EntityID spawnAttackingEnemy(World& world, float x, float y,
     XCTAssertEqual(world.get_component<HealthComponent>(player).current, 9); // 1 damage
 }
 
+- (void)test_curseScalesEnemyMeleeDamage {
+    World world;
+    world.set_curse(1.6f);
+    EntityID player = spawnPlayer(world, 50, 0);
+    EntityID enemy = spawnEnemy(world, 0, 0, 10);
+    world.add_component<FacingComponent>(enemy) = {1.f, 0.f};
+    world.add_component<AnimationComponent>(enemy);
+    AnimationComponent& anim = world.get_component<AnimationComponent>(enemy);
+    anim.currentClip = AnimClipID::Attack;
+    anim.requestedClip = AnimClipID::Attack;
+    anim.clipTime = kActiveMid;
+    anim.looping = false;
+    anim.hitApplied = false;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 8);
+}
+
 - (void)test_enemyAttack_outOfRange_noDamage {
     World world;
     EntityID player = spawnPlayer(world, 0, 0);

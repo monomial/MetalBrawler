@@ -150,6 +150,8 @@ struct ScrapPickupComponent {
 
 struct ExitComponent {
     bool active = true;
+    bool cursed = false;
+    uint8_t curseType = 0;
 };
 
 struct ProjectileComponent {

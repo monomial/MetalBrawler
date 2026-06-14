@@ -181,6 +181,20 @@ static int bossTestLavaLobCount(World& world) {
     (void)boss;
 }
 
+- (void)test_curseScalesBossChargeDamage {
+    World world;
+    world.set_curse(1.4f);
+    EntityID player = spawnPlayer(world, 0, 200);
+    EntityID boss = spawnBoss(world, 0, 200, 4.f);
+    BossChargeComponent& charge = world.get_component<BossChargeComponent>(boss);
+    charge.state = BossChargeComponent::Charge;
+    charge.timer = 1.f;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 4);
+}
+
 - (void)test_charge_endsAtWall_thenRecovers_thenIdles {
     World world;
     spawnPlayer(world, 0, -240); // boss charges toward the bottom wall (kRoomMinY = -250)

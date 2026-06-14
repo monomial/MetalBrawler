@@ -33,6 +33,7 @@ struct BrawlerPerkSummary {
 @property (nonatomic) int comboCount;
 @property (nonatomic) int scoreValue;
 @property (nonatomic, copy) NSString *shopPrompt;
+@property (nonatomic) float curseMult;
 
 // Shared phase overlay rendered into the Metal drawable, so macOS/iOS/tvOS
 // present the same text and the smoke harness can capture it.

@@ -198,7 +198,8 @@ static int eventCount(World& world, EventType type) {
 
     XCTAssertEqual(d.currentRoom, 4);
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
-    XCTAssertEqual([d exitEntityCount], 1);
+    // Leaving the shop into a combat room offers the curse choice → calm + cursed exits.
+    XCTAssertEqual([d exitEntityCount], 2);
     XCTAssertEqual([d shopkeeperEntityCount], 1);
     XCTAssertEqual([d shopItemEntityCount], 3);
     [phases removeAllObjects];

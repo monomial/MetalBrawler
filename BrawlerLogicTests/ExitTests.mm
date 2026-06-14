@@ -1,6 +1,7 @@
 #import <XCTest/XCTest.h>
 #include "Simulation/World.h"
 #include "Simulation/Systems/ExitSystem.h"
+#include "Simulation/Systems/EnemyFactory.h"
 
 static constexpr float kFixedDt = 1.0f / 120.0f;
 
@@ -37,6 +38,43 @@ static EntityID spawnExitPlayer(World& world, float x, float y) {
     events = 0;
     world.events().for_each(EventType::ExitReached, [&events](const Event&) { events++; });
     XCTAssertEqual(events, 0);
+}
+
+- (void)test_exitReachedPayloadCarriesCurseFields {
+    World world;
+    spawnExitPlayer(world, 0.f, 0.f);
+    EntityID exit = world.defer_create();
+    world.add_component<PositionComponent>(exit) = {0.f, kExitRadius - 1.f, 0.f};
+    ExitComponent& ex = world.add_component<ExitComponent>(exit);
+    ex.cursed = true;
+    ex.curseType = 3;
+
+    world.update(kFixedDt, kFixedDt);
+
+    int events = 0;
+    bool cursed = false;
+    uint8_t curseType = 0;
+    world.events().for_each(EventType::ExitReached, [&](const Event& ev) {
+        events++;
+        cursed = ev.exitReached.cursed;
+        curseType = ev.exitReached.curseType;
+    });
+    XCTAssertEqual(events, 1);
+    XCTAssertTrue(cursed);
+    XCTAssertEqual(curseType, 3);
+}
+
+- (void)test_curseScalesEnemySpawnHPAndRounds {
+    World world;
+    world.set_curse(1.2f);
+    EntityID grunt = Enemy_spawn(world, (uint8_t)EnemyArchetype::Grunt, 0.f, 0.f);
+    XCTAssertEqual(world.get_component<HealthComponent>(grunt).max, 5);
+
+    World tinyWorld;
+    tinyWorld.set_curse(0.1f);
+    EntityID tiny = Enemy_spawn(tinyWorld, (uint8_t)EnemyArchetype::Grunt, 0.f, 0.f);
+    XCTAssertEqual(tinyWorld.get_component<HealthComponent>(tiny).max, 1);
+    XCTAssertEqual(tinyWorld.curse_damage(1), 1);
 }
 
 @end

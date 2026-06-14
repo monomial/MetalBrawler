@@ -5,6 +5,7 @@
 #include "Simulation/AutoPilot.h"
 #include "Simulation/Systems/AnimationSystem.h"
 #include "Simulation/Systems/WaveSystem.h"
+#include "Simulation/Systems/ScreenShakeSystem.h"
 #include "Simulation/RoomBounds.h"
 #include "Assets/CharacterLoader.h"
 #import "Renderer/BrawlerRenderer.h"
@@ -149,6 +150,7 @@ static const int kShopRoomIndex  = 3;                  // 0-based: after two mid
 static const int kNumRooms       = kMiddlePerRun + 4;  // intro + middles + shop + boss + final
 static const int kStartingLives  = 3;
 static const int kMaxPlayers     = 4;
+static const int kCurseTypeCount = 4;
 
 // Phase timers (seconds).
 static const float kRoomClearDuration = 2.0f;
@@ -270,6 +272,16 @@ static int rarity_price(BrawlerPerk perk) {
     return 25;
 }
 
+static float curse_factor(uint8_t curseType) {
+    return (curseType == 3) ? 1.2f : 1.1f;
+}
+
+static int curse_coin_reward(uint8_t curseType, int stacksTakenSoFar) {
+    int coins = 8 + 4 * stacksTakenSoFar;
+    if (curseType == 3) coins *= 2;
+    return coins;
+}
+
 // ---------------------------------------------------------------------------
 
 @implementation BrawlerGameDelegate {
@@ -294,6 +306,9 @@ static int rarity_price(BrawlerPerk perk) {
     PlayerPerks          _perks[kMaxPlayers]; // per-player run-level, reset each run
     RunStats             _runStats;
     int                  _scrap;
+    float                _curseMult;
+    int                  _curseStacks;
+    int                  _runCoins;
     int                  _combo;
     float                _comboTimer;
     int                  _upgradePlayerIndex; // active picker during Upgrade, -1 otherwise
@@ -406,6 +421,39 @@ static int rarity_price(BrawlerPerk perk) {
         count += 1;
     }
     return count == 3;
+}
+
+- (float)debugCurseMult { return _curseMult; }
+- (int)debugCurseStacks { return _curseStacks; }
+- (int)debugRunCoins { return _runCoins; }
+- (int)debugCursedExitType {
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.exits().present(id)) continue;
+        const ExitComponent& exit = _world.get_component<ExitComponent>(id);
+        if (exit.cursed) return exit.curseType;
+    }
+    return -1;
+}
+- (int)debugFirstEnemyMaxHP {
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.has_component<FactionComponent>(id)) continue;
+        if (_world.get_component<FactionComponent>(id).type != FactionComponent::Enemy) continue;
+        if (!_world.has_component<HealthComponent>(id)) continue;
+        return _world.get_component<HealthComponent>(id).max;
+    }
+    return 0;
+}
+- (void)debugForceCurseMult:(float)mult stacks:(int)stacks {
+    _curseMult = mult;
+    _curseStacks = stacks;
+    _world.set_curse(_curseMult);
+    _renderer.curseMult = _curseMult;
+}
+- (void)debugApplyCurseRewardType:(int)curseType {
+    [self _applyCursePortalReward:(uint8_t)curseType];
+}
+- (void)debugReloadCurrentRoom {
+    [self _loadRoom];
 }
 
 - (void)_refreshOverlay {
@@ -645,6 +693,9 @@ static int rarity_price(BrawlerPerk perk) {
         _perks[i] = PlayerPerks{};
     _runStats = RunStats{};
     _scrap = 0;
+    _curseMult = 1.f;
+    _curseStacks = 0;
+    _runCoins = 0;
     _combo = 0;
     _comboTimer = 0.f;
     [self _refreshPerkHUD];
@@ -746,7 +797,7 @@ static int rarity_price(BrawlerPerk perk) {
     }
 
     _upgradePlayerIndex = -1;
-    [self _spawnExit];
+    [self _spawnExitsForNextRoom];
     [self _transitionToPhase:BrawlerGamePhasePlaying];
 }
 
@@ -755,19 +806,21 @@ static int rarity_price(BrawlerPerk perk) {
     _world.set_seed(self.rngSeedOverride ? self.rngSeedOverride : arc4random());
     _world.set_scrap(_scrap);
     _world.set_difficulty(_currentRoom);
+    _world.set_curse(_curseMult);
     [self resetInput];
     [self _spawnPlayers];
     [self _spawnWaveControllerForCurrentRoom];
     [self _spawnObstaclesForCurrentRoom];
     [self _spawnBoxesForCurrentRoom];
     if ([self _currentRoomDef].isShop) {
-        [self _spawnExit];
+        [self _spawnExitsForNextRoom];
         [self _spawnShopkeeper];
         [self _spawnShopItems];
     }
     _renderer.livesRemaining = _lives;
     _renderer.totalRooms = kNumRooms;
     _renderer.scrapCount = _scrap;
+    _renderer.curseMult = _curseMult;
     [self _refreshPerkHUD];
     _renderer.roomIndex = _currentRoom;
 }
@@ -776,6 +829,57 @@ static int rarity_price(BrawlerPerk perk) {
     EntityID exit = _world.defer_create();
     _world.add_component<PositionComponent>(exit) = {0.f, kRoomMaxY - 60.f, 0.f};
     _world.add_component<ExitComponent>(exit);
+}
+
+- (void)_spawnExitAtX:(float)x cursed:(BOOL)cursed curseType:(uint8_t)curseType {
+    EntityID exit = _world.defer_create();
+    _world.add_component<PositionComponent>(exit) = {x, kRoomMaxY - 60.f, 0.f};
+    ExitComponent& ex = _world.add_component<ExitComponent>(exit);
+    ex.cursed = cursed ? true : false;
+    ex.curseType = curseType;
+}
+
+- (void)_spawnExitsForNextRoom {
+    if (_currentRoom + 1 >= kNumRooms) return;
+    int nextRoom = _currentRoom + 1;
+    // Curse choice offered whenever the next room is not the shop (shops can't be
+    // cursed). Leaving the shop into a combat room DOES offer the choice.
+    bool nextIsShop = (nextRoom == kShopRoomIndex);
+    if (nextIsShop) {
+        [self _spawnExitAtX:0.f cursed:NO curseType:0];
+        return;
+    }
+    [self _spawnExitAtX:-220.f cursed:NO curseType:0];
+    [self _spawnExitAtX:220.f cursed:YES curseType:(uint8_t)_world.rand_range(kCurseTypeCount)];
+}
+
+- (void)_healActivePlayersBy:(int)amount {
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.player_tags().present(id)) continue;
+        if (!_world.has_component<HealthComponent>(id)) continue;
+        HealthComponent& hp = _world.get_component<HealthComponent>(id);
+        hp.current += amount;
+        if (hp.current > hp.max) hp.current = hp.max;
+    }
+}
+
+- (void)_applyCursePortalReward:(uint8_t)curseType {
+    int coins = curse_coin_reward(curseType, _curseStacks);
+    _runCoins += coins;
+    if (curseType == 1) {
+        _scrap += 40;
+        _world.set_scrap(_scrap);
+        _renderer.scrapCount = _scrap;
+    } else if (curseType == 2) {
+        [self _healActivePlayersBy:3];
+    }
+    _curseMult *= curse_factor(curseType);
+    _curseStacks += 1;
+    _world.set_curse(_curseMult);
+    _renderer.curseMult = _curseMult;
+    [_renderer triggerHitBlur:1.f];
+    ScreenShakeSystem_trigger(_world, 28.f);
+    [_audio playFinisherSound];
 }
 
 - (void)_spawnPlayers {
@@ -1329,11 +1433,16 @@ static int rarity_price(BrawlerPerk perk) {
         });
 
         BOOL exitReached = NO;
-        _world.events().for_each(EventType::ExitReached, [&exitReached](const Event& ev) {
-            (void)ev;
+        BOOL cursedExitReached = NO;
+        uint8_t exitCurseType = 0;
+        _world.events().for_each(EventType::ExitReached, [&exitReached, &cursedExitReached, &exitCurseType](const Event& ev) {
             exitReached = YES;
+            cursedExitReached = ev.exitReached.cursed ? YES : NO;
+            exitCurseType = ev.exitReached.curseType;
         });
         if (exitReached && _currentRoom + 1 < kNumRooms) {
+            if (cursedExitReached)
+                [self _applyCursePortalReward:exitCurseType];
             _currentRoom += 1;
             [self _loadRoom];
             [self _transitionToPhase:BrawlerGamePhasePlaying];

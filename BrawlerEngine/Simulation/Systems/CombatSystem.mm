@@ -92,7 +92,7 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
         if (targetID == kInvalidEntity) return false;
         const PositionComponent& tPos = world.get_component<PositionComponent>(targetID);
         HazardSystem_spawn_lava_lob(world, atkPos.x, atkPos.y, tPos.x, tPos.y,
-                                    damage, 64.f, 2.5f);
+                                    world.curse_damage(damage), 64.f, 2.5f);
         world.remove_component<TelegraphLineComponent>(attackerID);
         return true;
     }
@@ -126,7 +126,7 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
     float speed = kProjectileSpeed * Difficulty_projectile_mult(world.difficulty());
     pc.vx = dirX * speed;
     pc.vy = dirY * speed;
-    pc.damage = damage + 2; // straight shots sting more than a melee jab — must be dodged
+    pc.damage = world.curse_damage(damage + 2); // straight shots sting more than a melee jab — must be dodged
     pc.homing = kProjectileHoming * fminf(1.f, 0.6f + 0.15f * world.difficulty());
     return true;
 }
@@ -350,6 +350,8 @@ void CombatSystem_update(World& world, float gameDt) {
             int damage = win.damage;
             if (world.has_component<StatsComponent>(attackerID))
                 damage += world.get_component<StatsComponent>(attackerID).damageBonus;
+            if (atkFaction == FactionComponent::Enemy)
+                damage = world.curse_damage(damage);
 
             HealthComponent& hp = world.get_component<HealthComponent>(targetID);
             hp.current -= damage;

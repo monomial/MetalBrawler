@@ -99,10 +99,11 @@ static void damage_players_in_radius(World& world, EntityID attackerID,
         float dx = pp.x - center.x, dy = pp.y - center.y;
         if (dx * dx + dy * dy > radius * radius) continue;
 
+        int scaledDamage = world.curse_damage(damage);
         auto& hp = world.get_component<HealthComponent>(pid);
-        hp.current -= damage;
+        hp.current -= scaledDamage;
         world.events().emit_hit_contact(attackerID, pid);
-        world.events().emit_damage(pid, damage);
+        world.events().emit_damage(pid, scaledDamage);
         world.trigger_hit_stop(hitStop);
         ScreenShakeSystem_trigger(world, shake);
         if (world.has_component<DamageCooldownComponent>(pid))
@@ -174,7 +175,7 @@ static void spawn_boss_lobs(World& world, const PositionComponent& pos, bool enr
             float offset = (i == 0) ? -90.f : (i == 1 ? 90.f : 0.f);
             dx += offset;
         }
-        HazardSystem_spawn_lava_lob(world, pos.x, pos.y, dx, dy, 1, 90.f, 3.5f);
+        HazardSystem_spawn_lava_lob(world, pos.x, pos.y, dx, dy, world.curse_damage(1), 90.f, 3.5f);
     }
 }
 
@@ -325,7 +326,7 @@ void BossSystem_update(World& world, float gameDt) {
                     world.add_component<PositionComponent>(pool) = {pos.x, pos.y, 0.f};
                     HazardComponent& hz = world.add_component<HazardComponent>(pool);
                     hz.radius = 100.f;
-                    hz.damage = 1;
+                    hz.damage = world.curse_damage(1);
                     hz.lifetime = 3.0f;
                     world.events().emit_lava_pool_spawned(pos.x, pos.y);
                     ScreenShakeSystem_trigger(world, 26.f);

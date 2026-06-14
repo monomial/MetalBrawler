@@ -122,6 +122,19 @@ static EntityID spawnPlayer(World& world, float x, float y) {
     XCTAssertGreaterThanOrEqual(hp, 10 - 3, @"cooldown must gate re-hits");
 }
 
+- (void)test_curseScalesLavaPoolDamage {
+    World world;
+    world.set_curse(1.6f);
+    EntityID player = spawnPlayer(world, 0, 0);
+    EntityID pool = world.defer_create();
+    world.add_component<PositionComponent>(pool) = {0.f, 0.f, 0.f};
+    world.add_component<HazardComponent>(pool).damage = 1;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 8);
+}
+
 - (void)test_dodge_iFramesBlockHazard {
     World world;
     EntityID player = spawnPlayer(world, 0, 0);

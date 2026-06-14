@@ -127,10 +127,11 @@ void HazardSystem_update(World& world, float gameDt) {
             float dx = pp.x - pos.x, dy = pp.y - pos.y;
             if (dx * dx + dy * dy > hz.radius * hz.radius) continue;
 
+            int damage = world.curse_damage(hz.damage);
             auto& hp = world.get_component<HealthComponent>(pid);
-            hp.current -= hz.damage;
+            hp.current -= damage;
             world.events().emit_hit_contact(id, pid);
-            world.events().emit_damage(pid, hz.damage);
+            world.events().emit_damage(pid, damage);
             ScreenShakeSystem_trigger(world, 12.f);
             if (world.has_component<DamageCooldownComponent>(pid))
                 world.get_component<DamageCooldownComponent>(pid).remaining = kHazardRehit;

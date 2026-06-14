@@ -84,6 +84,14 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 - (void)debugRegisterPlayerDamage:(int)amount;
 - (void)debugAdvanceComboTimer:(float)dt;
 - (BOOL)debugShopItemsHaveDistinctPerks;
+- (float)debugCurseMult;
+- (int)debugCurseStacks;
+- (int)debugRunCoins;
+- (int)debugCursedExitType;
+- (int)debugFirstEnemyMaxHP;
+- (void)debugForceCurseMult:(float)mult stacks:(int)stacks;
+- (void)debugApplyCurseRewardType:(int)curseType;
+- (void)debugReloadCurrentRoom;
 
 // Zero all input — call when the app goes to background so held inputs
 // don't stay active on resume.

@@ -186,6 +186,21 @@ static id<MTLTexture> makeOverlayTexture(id<MTLDevice> device, CGFloat drawableW
                                          CGSize *outSize);
 static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, CGSize *outSize);
 
+static NSString *exit_label_for_component(const ExitComponent& exit) {
+    if (!exit.cursed) return @"ONWARD";
+    switch (exit.curseType) {
+        case 0: return @"IRON HORDE  UP enemies  +coins";
+        case 1: return @"WAR CHEST  UP enemies  +coins +scrap";
+        case 2: return @"BLOODPACT  UP enemies  +coins +heal";
+        case 3: return @"GREATER CURSE  UP UP enemies  +coins";
+        default: return @"CURSE  UP enemies  +coins";
+    }
+}
+
+static int exit_label_index(const ExitComponent& exit) {
+    return exit.cursed ? (int)(exit.curseType % 4) + 1 : 0;
+}
+
 @implementation BrawlerRenderer {
     id<MTLRenderPipelineState> _pipeline;        // flat-color quads
     id<MTLRenderPipelineState> _floorPipeline;   // grid floor
@@ -248,6 +263,11 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
     id<MTLTexture>             _hudComboTexture;
     CGSize                     _hudComboTextureSize;
     NSString                  *_hudComboText;
+    id<MTLTexture>             _hudCurseTexture;
+    CGSize                     _hudCurseTextureSize;
+    NSString                  *_hudCurseText;
+    id<MTLTexture>             _exitLabelTexture[5];
+    CGSize                     _exitLabelTextureSize[5];
     int                        _lastComboCount;
     float                      _comboPop;
     id<MTLTexture>             _shopPromptTexture;
@@ -935,6 +955,7 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
 
         // Exit arrow: flat cyan ground marker pointing toward the top-edge exit.
         if (world->exits().present(eid)) {
+            const ExitComponent& exit = world->get_component<ExitComponent>(eid);
             float pulse = 1.0f + 0.18f * sinf((float)CACurrentMediaTime() * 6.f + (float)eid);
             [enc setRenderPipelineState:_pipeline];
             [enc setDepthStencilState:_depthState];
@@ -942,7 +963,9 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             DrawUniforms u;
             u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 2.5f,
                                                  pulse, pulse));
-            u.color = (simd_float4){0.12f * pulse, 0.92f * pulse, 1.0f * pulse, 0.95f};
+            u.color = exit.cursed
+                    ? (simd_float4){0.82f * pulse, 0.12f * pulse, 0.95f * pulse, 0.95f}
+                    : (simd_float4){0.12f * pulse, 0.92f * pulse, 1.0f * pulse, 0.95f};
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:9];
             continue;
@@ -1308,6 +1331,38 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             }
         }
 
+        for (EntityID id = 0; id < world->entity_count(); ++id) {
+            if (!world->exits().present(id)) continue;
+            if (!world->has_component<PositionComponent>(id)) continue;
+            const auto& pos = world->get_component<PositionComponent>(id);
+            const ExitComponent& exit = world->get_component<ExitComponent>(id);
+            int labelIndex = exit_label_index(exit);
+            NSString *label = exit_label_for_component(exit);
+            if (!_exitLabelTexture[labelIndex]) {
+                _exitLabelTexture[labelIndex] = makeHUDLabelTexture(view.device, label,
+                                                                    &_exitLabelTextureSize[labelIndex]);
+            }
+            if (!_exitLabelTexture[labelIndex] || !_texturePipeline) continue;
+            simd_float4 clip = simd_mul(vp, (simd_float4){pos.x, pos.y, 90.f, 1.f});
+            if (clip.w <= 0.f) continue;
+            float ndcX = clip.x / clip.w;
+            float ndcY = clip.y / clip.w;
+            float scrX = (ndcX + 1.f) * 0.5f * W;
+            float scrY = (1.f - ndcY) * 0.5f * H - 22.f;
+
+            [enc setRenderPipelineState:_texturePipeline];
+            [enc setDepthStencilState:_noDepthState];
+            [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+            TextureUniforms tu;
+            tu.mvp = simd_mul(ortho, make_model_rect(scrX, scrY, 0.f,
+                                                     (float)_exitLabelTextureSize[labelIndex].width,
+                                                     (float)_exitLabelTextureSize[labelIndex].height));
+            [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+            [enc setFragmentTexture:_exitLabelTexture[labelIndex] atIndex:0];
+            [enc setFragmentSamplerState:_linearSampler atIndex:0];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
+
         NSString *roomText = [NSString stringWithFormat:@"ROOM %d / %d",
                               _roomIndex + 1, MAX(_totalRooms, _roomIndex + 1)];
         if (!_hudRoomTexture || ![_hudRoomText isEqualToString:roomText]) {
@@ -1326,6 +1381,27 @@ static id<MTLTexture> makeHUDLabelTexture(id<MTLDevice> device, NSString *text, 
             [enc setFragmentTexture:_hudRoomTexture atIndex:0];
             [enc setFragmentSamplerState:_linearSampler atIndex:0];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        }
+
+        if (_curseMult > 1.0001f) {
+            NSString *curseText = [NSString stringWithFormat:@"CURSE x%.2f", _curseMult];
+            if (!_hudCurseTexture || ![_hudCurseText isEqualToString:curseText]) {
+                _hudCurseText = [curseText copy];
+                _hudCurseTexture = makeHUDLabelTexture(view.device, _hudCurseText, &_hudCurseTextureSize);
+            }
+            if (_hudCurseTexture && _texturePipeline) {
+                [enc setRenderPipelineState:_texturePipeline];
+                [enc setDepthStencilState:_noDepthState];
+                [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
+                TextureUniforms tu;
+                tu.mvp = simd_mul(ortho, make_model_rect(W * 0.5f, 58.f, 0.f,
+                                                         (float)_hudCurseTextureSize.width,
+                                                         (float)_hudCurseTextureSize.height));
+                [enc setVertexBytes:&tu length:sizeof(tu) atIndex:1];
+                [enc setFragmentTexture:_hudCurseTexture atIndex:0];
+                [enc setFragmentSamplerState:_linearSampler atIndex:0];
+                [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            }
         }
 
         NSString *scrapText = [NSString stringWithFormat:@"SCRAP %d", _scrapCount];

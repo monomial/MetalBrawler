@@ -44,7 +44,7 @@ struct PlayerRevivedPayload { uint32_t playerID; };
 struct WaveStartedPayload   { uint8_t waveIndex; };
 struct SpawnLandedPayload   { uint32_t entityID; uint8_t style; };
 struct FinalKillPayload     { uint32_t killerID; uint32_t victimID; };
-struct ExitReachedPayload   { uint32_t entityID; };
+struct ExitReachedPayload   { uint32_t entityID; bool cursed; uint8_t curseType; };
 struct ScrapCollectedPayload { int value; };
 struct BoxBrokenPayload     { float x; float y; uint8_t hadScrap; };
 struct ShopPurchasePayload  { uint8_t perkID; int price; uint32_t itemEID; };
@@ -181,9 +181,9 @@ struct EventBus {
         e.finalKill = { killerID, victimID };
         push(e);
     }
-    void emit_exit_reached(uint32_t entityID) {
+    void emit_exit_reached(uint32_t entityID, bool cursed = false, uint8_t curseType = 0) {
         Event e{}; e.type = EventType::ExitReached;
-        e.exitReached = { entityID };
+        e.exitReached = { entityID, cursed, curseType };
         push(e);
     }
     void emit_scrap_collected(int value) {

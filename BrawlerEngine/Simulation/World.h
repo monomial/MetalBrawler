@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <vector>
 #include <cassert>
+#include <math.h>
 #include "Components.h"
 #include "EnemyArchetypes.h"
 #include "Platform/InputState.h"
@@ -100,6 +101,12 @@ public:
     int scrap() const { return _scrap; }
     void set_difficulty(int level) { _difficulty = level; }
     int difficulty() const { return _difficulty; }
+    void set_curse(float mult) { _curseMult = (mult > 0.f) ? mult : 1.f; }
+    float curse_mult() const { return _curseMult; }
+    int curse_damage(int base) const {
+        int scaled = (int)lroundf((float)base * _curseMult);
+        return scaled < 1 ? 1 : scaled;
+    }
 
     // Per-frame event bus — cleared at top of each tick, readable by all systems.
     EventBus& events() { return _events; }
@@ -161,6 +168,7 @@ private:
     InputState _inputs[4];      // one slot per player (0–3), set by platform each render frame
     int        _scrap;          // delegate-mirrored run currency for deterministic shop logic
     int        _difficulty;     // 0-based room difficulty, mirrored by delegate at room load
+    float      _curseMult;      // delegate-mirrored enemy HP/damage multiplier
 
     ComponentStorage<PositionComponent>  _positions;
     ComponentStorage<VelocityComponent>  _velocities;

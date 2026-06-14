@@ -107,6 +107,8 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     XCTAssertTrue(won, @"AutoPilot failed to clear all rooms within 510 sim-seconds (ended in phase %ld, room %d, lives %d)",
                   (long)d.gamePhase, d.currentRoom, d.livesRemaining);
     XCTAssertEqual(d.currentRoom, 8, @"a full run is intro + 4 middle rooms + shop + boss + twin boss");
+    XCTAssertEqualWithAccuracy([d debugCurseMult], 1.f, 0.001f,
+                               @"AutoPilot must choose calm exits for the beatability gate");
 
     // Every room fires RoomClear; every non-final clear offers an upgrade.
     NSInteger clears = 0, upgrades = 0;
@@ -272,7 +274,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d chooseUpgrade:0];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1, @"choice returns to the cleared room");
-    XCTAssertEqual([d exitEntityCount], 1, @"last choice spawns the exit portal");
+    XCTAssertEqual([d exitEntityCount], 2, @"normal room clears spawn calm and cursed exits");
 
     BOOL advanced = advanceUntilRoom(d, 2, 20.f);
     XCTAssertTrue(advanced, @"AutoPilot must walk through the exit before room advances");
@@ -305,7 +307,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d chooseUpgrade:1];
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1, @"next room waits until a player reaches the exit");
-    XCTAssertEqual([d exitEntityCount], 1);
+    XCTAssertEqual([d exitEntityCount], 2);
 
     BOOL advanced = advanceUntilRoom(d, 2, 20.f);
     XCTAssertTrue(advanced, @"AutoPilot must walk through the exit after both choices");
@@ -327,7 +329,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
 
     XCTAssertEqual(d.gamePhase, BrawlerGamePhasePlaying);
     XCTAssertEqual(d.currentRoom, 1);
-    XCTAssertEqual([d exitEntityCount], 1);
+    XCTAssertEqual([d exitEntityCount], 2);
     XCTAssertTrue(advanceUntilRoom(d, 2, 20.f));
 }
 
@@ -344,6 +346,54 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     XCTAssertNotEqualObjects([a upgradeChoiceLabel:0], [a upgradeChoiceLabel:1]);
     XCTAssertEqualObjects([a upgradeChoiceLabel:0], [b upgradeChoiceLabel:0]);
     XCTAssertEqualObjects([a upgradeChoiceLabel:1], [b upgradeChoiceLabel:1]);
+}
+
+- (void)test_cursePortalPoolSelection_isDeterministicForSeed {
+    BrawlerGameDelegate *a = [self makeDelegateWithSeed:4242];
+    BrawlerGameDelegate *b = [self makeDelegateWithSeed:4242];
+    a.autoPilotEnabled = YES;
+    b.autoPilotEnabled = YES;
+    [a startGameWithPlayers:1];
+    [b startGameWithPlayers:1];
+    XCTAssertTrue(advanceUntilPhase(a, BrawlerGamePhaseUpgrade, 120.f));
+    XCTAssertTrue(advanceUntilPhase(b, BrawlerGamePhaseUpgrade, 120.f));
+
+    [a chooseUpgrade:0];
+    [b chooseUpgrade:0];
+
+    XCTAssertEqual([a exitEntityCount], 2);
+    XCTAssertEqual([b exitEntityCount], 2);
+    XCTAssertGreaterThanOrEqual([a debugCursedExitType], 0);
+    XCTAssertEqual([a debugCursedExitType], [b debugCursedExitType]);
+}
+
+- (void)test_curseRewardStacksMultiplierAndTracksRunCoins {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:1];
+    [d startGameWithPlayers:1];
+    [d debugForceCurseMult:1.f stacks:0];
+
+    [d debugApplyCurseRewardType:0];
+    XCTAssertEqualWithAccuracy([d debugCurseMult], 1.1f, 0.001f);
+    XCTAssertEqual([d debugCurseStacks], 1);
+    XCTAssertEqual([d debugRunCoins], 8);
+
+    [d debugApplyCurseRewardType:3];
+    XCTAssertEqualWithAccuracy([d debugCurseMult], 1.32f, 0.001f);
+    XCTAssertEqual([d debugCurseStacks], 2);
+    XCTAssertEqual([d debugRunCoins], 32);
+}
+
+- (void)test_forcedCurseScenario_nextRoomEnemiesHaveBoostedHP {
+    BrawlerGameDelegate *d = [self makeDelegateWithSeed:42];
+    [d startGameWithPlayers:1];
+    advanceSeconds(d, 4.f);
+    XCTAssertEqual([d debugFirstEnemyMaxHP], 4);
+
+    [d debugForceCurseMult:1.2f stacks:1];
+    [d debugReloadCurrentRoom];
+    advanceSeconds(d, 4.f);
+
+    XCTAssertEqual([d debugFirstEnemyMaxHP], 5);
 }
 
 - (void)test_shopPedestals_haveDistinctPerks {

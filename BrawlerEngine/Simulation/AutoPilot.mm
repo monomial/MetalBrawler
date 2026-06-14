@@ -161,10 +161,16 @@ InputState AutoPilot_input(World& world, int playerIndex) {
         for (EntityID id = 0; id < world.entity_count(); ++id) {
             if (!world.exits().present(id)) continue;
             if (!world.has_component<PositionComponent>(id)) continue;
+            const ExitComponent& exit = world.get_component<ExitComponent>(id);
             const PositionComponent& p = world.get_component<PositionComponent>(id);
             float dx = p.x - myPos.x, dy = p.y - myPos.y;
             float d2 = dx * dx + dy * dy;
-            if (exitID == kInvalidEntity || d2 < exitD2) {
+            bool preferCalm = exitID == kInvalidEntity ||
+                              (world.get_component<ExitComponent>(exitID).cursed && !exit.cursed);
+            bool sameKindCloser = exitID != kInvalidEntity &&
+                                  world.get_component<ExitComponent>(exitID).cursed == exit.cursed &&
+                                  d2 < exitD2;
+            if (preferCalm || sameKindCloser) {
                 exitID = id; exitD2 = d2; edx = dx; edy = dy;
             }
         }

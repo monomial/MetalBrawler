@@ -72,6 +72,21 @@ static int projectileTestLavaLobCount(World& world) {
     XCTAssertTrue(world.get_component<AnimationComponent>(spitter).hitApplied);
 }
 
+- (void)test_curseScalesSpitterProjectileDamageAtSpawn {
+    World world;
+    world.set_curse(1.6f);
+    spawnProjectilePlayer(world, 300.f, 0.f);
+    spawnSpitter(world, 0.f, 0.f);
+
+    world.update(kFixedDt, kFixedDt);
+
+    EntityID projectile = kInvalidEntity;
+    for (EntityID id = 0; id < world.entity_count(); ++id)
+        if (world.projectiles().present(id)) projectile = id;
+    XCTAssertNotEqual(projectile, kInvalidEntity);
+    XCTAssertEqual(world.get_component<ProjectileComponent>(projectile).damage, 5);
+}
+
 - (void)test_projectileSpeedScalesWithDifficulty {
     World world;
     world.set_difficulty(4);
