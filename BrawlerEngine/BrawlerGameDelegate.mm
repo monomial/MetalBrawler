@@ -52,42 +52,44 @@ static const EnemySpawn kIntroSpawns[] = {
     {EnemyArchetype::Grunt,  1,  200, 250},
 };
 static const EnemySpawn kMidGruntsRusher[] = {
-    {EnemyArchetype::Grunt,  0, -200, 250},
-    {EnemyArchetype::Grunt,  0,  200, 250},
-    {EnemyArchetype::Grunt,  1, -160, 390},
-    {EnemyArchetype::Rusher, 1,  160, 390},
-    {EnemyArchetype::Leaper, 1,    0, 470},
-    {EnemyArchetype::Spitter,2,    0, 520},
+    {EnemyArchetype::Grunt,  0, -260, 300},
+    {EnemyArchetype::Grunt,  0,    0, 360},
+    {EnemyArchetype::Rusher, 0,  260, 300},
+    {EnemyArchetype::Grunt,  1, -220, 430},
+    {EnemyArchetype::Leaper, 1,    0, 500},
+    {EnemyArchetype::Spitter,1,  220, 430},
 };
 static const EnemySpawn kMidRusherPack[] = {
     {EnemyArchetype::Rusher, 0, -250, 380},
+    {EnemyArchetype::Rusher, 0,    0, 330},
     {EnemyArchetype::Rusher, 0,  250, 380},
     {EnemyArchetype::Rusher, 1, -160, 450},
     {EnemyArchetype::Rusher, 1,  160, 450},
-    {EnemyArchetype::Rusher, 1,    0, 360},
-    {EnemyArchetype::Spitter, 1,    0, 520},
-    {EnemyArchetype::Leaper, 2,    0, 430},
+    {EnemyArchetype::Spitter,1,    0, 520},
 };
 static const EnemySpawn kMidHeavyEscort[] = {
-    {EnemyArchetype::Grunt,  0, -250, 400},
-    {EnemyArchetype::Grunt,  0,  250, 400},
-    {EnemyArchetype::Heavy,  1,    0, 300},
-    {EnemyArchetype::Spitter,1,    0, 450},
-    {EnemyArchetype::Spitter,2, -180, 510},
+    {EnemyArchetype::Grunt,  0, -260, 420},
+    {EnemyArchetype::Grunt,  0,    0, 360},
+    {EnemyArchetype::Spitter,0,  260, 420},
+    {EnemyArchetype::Heavy,  1, -180, 320},
+    {EnemyArchetype::Rusher, 1,  180, 320},
+    {EnemyArchetype::Spitter,1,    0, 510},
 };
 static const EnemySpawn kMidMixed[] = {
     {EnemyArchetype::Rusher, 0, -250, 380},
+    {EnemyArchetype::Grunt,  0,    0, 180},
     {EnemyArchetype::Rusher, 0,  250, 380},
     {EnemyArchetype::Heavy,  1, -150, 300}, // clear of the (0,320) pillar
-    {EnemyArchetype::Grunt,  1,    0, 150},
-    {EnemyArchetype::Leaper, 2,  180, 460},
+    {EnemyArchetype::Leaper, 1,  180, 460},
+    {EnemyArchetype::Spitter,1,    0, 520},
 };
 static const EnemySpawn kMidTwinHeavies[] = {
     {EnemyArchetype::Heavy,  0, -180, 320},
+    {EnemyArchetype::Grunt,  0,    0, 470},
     {EnemyArchetype::Leaper, 0,  180, 420},
     {EnemyArchetype::Heavy,  1,  120, 320},
     {EnemyArchetype::Rusher, 1, -260, 400},
-    {EnemyArchetype::Spitter,2,    0, 520},
+    {EnemyArchetype::Spitter,1,    0, 520},
 };
 static const EnemySpawn kBossSpawns[] = {
     {EnemyArchetype::Boss,   0,    0, 350},
@@ -140,10 +142,10 @@ static const RoomDef kFinalRoom = {kFinalSpawns, 2, nullptr, 0, kBossBoxes, 2, f
 static const RoomDef kShopRoom  = {nullptr, 0, nullptr, 0, kShopBoxes, 3, true};
 static const RoomDef kMiddleRooms[] = {
     {kMidGruntsRusher, 6, nullptr, 0, kGruntsBoxes, 3, false},
-    {kMidRusherPack,   7, nullptr, 0, kRusherBoxes, 3, false},
-    {kMidHeavyEscort,  5, kHeavyEscortObstacles, 2, kHeavyBoxes, 4, false},
-    {kMidMixed,        5, kMixedObstacles, 1, kMixedBoxes, 3, false},
-    {kMidTwinHeavies,  5, nullptr, 0, kTwinBoxes, 3, false},
+    {kMidRusherPack,   6, nullptr, 0, kRusherBoxes, 3, false},
+    {kMidHeavyEscort,  6, kHeavyEscortObstacles, 2, kHeavyBoxes, 4, false},
+    {kMidMixed,        6, kMixedObstacles, 1, kMixedBoxes, 3, false},
+    {kMidTwinHeavies,  6, nullptr, 0, kTwinBoxes, 3, false},
 };
 static const int kNumMiddleRooms = 5;
 static const int kMiddlePerRun   = 4;                  // middle rooms per run

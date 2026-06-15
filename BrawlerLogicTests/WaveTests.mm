@@ -95,6 +95,15 @@ static EntityID firstMarker(World& world) {
     return kInvalidEntity;
 }
 
+static std::vector<float> markerCountdowns(World& world) {
+    std::vector<float> countdowns;
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (!world.spawn_markers().present(id)) continue;
+        countdowns.push_back(world.get_component<SpawnMarkerComponent>(id).countdown);
+    }
+    return countdowns;
+}
+
 static EntityID firstBoss(World& world) {
     for (EntityID id = 0; id < world.entity_count(); ++id)
         if (world.boss_tags().present(id)) return id;
@@ -210,6 +219,38 @@ static void setPlayerAttacking(World& world, EntityID player) {
     const PositionComponent& enemyPos = world.get_component<PositionComponent>(enemy);
     XCTAssertEqualWithAccuracy(enemyPos.x, 120.f, 0.001f);
     XCTAssertEqualWithAccuracy(enemyPos.y, 300.f, 0.001f);
+}
+
+- (void)test_waveMarkersUseStaggeredCountdownsAndFightAfterLastDrop {
+    World world;
+    world.set_seed(1234);
+    PendingSpawn spawns[] = {
+        {(uint8_t)EnemyArchetype::Grunt, 0, -240.f, 360.f},
+        {(uint8_t)EnemyArchetype::Rusher, 0, -80.f, 360.f},
+        {(uint8_t)EnemyArchetype::Grunt, 0, 80.f, 360.f},
+        {(uint8_t)EnemyArchetype::Spitter, 0, 240.f, 360.f},
+    };
+    EntityID controller = addController(world, spawns, 4, 1);
+
+    advance(world, kInitialWaveDelay + 0.1f);
+
+    XCTAssertEqual(markerCount(world), 4);
+    std::vector<float> countdowns = markerCountdowns(world);
+    bool hasDistinctCountdown = false;
+    for (size_t i = 1; i < countdowns.size(); ++i)
+        if (fabsf(countdowns[i] - countdowns[0]) > 0.05f)
+            hasDistinctCountdown = true;
+    XCTAssertTrue(hasDistinctCountdown, @"four-enemy waves should not all land on the same tick");
+
+    advance(world, kMarkerTelegraph + 0.2f);
+    XCTAssertGreaterThan(enemyCount(world), 0);
+    XCTAssertGreaterThan(markerCount(world), 0);
+    XCTAssertEqual(world.get_component<WaveControllerComponent>(controller).phase, WavePhaseTelegraph);
+
+    advance(world, 0.8f);
+    XCTAssertEqual(markerCount(world), 0);
+    XCTAssertEqual(enemyCount(world), 4);
+    XCTAssertEqual(world.get_component<WaveControllerComponent>(controller).phase, WavePhaseFighting);
 }
 
 - (void)test_waveOneWaitsForWaveZeroDeathAndInterWaveDelay {

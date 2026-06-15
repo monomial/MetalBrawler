@@ -5,6 +5,9 @@
 #include <math.h>
 
 static constexpr float kSpawnObstacleRadius = 40.f;
+static constexpr int kDropGroupSize = 2;
+static constexpr float kDropGap = 0.55f;
+static constexpr float kDropJitterStep = 0.02f;
 
 uint8_t WaveSystem_spawn_style(uint8_t archetype) {
     return (archetype == (uint8_t)EnemyArchetype::Heavy ||
@@ -106,21 +109,29 @@ static void nudge_spawn_out_of_obstacles(World& world, float& x, float& y) {
     }
 }
 
-static void spawn_marker(World& world, uint8_t archetype, float x, float y) {
+static float staggered_marker_countdown(World& world, int indexInWave) {
+    int group = indexInWave / kDropGroupSize;
+    int jitterStep = world.rand_range(9) - 4; // deterministic +/-0.08s
+    return kMarkerTelegraph + (float)group * kDropGap + (float)jitterStep * kDropJitterStep;
+}
+
+static void spawn_marker(World& world, uint8_t archetype, float x, float y, float countdown) {
     nudge_spawn_out_of_obstacles(world, x, y);
     EntityID marker = world.defer_create();
     world.add_component<PositionComponent>(marker) = {x, y, 0.f};
     SpawnMarkerComponent& sm = world.add_component<SpawnMarkerComponent>(marker);
     sm.archetype = archetype;
-    sm.countdown = kMarkerTelegraph;
+    sm.countdown = countdown;
     sm.style = WaveSystem_spawn_style(archetype);
 }
 
 static void emit_plan_markers(World& world, WaveControllerComponent& ctrl, int wave) {
+    int indexInWave = 0;
     for (int i = 0; i < ctrl.spawnCount; ++i) {
         const PendingSpawn& spawn = ctrl.spawns[i];
         if (spawn.wave != wave) continue;
-        spawn_marker(world, spawn.archetype, spawn.x, spawn.y);
+        spawn_marker(world, spawn.archetype, spawn.x, spawn.y,
+                     staggered_marker_countdown(world, indexInWave++));
     }
     ctrl.currentWave = wave;
     ctrl.phase = WavePhaseTelegraph;
@@ -134,7 +145,8 @@ static void emit_reinforcement_markers(World& world, WaveControllerComponent& ct
     if (sequence < 0) sequence = 0;
     for (int i = 0; i < 2; ++i) {
         const PendingSpawn& spawn = ctrl.reinforcements[(sequence * 2 + i) % ctrl.reinforceCount];
-        spawn_marker(world, spawn.archetype, spawn.x, spawn.y);
+        spawn_marker(world, spawn.archetype, spawn.x, spawn.y,
+                     staggered_marker_countdown(world, i));
     }
     ctrl.currentWave += 1;
     ctrl.phase = WavePhaseTelegraph;

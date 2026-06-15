@@ -26,6 +26,13 @@ static EntityID spawnEnemy(World& world, float x, float y) {
     return e;
 }
 
+static EntityID addObstacle(World& world, float x, float y, float halfW, float halfH) {
+    EntityID e = world.defer_create();
+    world.add_component<PositionComponent>(e) = {x, y, 0};
+    world.add_component<ObstacleComponent>(e) = {halfW, halfH};
+    return e;
+}
+
 @interface EnemyAITests : XCTestCase
 @end
 
@@ -77,6 +84,69 @@ static EntityID spawnEnemy(World& world, float x, float y) {
     // Should move in -Y direction; X should be nearly unchanged.
     XCTAssertLessThan(pos.y, 300.f);
     XCTAssertEqualWithAccuracy(pos.x, 0.f, kEps);
+}
+
+- (void)test_openFieldChaseVelocityRemainsPureSeek {
+    World world;
+    spawnPlayer(world, 0, 0);
+    EntityID enemy = spawnEnemy(world, 300, 400);
+
+    world.update(kFixedDt, kFixedDt);
+
+    VelocityComponent vel = world.get_component<VelocityComponent>(enemy);
+    XCTAssertEqualWithAccuracy(vel.vx, -90.f, kEps);
+    XCTAssertEqualWithAccuracy(vel.vy, -120.f, kEps);
+}
+
+- (void)test_enemySteersPerpendicularAroundObstacleInChasePath {
+    World world;
+    spawnPlayer(world, 0, 0);
+    addObstacle(world, 0, 180, 35, 35);
+    EntityID enemy = spawnEnemy(world, 0, 250);
+
+    world.update(kFixedDt, kFixedDt);
+
+    VelocityComponent vel = world.get_component<VelocityComponent>(enemy);
+    XCTAssertGreaterThan(fabsf(vel.vx), 1.f, @"obstacle avoidance should add a side-step component");
+}
+
+- (void)test_obstacleAvoidanceMakesProgressInsteadOfGrindingIntoPillar {
+    World world;
+    spawnPlayer(world, 0, 0);
+    addObstacle(world, 0, 180, 35, 35);
+    EntityID enemy = spawnEnemy(world, 0, 260);
+    float startDist = 260.f;
+
+    for (int i = 0; i < 90; ++i)
+        world.update(kFixedDt, kFixedDt);
+
+    PositionComponent pos = world.get_component<PositionComponent>(enemy);
+    float endDist = sqrtf(pos.x * pos.x + pos.y * pos.y);
+    XCTAssertLessThan(endDist, startDist - 20.f);
+}
+
+- (void)test_nearbyEnemiesSeparateInOpposingDirections {
+    World world;
+    spawnPlayer(world, 0, 400);
+    EntityID left = spawnEnemy(world, -20, 0);
+    EntityID right = spawnEnemy(world, 20, 0);
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertLessThan(world.get_component<VelocityComponent>(left).vx, 0.f);
+    XCTAssertGreaterThan(world.get_component<VelocityComponent>(right).vx, 0.f);
+}
+
+- (void)test_loneEnemyHasNoSeparationOffset {
+    World world;
+    spawnPlayer(world, 0, 400);
+    EntityID enemy = spawnEnemy(world, 0, 0);
+
+    world.update(kFixedDt, kFixedDt);
+
+    VelocityComponent vel = world.get_component<VelocityComponent>(enemy);
+    XCTAssertEqualWithAccuracy(vel.vx, 0.f, kEps);
+    XCTAssertEqualWithAccuracy(vel.vy, 150.f, kEps);
 }
 
 - (void)test_enemy_stopsWithinStopRadius {
