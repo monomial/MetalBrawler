@@ -8,6 +8,13 @@ options:
   xcodeVersion: "16.0"
   generateEmptyDirectories: false
 
+# Files shown in the Xcode navigator for browsing only — not compiled or
+# bundled into any target (no build phase). Lets you read docs in Xcode.
+fileGroups:
+  - docs
+  - README.md
+  - project.yml
+
 targets:
   Brawler-macOS:
     type: application
