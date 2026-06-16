@@ -257,6 +257,9 @@ static const int kNumSfxNodes = 8;
 
 - (void)startupInit {
     if (_started) return;
+    // BRAWLER_MUTE=1: skip all audio (engine never starts → SFX no-op; music
+    // gated below). Used by scripts/smoke.sh so test runs are silent.
+    if (getenv("BRAWLER_MUTE")) { NSLog(@"AudioEngine: muted (BRAWLER_MUTE)"); return; }
 
     _engine = [[AVAudioEngine alloc] init];
 
@@ -317,6 +320,7 @@ static const int kNumSfxNodes = 8;
 // ---------------------------------------------------------------------------
 
 - (void)startBattleMusic {
+    if (getenv("BRAWLER_MUTE")) return; // silent test runs
     NSURL *url = bundleAudioURL(@"music_battle");
     if (!url) {
         NSLog(@"AudioEngine: music_battle not found — add music_battle.mp3 to bundle to enable music");

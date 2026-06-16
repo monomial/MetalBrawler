@@ -17,7 +17,7 @@ APP=".build/DerivedData/Build/Products/Debug/Brawler-macOS.app/Contents/MacOS/Br
 
 # Clear DYLD_LIBRARY_PATH — inherited from Node it confuses the dynamic linker.
 set +e
-env -u DYLD_LIBRARY_PATH "$APP" --autotest "--autotest-out=$OUT"
+env -u DYLD_LIBRARY_PATH BRAWLER_MUTE=1 "$APP" --autotest "--autotest-out=$OUT"
 status=$?
 set -e
 
