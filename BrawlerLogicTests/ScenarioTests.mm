@@ -414,6 +414,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d debugApplyPerkID:11 toPlayer:0]; // Thorns
     [d debugApplyPerkID:12 toPlayer:0]; // Whirlwind
     [d debugApplyPerkID:13 toPlayer:0]; // Adrenaline
+    [d debugApplyPerkID:15 toPlayer:0]; // Evasion
 
     XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 1);
     XCTAssertEqual([d debugPerkMaxHPBonusForPlayer:0], 4);
@@ -425,6 +426,11 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
     [d debugApplyPerkID:14 toPlayer:0]; // Vampire
     XCTAssertEqual([d debugPerkDamageBonusForPlayer:0], 1);
     XCTAssertEqual([d debugPerkLifestealForPlayer:0], 6);
+
+    [d startGameWithPlayers:1];
+    [d debugApplyPerkID:15 toPlayer:0]; // Evasion
+    [d debugReloadCurrentRoom];
+    XCTAssertEqual([d debugFirstPlayerDodgeMaxCharges], 3);
 }
 
 - (void)test_comboScore_incrementsResetsExpiresAndTracksMax {

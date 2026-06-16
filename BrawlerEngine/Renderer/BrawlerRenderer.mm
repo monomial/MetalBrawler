@@ -934,7 +934,7 @@ static int exit_label_index(const ExitComponent& exit) {
                 {0.20f, 0.52f, 1.00f, 1.f}, {0.20f, 0.52f, 1.00f, 1.f},
                 {0.20f, 0.52f, 1.00f, 1.f}, {0.20f, 0.52f, 1.00f, 1.f},
                 {1.00f, 0.72f, 0.16f, 1.f}, {1.00f, 0.72f, 0.16f, 1.f},
-                {1.00f, 0.72f, 0.16f, 1.f},
+                {1.00f, 0.72f, 0.16f, 1.f}, {0.35f, 0.70f, 1.00f, 1.f},
             };
             float pulse = 0.75f + 0.20f * sinf((float)CACurrentMediaTime() * 5.f + (float)eid);
             [enc setRenderPipelineState:_pipeline];
@@ -1293,9 +1293,33 @@ static int exit_label_index(const ExitComponent& exit) {
                     {1.00f, 0.72f, 0.16f, 1.f}, // whirlwind
                     {1.00f, 0.72f, 0.16f, 1.f}, // adrenaline
                     {1.00f, 0.72f, 0.16f, 1.f}, // vampire
+                    {0.35f, 0.70f, 1.00f, 1.f}, // evasion
                 };
+                if (world->has_component<DodgeChargesComponent>(id)) {
+                    const DodgeChargesComponent& dodgeCharges =
+                        world->get_component<DodgeChargesComponent>(id);
+                    static const float kDodgePipW = 10.f;
+                    static const float kDodgePipH = 5.f;
+                    static const float kDodgePipGap = 4.f;
+                    int maxCharges = dodgeCharges.maxCharges;
+                    if (maxCharges < 0) maxCharges = 0;
+                    if (maxCharges > 5) maxCharges = 5;
+                    float rowW = maxCharges * kDodgePipW + (maxCharges - 1) * kDodgePipGap;
+                    float left = scrX - rowW * 0.5f;
+                    float dodgeY = meterY + kSpecialBarH + 6.f;
+                    for (int c = 0; c < maxCharges; ++c) {
+                        float pipX = left + kDodgePipW * 0.5f + c * (kDodgePipW + kDodgePipGap);
+                        u.color = c < dodgeCharges.charges
+                            ? (simd_float4){0.28f, 0.70f, 1.00f, 1.f}
+                            : (simd_float4){0.08f, 0.12f, 0.16f, 0.85f};
+                        u.mvp = simd_mul(ortho, make_model_rect(pipX, dodgeY, 0.f,
+                                                                kDodgePipW, kDodgePipH));
+                        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+                        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+                    }
+                }
                 int pipIndex = 0;
-                float pipY = meterY + kSpecialBarH + 7.f;
+                float pipY = meterY + kSpecialBarH + 16.f;
                 for (int type = 0; type < kBrawlerPerkTypeCount; ++type) {
                     for (uint8_t n = 0; n < _perkSummary[slot].counts[type] && pipIndex < 14; ++n, ++pipIndex) {
                         float pipX = scrX - kBarW * 0.5f + 4.f + pipIndex * 6.f;

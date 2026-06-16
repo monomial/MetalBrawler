@@ -191,6 +191,7 @@ typedef NS_ENUM(int, BrawlerPerk) {
     BrawlerPerkWhirlwind,
     BrawlerPerkAdrenaline,
     BrawlerPerkVampire,
+    BrawlerPerkEvasion,
     BrawlerPerkCount
 };
 
@@ -216,6 +217,7 @@ static NSString *const kPerkLabels[BrawlerPerkCount] = {
     @"Whirlwind",
     @"Adrenaline",
     @"Vampire",
+    @"Evasion",
 };
 
 static const BrawlerPerkRarity kPerkRarity[BrawlerPerkCount] = {
@@ -234,6 +236,7 @@ static const BrawlerPerkRarity kPerkRarity[BrawlerPerkCount] = {
     BrawlerRarityEpic,
     BrawlerRarityEpic,
     BrawlerRarityEpic,
+    BrawlerRarityRare,
 };
 
 struct PlayerPerks {
@@ -248,6 +251,7 @@ struct PlayerPerks {
     bool  thorns = false;
     bool  whirlwind = false;
     bool  passiveSpecial = false;
+    int   bonusDodgeCharges = 0;
     uint8_t counts[BrawlerPerkCount] = {};
 };
 
@@ -508,6 +512,14 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
         if (!_world.player_tags().present(id)) continue;
         if (!_world.has_component<StatsComponent>(id)) continue;
         return _world.get_component<StatsComponent>(id).secondWinds;
+    }
+    return 0;
+}
+- (int)debugFirstPlayerDodgeMaxCharges {
+    for (EntityID id = 0; id < _world.entity_count(); ++id) {
+        if (!_world.player_tags().present(id)) continue;
+        if (!_world.has_component<DodgeChargesComponent>(id)) continue;
+        return _world.get_component<DodgeChargesComponent>(id).maxCharges;
     }
     return 0;
 }
@@ -954,6 +966,7 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
         case BrawlerPerkVampire:
             perks.lifestealPerHits = 6;
             break;
+        case BrawlerPerkEvasion:       perks.bonusDodgeCharges += 1; break;
         case BrawlerPerkCount:  break;
     }
     if (chosen >= 0 && chosen < BrawlerPerkCount) {
@@ -1096,6 +1109,10 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
     _world.add_component<FacingComponent>(e);
     _world.add_component<SpecialMeterComponent>(e);
     _world.add_component<ChargeAttackComponent>(e);
+    DodgeChargesComponent& dodgeCharges = _world.add_component<DodgeChargesComponent>(e);
+    dodgeCharges.maxCharges = 2 + perks.bonusDodgeCharges;
+    dodgeCharges.charges = dodgeCharges.maxCharges;
+    dodgeCharges.regenTimer = 0.f;
     auto& stats = _world.add_component<StatsComponent>(e);
     stats.damageBonus = perks.bonusDamage;
     stats.speedMult   = perks.speedMult;

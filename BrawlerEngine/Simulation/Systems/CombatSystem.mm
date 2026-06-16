@@ -42,8 +42,10 @@ static constexpr int   kFinisherHitStopTicks = 7;
 static constexpr float kHitShake             = 7.f;
 static constexpr float kFinisherShake        = 30.f;
 static constexpr float kPlayerHitShake       = 22.f;
-static constexpr float kProjectileSpeed      = 420.f;
+static constexpr float kProjectileSpeed      = 340.f;
 static constexpr float kProjectileHoming     = 3.2f;
+static constexpr float kProjectileLifetime   = 1.3f;
+static constexpr float kProjectileHomingWindow = 0.45f;
 static constexpr float kHeavyRadius          = 130.f;
 static constexpr int   kHeavyBaseDamage      = 2;
 static constexpr int   kHeavyHitStopTicks    = 8;
@@ -126,8 +128,10 @@ static bool spawn_projectile_at_target(World& world, EntityID attackerID,
     float speed = kProjectileSpeed * Difficulty_projectile_mult(world.difficulty());
     pc.vx = dirX * speed;
     pc.vy = dirY * speed;
-    pc.damage = world.curse_damage(damage + 2); // straight shots sting more than a melee jab — must be dodged
+    pc.damage = world.curse_damage(damage);
+    pc.lifetime = kProjectileLifetime;
     pc.homing = kProjectileHoming * fminf(1.f, 0.6f + 0.15f * world.difficulty());
+    pc.homingTime = kProjectileHomingWindow;
     return true;
 }
 

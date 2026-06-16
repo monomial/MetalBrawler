@@ -186,9 +186,13 @@ InputState AutoPilot_input(World& world, int playerIndex) {
 
     // Defense: dodge deliberate incoming threats while continuing to trade
     // ordinary melee pressure.
+    if (s_dodgeEnabled && world.has_component<DodgeComponent>(me))
+        in.dodge = true;
     bool meCanDodge = world.has_component<AnimationComponent>(me) &&
                       (world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Idle ||
-                       world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Walk);
+                       world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Walk) &&
+                      world.has_component<DodgeChargesComponent>(me) &&
+                      world.get_component<DodgeChargesComponent>(me).charges > 0;
     if (s_dodgeEnabled && meCanDodge) {
         for (EntityID id = 0; id < world.entity_count(); ++id) {
             if (!world.projectiles().present(id)) continue;

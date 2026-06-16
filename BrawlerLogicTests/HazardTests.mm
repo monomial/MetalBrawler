@@ -22,6 +22,7 @@ static EntityID spawnPlayer(World& world, float x, float y) {
     world.add_component<DamageCooldownComponent>(e).remaining = 0.f;
     world.add_component<AnimationComponent>(e);
     world.add_component<FacingComponent>(e);
+    world.add_component<DodgeChargesComponent>(e);
     return e;
 }
 

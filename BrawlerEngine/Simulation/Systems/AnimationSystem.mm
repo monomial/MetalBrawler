@@ -73,12 +73,6 @@ static float clip_speed_multiplier(World& world, EntityID entity, AnimClipID id)
         case AnimClipID::Run:     mult = 1.0f; break;
         default:                  mult = 1.0f; break;
     }
-    if (id == AnimClipID::Dodge &&
-        world.has_component<StatsComponent>(entity)) {
-        float cooldownMult = world.get_component<StatsComponent>(entity).dodgeCooldownMult;
-        if (cooldownMult > 0.01f)
-            mult /= cooldownMult;
-    }
     return mult;
 }
 

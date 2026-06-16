@@ -101,6 +101,7 @@
 		6060D8DCB27E954B115BA1D4 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A75FE85F1481015D8E48A17 /* ImageIO.framework */; };
 		6232FD0FD00A65A3D2EB1B4E /* ScreenShakeSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74E1CC18857BB1A39EB71419 /* ScreenShakeSystem.mm */; };
 		62A56767E4B9F025583090A1 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 856406A32C732664791F661B /* GameController.framework */; };
+		6600EB50AF0E9A6697F4E209 /* DodgeChargeTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 174E91AA803E6B2B3A8C78BC /* DodgeChargeTests.mm */; };
 		66D9B003B7F8D43669896681 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE4993722C4B0E722982AE16 /* AVFoundation.framework */; };
 		66E1768FFC17BC8B2EB01C0C /* InputSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF5371A1FA10DE17872A35 /* InputSystem.mm */; };
 		678DBFAF534FDE2CF8423B6C /* LavaLobSystem.mm in Sources */ = {isa = PBXBuildFile; fileRef = EF797C1C558E5FA443D4978D /* LavaLobSystem.mm */; };
@@ -247,6 +248,7 @@
 		0F81F8DDAE07D7743D1C0C19 /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = System/Library/Frameworks/CoreHaptics.framework; sourceTree = SDKROOT; };
 		1477157D34E4A95A7882659B /* EnemyFactory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnemyFactory.h; sourceTree = "<group>"; };
 		15B52A5E86820BC13B98EB94 /* HazardTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HazardTests.mm; sourceTree = "<group>"; };
+		174E91AA803E6B2B3A8C78BC /* DodgeChargeTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = DodgeChargeTests.mm; sourceTree = "<group>"; };
 		189A9141A8E1CF5522C84640 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		1920F4ED4B1584D6DDB49BAF /* ExitSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExitSystem.h; sourceTree = "<group>"; };
 		1A002302E6D7EE53F38E2D27 /* ModelIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ModelIO.framework; path = System/Library/Frameworks/ModelIO.framework; sourceTree = SDKROOT; };
@@ -371,6 +373,7 @@
 		D711454C8F92BBE53B3F45C4 /* BossSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = BossSystem.mm; sourceTree = "<group>"; };
 		D75C1F416498549428B0847F /* RespawnSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RespawnSystem.mm; sourceTree = "<group>"; };
 		D79C4338A0676D18FB1F27DA /* BrawlerRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrawlerRenderer.h; sourceTree = "<group>"; };
+		D7A5C7AE75BD14C55B77D3FB /* dodge-charges-and-projectile-fairness-design.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "dodge-charges-and-projectile-fairness-design.md"; sourceTree = "<group>"; };
 		DB1C29C5E5AD3D69339BE7E4 /* difficulty-and-twin-boss-design.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "difficulty-and-twin-boss-design.md"; sourceTree = "<group>"; };
 		DCDB3F619B92B9629E4A3149 /* WorldTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WorldTests.mm; sourceTree = "<group>"; };
 		DE7645C47762F4FE0C8C623D /* SpecialTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SpecialTests.mm; sourceTree = "<group>"; };
@@ -609,6 +612,7 @@
 				3FCFF1576440EAD0EF9605B1 /* curse-portals-and-meta-progression-design.md */,
 				CDCCB2B0ED702F5EE3463424 /* design.md */,
 				DB1C29C5E5AD3D69339BE7E4 /* difficulty-and-twin-boss-design.md */,
+				D7A5C7AE75BD14C55B77D3FB /* dodge-charges-and-projectile-fairness-design.md */,
 				086B93D29DCD23F763925F48 /* ecs-vocabulary.md */,
 				AB17FE22F167EB2C60A81961 /* enemy-steering-and-bigger-waves-design.md */,
 				655428C18494149B83F745A4 /* enemy-waves-design.md */,
@@ -718,6 +722,7 @@
 				9B56D567E7D4F96112FC6281 /* CombatTests.mm */,
 				772B27D11CA47F87C7091469 /* ComboTests.mm */,
 				C198EE6AC4B8C900025F2E54 /* ContactDamageTests.mm */,
+				174E91AA803E6B2B3A8C78BC /* DodgeChargeTests.mm */,
 				7B578A52EC9FECB06192D70B /* EdgeCaseTests.mm */,
 				9872E2A72357EB6205023978 /* EnemyAITests.mm */,
 				2113C59A3DD079751D9A5BC3 /* EventBusTests.mm */,
@@ -1078,6 +1083,7 @@
 				F16C7ED29AB832EEA7DD642F /* ComboTests.mm in Sources */,
 				7C5930E3F0038BB5D235C1C6 /* ContactDamageSystem.mm in Sources */,
 				31CC37ACBD9CDF76BB3857EB /* ContactDamageTests.mm in Sources */,
+				6600EB50AF0E9A6697F4E209 /* DodgeChargeTests.mm in Sources */,
 				3649286F02112A180528BCA9 /* DodgeSystem.mm in Sources */,
 				8E0991FE8CD3247491E9E6D8 /* EdgeCaseTests.mm in Sources */,
 				1D86F9EC26F02B9310D9F094 /* EnemyAISystem.mm in Sources */,

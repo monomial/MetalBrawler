@@ -37,7 +37,7 @@ static float clampf_local(float v, float lo, float hi) {
 static void steer_projectile_toward_player(World& world, ProjectileComponent& proj,
                                            const PositionComponent& pos,
                                            float gameDt) {
-    if (proj.homing <= 0.f) return;
+    if (proj.homing <= 0.f || proj.homingTime <= 0.f) return;
     float speed = sqrtf(proj.vx * proj.vx + proj.vy * proj.vy);
     if (speed <= 0.001f) return;
     EntityID target = nearest_living_player(world, pos);
@@ -81,6 +81,10 @@ void ProjectileSystem_update(World& world, float gameDt) {
         ProjectileComponent& proj = world.get_component<ProjectileComponent>(id);
         PositionComponent& pos = world.get_component<PositionComponent>(id);
         proj.lifetime -= gameDt;
+        if (proj.homingTime > 0.f) {
+            proj.homingTime -= gameDt;
+            if (proj.homingTime < 0.f) proj.homingTime = 0.f;
+        }
         steer_projectile_toward_player(world, proj, pos, gameDt);
         pos.x += proj.vx * gameDt;
         pos.y += proj.vy * gameDt;

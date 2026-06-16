@@ -98,6 +98,7 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 - (int)debugScrap;
 - (int)debugFirstPlayerMaxHP;
 - (int)debugFirstPlayerSecondWinds;
+- (int)debugFirstPlayerDodgeMaxCharges;
 - (MetaProgressStore *)debugMetaStore;
 - (void)setMetaStoreOverride:(MetaProgressStore *)store;
 - (int)debugCursedExitType;

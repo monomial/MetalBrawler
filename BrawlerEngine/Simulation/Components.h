@@ -160,6 +160,7 @@ struct ProjectileComponent {
     int damage = 1;
     float lifetime = 2.5f;
     float homing = 0.f;
+    float homingTime = 0.f;
 };
 
 struct TelegraphLineComponent {
@@ -271,7 +272,7 @@ struct StatsComponent {
     int   damageBonus       = 0;   // added to attack damage
     float speedMult         = 1.f; // multiplies move speed
     float knockbackMult     = 1.f; // multiplies outgoing shove velocity
-    float dodgeCooldownMult = 1.f; // multiplies Dodge clip/recovery duration
+    float dodgeCooldownMult = 1.f; // multiplies dodge-charge regeneration time
     float specialChargeMult = 1.f; // multiplies meter gained from landed hits
     int   secondWinds       = 0;   // one-time saves at 1 HP before death
     int   lifestealPerHits  = 0;   // 0 = off, otherwise heal after N landed hits
@@ -303,4 +304,11 @@ struct DodgeComponent {
     bool  active = false; // velocity has been initialised
     float velX   = 0.f;  // initial velocity at dodge start (direction * kDodgeSpeed)
     float velY   = 0.f;  // stored so deceleration curve uses a consistent direction
+    float elapsed = 0.f; // seconds since this charge's dodge started
+};
+
+struct DodgeChargesComponent {
+    int charges = 2;
+    int maxCharges = 2;
+    float regenTimer = 0.f;
 };

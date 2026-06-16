@@ -136,31 +136,26 @@ static int countEvents(World& world, EventType type) {
     XCTAssertLessThan(world.get_component<SpecialMeterComponent>(player).charge, 0.020f);
 }
 
-- (void)test_dodgeCooldownMult_shortensDodgeRecovery {
-    auto ticksUntilDodgeEnds = [](float cooldownMult) {
+- (void)test_dodgeCooldownMult_speedsDodgeChargeRegen {
+    auto ticksUntilChargeRegens = [](float cooldownMult) {
         World world;
         EntityID player = spawnPlayer(world);
-        if (cooldownMult != 1.f)
-            world.add_component<StatsComponent>(player).dodgeCooldownMult = cooldownMult;
-
-        InputState dodge{};
-        dodge.dodge = true;
-        world.set_input(dodge, 0);
-        world.update(kFixedDt, kFixedDt);
-        world.set_input(InputState{}, 0);
+        world.add_component<StatsComponent>(player).dodgeCooldownMult = cooldownMult;
+        DodgeChargesComponent& charges = world.add_component<DodgeChargesComponent>(player);
+        charges.charges = 1;
+        charges.maxCharges = 2;
+        charges.regenTimer = 1.5f * cooldownMult;
 
         for (int i = 0; i < 240; ++i) {
             world.update(kFixedDt, kFixedDt);
-            const auto& anim = world.get_component<AnimationComponent>(player);
-            if (anim.currentClip != AnimClipID::Dodge &&
-                !world.has_component<DodgeComponent>(player))
+            if (world.get_component<DodgeChargesComponent>(player).charges == 2)
                 return i;
         }
         return 240;
     };
 
-    int baseTicks = ticksUntilDodgeEnds(1.f);
-    int quickTicks = ticksUntilDodgeEnds(0.7f);
+    int baseTicks = ticksUntilChargeRegens(1.f);
+    int quickTicks = ticksUntilChargeRegens(0.7f);
     XCTAssertLessThan(quickTicks, baseTicks);
     XCTAssertEqualWithAccuracy((float)quickTicks / (float)baseTicks, 0.7f, 0.12f);
 }

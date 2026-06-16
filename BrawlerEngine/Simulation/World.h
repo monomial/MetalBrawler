@@ -123,6 +123,7 @@ public:
     ComponentStorage<FacingComponent>&             facings()          { return _facings; }
     ComponentStorage<EnemyAttackCooldownComponent>& attack_cooldowns() { return _attackCooldowns; }
     ComponentStorage<DodgeComponent>&              dodges()           { return _dodges; }
+    ComponentStorage<DodgeChargesComponent>&       dodge_charges()    { return _dodgeCharges; }
     ComponentStorage<BossTagComponent>&            boss_tags()        { return _bossTags; }
     ComponentStorage<KnockbackComponent>&          knockbacks()       { return _knockbacks; }
     ComponentStorage<EnemyArchetypeComponent>&     archetypes()       { return _archetypes; }
@@ -181,6 +182,7 @@ private:
     ComponentStorage<FacingComponent>              _facings;
     ComponentStorage<EnemyAttackCooldownComponent> _attackCooldowns;
     ComponentStorage<DodgeComponent>              _dodges;
+    ComponentStorage<DodgeChargesComponent>       _dodgeCharges;
     ComponentStorage<BossTagComponent>            _bossTags;
     ComponentStorage<KnockbackComponent>          _knockbacks;
     ComponentStorage<EnemyArchetypeComponent>     _archetypes;
@@ -232,6 +234,7 @@ template<> ComponentStorage<AnimationComponent>&      World::_pool<AnimationComp
 template<> ComponentStorage<FacingComponent>&              World::_pool<FacingComponent>();
 template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool<EnemyAttackCooldownComponent>();
 template<> ComponentStorage<DodgeComponent>&              World::_pool<DodgeComponent>();
+template<> ComponentStorage<DodgeChargesComponent>&       World::_pool<DodgeChargesComponent>();
 template<> ComponentStorage<BossTagComponent>&            World::_pool<BossTagComponent>();
 template<> ComponentStorage<KnockbackComponent>&          World::_pool<KnockbackComponent>();
 template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool<EnemyArchetypeComponent>();

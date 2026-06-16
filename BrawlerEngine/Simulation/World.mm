@@ -36,6 +36,7 @@ template<> ComponentStorage<AnimationComponent>&      World::_pool() { return _a
 template<> ComponentStorage<FacingComponent>&              World::_pool() { return _facings; }
 template<> ComponentStorage<EnemyAttackCooldownComponent>& World::_pool() { return _attackCooldowns; }
 template<> ComponentStorage<DodgeComponent>&              World::_pool() { return _dodges; }
+template<> ComponentStorage<DodgeChargesComponent>&       World::_pool() { return _dodgeCharges; }
 template<> ComponentStorage<BossTagComponent>&            World::_pool() { return _bossTags; }
 template<> ComponentStorage<KnockbackComponent>&          World::_pool() { return _knockbacks; }
 template<> ComponentStorage<EnemyArchetypeComponent>&     World::_pool() { return _archetypes; }
@@ -114,6 +115,7 @@ void World::flush() {
         _facings.remove(id);
         _attackCooldowns.remove(id);
         _dodges.remove(id);
+        _dodgeCharges.remove(id);
         _bossTags.remove(id);
         _knockbacks.remove(id);
         _archetypes.remove(id);

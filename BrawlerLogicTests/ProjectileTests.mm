@@ -21,6 +21,7 @@ static EntityID spawnProjectilePlayer(World& world, float x, float y, int hp = 1
     world.add_component<DamageCooldownComponent>(e).remaining = 0.f;
     world.add_component<AnimationComponent>(e);
     world.add_component<FacingComponent>(e);
+    world.add_component<DodgeChargesComponent>(e);
     return e;
 }
 
@@ -84,7 +85,7 @@ static int projectileTestLavaLobCount(World& world) {
     for (EntityID id = 0; id < world.entity_count(); ++id)
         if (world.projectiles().present(id)) projectile = id;
     XCTAssertNotEqual(projectile, kInvalidEntity);
-    XCTAssertEqual(world.get_component<ProjectileComponent>(projectile).damage, 5);
+    XCTAssertEqual(world.get_component<ProjectileComponent>(projectile).damage, 2);
 }
 
 - (void)test_projectileSpeedScalesWithDifficulty {
@@ -99,7 +100,7 @@ static int projectileTestLavaLobCount(World& world) {
     for (EntityID id = 0; id < world.entity_count(); ++id)
         if (world.projectiles().present(id)) projectile = id;
     XCTAssertNotEqual(projectile, kInvalidEntity);
-    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 420.f * 1.14f, 0.01f);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 340.f * 1.14f, 0.01f);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy, 0.f, 0.01f);
 }
 
@@ -137,6 +138,10 @@ static int projectileTestLavaLobCount(World& world) {
     XCTAssertNotEqual(projectile, kInvalidEntity);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).homing,
                                3.2f, 0.001f);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).homingTime,
+                               0.45f, 0.001f);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).lifetime,
+                               1.3f, 0.001f);
 }
 
 - (void)test_spitterTelegraphShortensAtObstacleAndProjectileUsesLockedAim {
@@ -179,7 +184,7 @@ static int projectileTestLavaLobCount(World& world) {
     for (EntityID id = 0; id < world.entity_count(); ++id)
         if (world.projectiles().present(id)) projectile = id;
     XCTAssertNotEqual(projectile, kInvalidEntity);
-    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 420.f, 0.01f);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vx, 340.f, 0.01f);
     XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy, 0.f, 0.01f);
 }
 
@@ -188,7 +193,7 @@ static int projectileTestLavaLobCount(World& world) {
     spawnProjectilePlayer(homingWorld, 100.f, 100.f);
     EntityID homing = homingWorld.defer_create();
     homingWorld.add_component<PositionComponent>(homing) = {0.f, 0.f, 0.f};
-    homingWorld.add_component<ProjectileComponent>(homing) = {420.f, 0.f, 1, 2.5f, 2.2f};
+    homingWorld.add_component<ProjectileComponent>(homing) = {420.f, 0.f, 1, 2.5f, 2.2f, 0.45f};
     advance(homingWorld, 12);
     XCTAssertGreaterThan(homingWorld.get_component<ProjectileComponent>(homing).vy, 0.f);
     XCTAssertEqualWithAccuracy(
@@ -202,9 +207,35 @@ static int projectileTestLavaLobCount(World& world) {
     spawnProjectilePlayer(straightWorld, 100.f, 100.f);
     EntityID straight = straightWorld.defer_create();
     straightWorld.add_component<PositionComponent>(straight) = {0.f, 0.f, 0.f};
-    straightWorld.add_component<ProjectileComponent>(straight) = {420.f, 0.f, 1, 2.5f, 0.f};
+    straightWorld.add_component<ProjectileComponent>(straight) = {420.f, 0.f, 1, 2.5f, 0.f, 0.45f};
     advance(straightWorld, 12);
     XCTAssertEqualWithAccuracy(straightWorld.get_component<ProjectileComponent>(straight).vy, 0.f, 0.01f);
+}
+
+- (void)test_homingWindowExpiresAndProjectileThenFliesStraight {
+    World world;
+    spawnProjectilePlayer(world, 100.f, 100.f);
+    EntityID projectile = world.defer_create();
+    world.add_component<PositionComponent>(projectile) = {0.f, 0.f, 0.f};
+    world.add_component<ProjectileComponent>(projectile) = {340.f, 0.f, 1, 1.3f, 3.2f, 0.05f};
+
+    advance(world, 7);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).homingTime,
+                               0.f, 0.001f);
+    float vyAfterWindow = world.get_component<ProjectileComponent>(projectile).vy;
+    advance(world, 12);
+    XCTAssertEqualWithAccuracy(world.get_component<ProjectileComponent>(projectile).vy,
+                               vyAfterWindow, 0.001f);
+}
+
+- (void)test_projectileLifetimeUsesShortFairnessWindow {
+    World world;
+    EntityID projectile = world.defer_create();
+    world.add_component<PositionComponent>(projectile) = {0.f, 0.f, 0.f};
+    world.add_component<ProjectileComponent>(projectile) = {0.f, 0.f, 1, 1.3f, 0.f, 0.f};
+
+    advance(world, 157);
+    XCTAssertFalse(world.projectiles().present(projectile));
 }
 
 - (void)test_homingProjectileCanBeDodgedPerpendicular {
