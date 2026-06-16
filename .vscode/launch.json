@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Brawler-macOS",
+      "program": "${workspaceFolder}/.build/DerivedData/Build/Products/Debug/Brawler-macOS.app/Contents/MacOS/Brawler-macOS",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build-macos-debug",
+      "env": {
+        "DYLD_LIBRARY_PATH": ""
+      }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Brawler-macOS (--autotest)",
+      "program": "${workspaceFolder}/.build/DerivedData/Build/Products/Debug/Brawler-macOS.app/Contents/MacOS/Brawler-macOS",
+      "args": ["--autotest", "--autotest-out=/tmp/brawler-autotest"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build-macos-debug",
+      "env": {
+        "DYLD_LIBRARY_PATH": ""
+      }
+    }
+  ]
+}
