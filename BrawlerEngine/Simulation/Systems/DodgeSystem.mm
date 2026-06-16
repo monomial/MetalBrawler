@@ -6,7 +6,7 @@
 #include <math.h>
 
 static constexpr float kDodgeMinDuration = 0.15f;
-static constexpr float kDodgeMaxDuration = 0.40f;
+static constexpr float kDodgeMaxDuration = 0.80f; // longer dash; cancelable on release after the min
 static constexpr float kDodgeRegenPerCharge = 1.5f;
 static constexpr float kDodgeSpeed = 650.0f; // units/sec at start of roll
 

@@ -126,7 +126,7 @@ static void advanceDodge(World& world, int ticks) {
     world.set_input(dodge, 0);
     advanceDodge(world, 30);
     XCTAssertTrue(world.has_component<DodgeComponent>(player));
-    advanceDodge(world, 30);
+    advanceDodge(world, 90); // past the 0.80s max-duration window
     XCTAssertFalse(world.has_component<DodgeComponent>(player));
     XCTAssertEqual(charges.charges, 0);
 }
@@ -142,10 +142,10 @@ static void advanceDodge(World& world, int ticks) {
     advanceDodge(world, 30);
     XCTAssertTrue(world.has_component<DodgeComponent>(player));
     XCTAssertEqual(world.get_component<DodgeChargesComponent>(player).charges, 1);
-    advanceDodge(world, 30);
+    advanceDodge(world, 90); // dash 1 (0.80s) ends and chains into dash 2
     XCTAssertTrue(world.has_component<DodgeComponent>(player));
     XCTAssertEqual(world.get_component<DodgeChargesComponent>(player).charges, 0);
-    advanceDodge(world, 50);
+    advanceDodge(world, 110); // dash 2 ends; no charges left to chain
     XCTAssertFalse(world.has_component<DodgeComponent>(player));
     XCTAssertEqual(world.get_component<DodgeChargesComponent>(player).charges, 0);
 }
