@@ -121,7 +121,7 @@ static const BoxSpawn kRusherBoxes[] = {
     {-420.f, 120.f, false}, {420.f, 140.f, true}, {0.f, 610.f, true},
 };
 static const BoxSpawn kHeavyBoxes[] = {
-    {-410.f, 240.f, true}, {410.f, 240.f, false}, {-120.f, 600.f, true}, {230.f, 590.f, true},
+    {-410.f, 240.f, true}, {410.f, 240.f, false}, {-120.f, 600.f, true}, {230.f, 590.f, false},
 };
 static const BoxSpawn kMixedBoxes[] = {
     {-420.f, 130.f, true}, {420.f, 130.f, false}, {-330.f, 590.f, true},
@@ -133,7 +133,7 @@ static const BoxSpawn kBossBoxes[] = {
     {-420.f, 170.f, true}, {420.f, 170.f, false},
 };
 static const BoxSpawn kShopBoxes[] = {
-    {-360.f, 320.f, true}, {360.f, 320.f, false}, {0.f, 560.f, false},
+    {-360.f, 320.f, true}, {360.f, 320.f, false}, {0.f, 560.f, true},
 };
 
 static const RoomDef kIntroRoom = {kIntroSpawns, 4, nullptr, 0, kIntroBoxes, 3, false};

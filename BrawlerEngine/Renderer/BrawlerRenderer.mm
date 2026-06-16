@@ -18,7 +18,7 @@ typedef struct { simd_float3 pos; float size; simd_float4 color; } ParticleInsta
 typedef struct { simd_float4x4 vp; simd_float3 camRight; simd_float3 camUp; } ParticleUniformsGPU;
 // Must match FloorUniforms in Brawler.metal.
 typedef struct { simd_float4x4 mvp; simd_float4 baseColor; simd_float4 lineColor;
-                 simd_float2 center; simd_float2 size; } FloorUniformsGPU;
+                 simd_float4 marking; simd_float2 center; simd_float2 size; } FloorUniformsGPU;
 // Must match PostUniforms in Brawler.metal.
 typedef struct { float hitBlur; float damageFlash; } PostUniformsGPU;
 
@@ -26,16 +26,17 @@ typedef struct { float hitBlur; float damageFlash; } PostUniformsGPU;
 typedef struct {
     simd_float4 floorBase, floorLine, wall;
     MTLClearColor clear;
+    simd_float4 marking;
 } RoomPalette;
 // The last palette (violet) is reserved for the boss room — the delegate
 // passes kBossPaletteIndex for it and cycles the others for normal rooms.
 static const RoomPalette kRoomPalettes[] = {
-    {{0.13f,0.13f,0.18f,1}, {0.20f,0.21f,0.30f,1}, {0.30f,0.30f,0.40f,1}, {0.08,0.08,0.12,1}},  // slate
-    {{0.10f,0.15f,0.14f,1}, {0.16f,0.24f,0.21f,1}, {0.24f,0.36f,0.31f,1}, {0.06,0.10,0.09,1}},  // moss
-    {{0.16f,0.12f,0.10f,1}, {0.25f,0.18f,0.13f,1}, {0.38f,0.27f,0.18f,1}, {0.10,0.07,0.06,1}},  // rust
-    {{0.10f,0.13f,0.17f,1}, {0.15f,0.21f,0.27f,1}, {0.22f,0.32f,0.42f,1}, {0.06,0.08,0.11,1}},  // deep teal
-    {{0.16f,0.14f,0.10f,1}, {0.24f,0.21f,0.14f,1}, {0.38f,0.33f,0.20f,1}, {0.10,0.09,0.06,1}},  // sand
-    {{0.15f,0.10f,0.16f,1}, {0.24f,0.15f,0.26f,1}, {0.36f,0.22f,0.38f,1}, {0.09,0.06,0.10,1}},  // boss violet
+    {{0.115f,0.120f,0.125f,1}, {0.185f,0.190f,0.195f,1}, {0.245f,0.285f,0.330f,1}, {0.045,0.050,0.060,1}, {0.86f,0.68f,0.22f,1}}, // downtown street
+    {{0.145f,0.135f,0.125f,1}, {0.225f,0.205f,0.180f,1}, {0.430f,0.205f,0.140f,1}, {0.075,0.060,0.050,1}, {0.72f,0.70f,0.62f,1}}, // brick alley
+    {{0.125f,0.130f,0.135f,1}, {0.205f,0.215f,0.220f,1}, {0.315f,0.335f,0.350f,1}, {0.055,0.060,0.065,1}, {0.92f,0.74f,0.18f,1}}, // subway platform
+    {{0.075f,0.080f,0.090f,1}, {0.145f,0.155f,0.170f,1}, {0.155f,0.180f,0.220f,1}, {0.030,0.035,0.048,1}, {0.18f,0.86f,0.95f,1}}, // rooftop night
+    {{0.130f,0.125f,0.115f,1}, {0.215f,0.200f,0.175f,1}, {0.390f,0.300f,0.205f,1}, {0.070,0.060,0.048,1}, {0.95f,0.42f,0.12f,1}}, // industrial yard
+    {{0.120f,0.080f,0.145f,1}, {0.215f,0.135f,0.245f,1}, {0.340f,0.215f,0.390f,1}, {0.050,0.030,0.070,1}, {0.88f,0.28f,1.00f,1}}, // boss violet
 };
 static const int kNumRoomPalettes = sizeof(kRoomPalettes) / sizeof(kRoomPalettes[0]);
 // Layout must match SkinnedUniforms in SkinnedMesh.metal.
@@ -172,6 +173,15 @@ static simd_float4x4 make_model_wall(float cx, float cy, float length, float hei
 
 static float clampf(float v, float lo, float hi) {
     return v < lo ? lo : (v > hi ? hi : v);
+}
+
+static simd_float4 lighten_color(simd_float4 c, float amount) {
+    return (simd_float4){
+        c.x + (1.f - c.x) * amount,
+        c.y + (1.f - c.y) * amount,
+        c.z + (1.f - c.z) * amount,
+        c.w
+    };
 }
 
 static void writePNG(id<MTLBuffer> staging, NSUInteger w, NSUInteger h,
@@ -692,6 +702,7 @@ static int exit_label_index(const ExitComponent& exit) {
                                                     kRoomWidth, kRoomHeight));
         fu.baseColor = pal.floorBase;
         fu.lineColor = pal.floorLine;
+        fu.marking   = pal.marking;
         fu.center    = (simd_float2){kRoomCenterX, kRoomCenterY};
         fu.size      = (simd_float2){kRoomWidth, kRoomHeight};
         [enc setRenderPipelineState:_floorPipeline ?: _pipeline];
@@ -706,9 +717,11 @@ static int exit_label_index(const ExitComponent& exit) {
     {
         static const float kWallHeight = 80.f;
         static const float kWallThick  = 20.f;
+        static const float kTrimHeight = 6.f;
 
         DrawUniforms u;
         u.color = pal.wall;
+        simd_float4 trimColor = lighten_color(pal.wall, 0.34f);
 
         // Far (top) wall + side walls — vertical.
         u.mvp = simd_mul(vp, make_model_wall(kRoomCenterX, kRoomMaxY, kRoomWidth, kWallHeight, true));
@@ -721,7 +734,22 @@ static int exit_label_index(const ExitComponent& exit) {
         [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
         [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
 
+        u.color = trimColor;
+        u.mvp = simd_mul(vp, make_model_wall(kRoomCenterX, kRoomMaxY - 1.f, kRoomWidth, kTrimHeight, true));
+        u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        u.mvp = simd_mul(vp, make_model_wall(kRoomMinX + 1.f, kRoomCenterY, kRoomHeight, kTrimHeight, false));
+        u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+        u.mvp = simd_mul(vp, make_model_wall(kRoomMaxX - 1.f, kRoomCenterY, kRoomHeight, kTrimHeight, false));
+        u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
+        [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+        [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
         // Near (bottom) edge — flat strip.
+        u.color = pal.wall;
         u.mvp = simd_mul(vp, make_model_rect(kRoomCenterX, kRoomMinY + kWallThick * 0.5f, 0.f,
                                              kRoomWidth, kWallThick));
         [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
@@ -735,6 +763,7 @@ static int exit_label_index(const ExitComponent& exit) {
             float w = obs.halfW * 2.f;
             float h = obs.halfH * 2.f;
 
+            u.color = pal.wall;
             u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y + obs.halfH, w, kWallHeight, true));
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
@@ -745,6 +774,24 @@ static int exit_label_index(const ExitComponent& exit) {
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
             u.mvp = simd_mul(vp, make_model_wall(pos.x + obs.halfW, pos.y, h, kWallHeight, false));
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+
+            u.color = trimColor;
+            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y + obs.halfH - 1.f, w, kTrimHeight, true));
+            u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y - obs.halfH + 1.f, w, kTrimHeight, true));
+            u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x - obs.halfW + 1.f, pos.y, h, kTrimHeight, false));
+            u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x + obs.halfW - 1.f, pos.y, h, kTrimHeight, false));
+            u.mvp.columns[3].z = kWallHeight - kTrimHeight * 0.5f + 1.f;
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
         }
@@ -909,16 +956,44 @@ static int exit_label_index(const ExitComponent& exit) {
         }
 
         if (world->boxes().present(eid)) {
+            static const float kCrateSize = 50.f;
+            static const float kCrateHalf = kCrateSize * 0.5f;
+            static const float kCrateH = 44.f;
+            static const simd_float4 kCrateTop   = {0.60f, 0.43f, 0.24f, 1.f};
+            static const simd_float4 kCrateMid   = {0.50f, 0.34f, 0.18f, 1.f};
+            static const simd_float4 kCrateDark  = {0.40f, 0.27f, 0.14f, 1.f};
+            static const simd_float4 kCrateBrace = {0.28f, 0.18f, 0.09f, 1.f};
             [enc setRenderPipelineState:_pipeline];
             [enc setDepthStencilState:_depthState];
             [enc setVertexBuffer:_quadVB offset:0 atIndex:0];
             DrawUniforms u;
-            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 12.f, 50.f, 50.f));
-            u.color = (simd_float4){0.55f, 0.38f, 0.20f, 1.f};
+            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y + kCrateHalf, kCrateSize, kCrateH, true));
+            u.color = kCrateMid;
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
-            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, 13.f, 32.f, 32.f));
-            u.color = (simd_float4){0.30f, 0.18f, 0.09f, 1.f};
+            u.mvp = simd_mul(vp, make_model_wall(pos.x, pos.y - kCrateHalf, kCrateSize, kCrateH, true));
+            u.color = kCrateMid;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x - kCrateHalf, pos.y, kCrateSize, kCrateH, false));
+            u.color = kCrateDark;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_wall(pos.x + kCrateHalf, pos.y, kCrateSize, kCrateH, false));
+            u.color = kCrateDark;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_rect(pos.x, pos.y, kCrateH, kCrateSize, kCrateSize));
+            u.color = kCrateTop;
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.color = kCrateBrace;
+            u.mvp = simd_mul(vp, make_model_line(pos.x - 21.f, pos.y - 21.f, pos.x + 21.f, pos.y + 21.f,
+                                                 5.f, kCrateH + 0.8f));
+            [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
+            [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+            u.mvp = simd_mul(vp, make_model_line(pos.x - 21.f, pos.y + 21.f, pos.x + 21.f, pos.y - 21.f,
+                                                 5.f, kCrateH + 0.8f));
             [enc setVertexBytes:&u length:sizeof(u) atIndex:1];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
             continue;
