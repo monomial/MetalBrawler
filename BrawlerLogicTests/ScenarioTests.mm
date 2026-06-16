@@ -135,7 +135,7 @@ static BOOL advanceUntilRoom(BrawlerGameDelegate *d, int room, float maxSimSecon
 }
 
 - (void)test_autoPilot_noDodgeRunFailsToWin {
-    uint32_t seeds[] = {42, 7, 1337, 2026, 9001};
+    uint32_t seeds[] = {42, 7, 1337, 2026, 9001, 31415, 27182, 4242, 1001, 8675309};
     for (uint32_t seed : seeds) {
         AutoPilot_set_dodge_enabled(true);
         BrawlerGameDelegate *dodging = [self makeDelegateWithSeed:seed];

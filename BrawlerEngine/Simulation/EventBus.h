@@ -27,6 +27,7 @@ enum class EventType : uint8_t {
     LavaPoolSpawned, // lob landed and created a lava pool
     ChargeReady,    // player held attack long enough to charge
     ChargedSlam,    // charged heavy attack fired
+    Evaded,         // passive dodge chance negated incoming player damage
 };
 
 struct DamageDealtPayload   { uint32_t targetID; int amount; };
@@ -51,6 +52,7 @@ struct ShopPurchasePayload  { uint8_t perkID; int price; uint32_t itemEID; };
 struct LavaPoolSpawnedPayload { float x; float y; };
 struct ChargeReadyPayload   { uint32_t playerID; };
 struct ChargedSlamPayload   { float x; float y; };
+struct EvadedPayload        { uint32_t playerID; };
 
 // One slot in the ring buffer.
 struct Event {
@@ -78,6 +80,7 @@ struct Event {
         LavaPoolSpawnedPayload lavaPoolSpawned;
         ChargeReadyPayload   chargeReady;
         ChargedSlamPayload   chargedSlam;
+        EvadedPayload        evaded;
     };
 };
 
@@ -214,6 +217,11 @@ struct EventBus {
     void emit_charged_slam(float x, float y) {
         Event e{}; e.type = EventType::ChargedSlam;
         e.chargedSlam = { x, y };
+        push(e);
+    }
+    void emit_evaded(uint32_t playerID) {
+        Event e{}; e.type = EventType::Evaded;
+        e.evaded = { playerID };
         push(e);
     }
 

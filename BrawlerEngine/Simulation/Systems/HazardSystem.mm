@@ -127,6 +127,11 @@ void HazardSystem_update(World& world, float gameDt) {
             const auto& pp = world.get_component<PositionComponent>(pid);
             float dx = pp.x - pos.x, dy = pp.y - pos.y;
             if (dx * dx + dy * dy > hz.radius * hz.radius) continue;
+            if (Combat_player_dodges_hit(world, pid)) {
+                if (world.has_component<DamageCooldownComponent>(pid))
+                    world.get_component<DamageCooldownComponent>(pid).remaining = kHazardRehit;
+                continue;
+            }
 
             int damage = world.curse_damage(hz.damage);
             auto& hp = world.get_component<HealthComponent>(pid);

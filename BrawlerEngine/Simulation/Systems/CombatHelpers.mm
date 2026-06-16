@@ -4,6 +4,7 @@
 
 static constexpr int   kSlowMoTicks = 400;
 static constexpr float kSlowMoScale = 0.1f;
+static constexpr float kDodgeChanceCap = 0.3f;
 
 void Combat_spawn_heart_drop_if_needed(World& world, EntityID victimID) {
     if (!world.has_component<FactionComponent>(victimID)) return;
@@ -43,6 +44,16 @@ bool Combat_try_second_wind(World& world, EntityID victimID) {
     stats.secondWinds -= 1;
     hp.current = 1;
     world.events().emit_second_wind_used(victimID);
+    return true;
+}
+
+bool Combat_player_dodges_hit(World& world, EntityID playerID) {
+    if (!world.has_component<StatsComponent>(playerID)) return false;
+    float chance = world.get_component<StatsComponent>(playerID).dodgeChance;
+    if (chance > kDodgeChanceCap) chance = kDodgeChanceCap;
+    if (chance <= 0.f) return false;
+    if (world.rand_float01() >= chance) return false;
+    world.events().emit_evaded(playerID);
     return true;
 }
 

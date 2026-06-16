@@ -192,6 +192,7 @@ typedef NS_ENUM(int, BrawlerPerk) {
     BrawlerPerkAdrenaline,
     BrawlerPerkVampire,
     BrawlerPerkEvasion,
+    BrawlerPerkDodgeChance,
     BrawlerPerkCount
 };
 
@@ -207,7 +208,7 @@ static NSString *const kPerkLabels[BrawlerPerkCount] = {
     @"+3 Max Health",
     @"+1 Team Life",
     @"+30% Knockback",
-    @"Quick Dodge",
+    @"Quick Dash",
     @"+50% Special Charge",
     @"Second Wind",
     @"Heavy Hitter",
@@ -217,7 +218,8 @@ static NSString *const kPerkLabels[BrawlerPerkCount] = {
     @"Whirlwind",
     @"Adrenaline",
     @"Vampire",
-    @"Evasion",
+    @"Extra Dash",
+    @"Dodge",
 };
 
 static const BrawlerPerkRarity kPerkRarity[BrawlerPerkCount] = {
@@ -237,6 +239,7 @@ static const BrawlerPerkRarity kPerkRarity[BrawlerPerkCount] = {
     BrawlerRarityEpic,
     BrawlerRarityEpic,
     BrawlerRarityRare,
+    BrawlerRarityRare,
 };
 
 struct PlayerPerks {
@@ -245,6 +248,7 @@ struct PlayerPerks {
     int   bonusMaxHP  = 0;
     float knockbackMult = 1.f;
     float dodgeCooldownMult = 1.f;
+    float dodgeChance = 0.f;
     float specialChargeMult = 1.f;
     int   secondWinds = 0;
     int   lifestealPerHits = 0;
@@ -447,6 +451,16 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
 - (BOOL)debugPerkPassiveSpecialForPlayer:(int)playerIndex {
     if (playerIndex < 0 || playerIndex >= kMaxPlayers) return NO;
     return _perks[playerIndex].passiveSpecial ? YES : NO;
+}
+
+- (float)debugPerkDodgeChanceForPlayer:(int)playerIndex {
+    if (playerIndex < 0 || playerIndex >= kMaxPlayers) return 0.f;
+    return _perks[playerIndex].dodgeChance;
+}
+
+- (NSString *)debugPerkLabelForID:(int)perkID {
+    if (perkID < 0 || perkID >= BrawlerPerkCount) return @"";
+    return kPerkLabels[perkID];
 }
 
 - (void)debugApplyPerkID:(int)perkID toPlayer:(int)playerIndex {
@@ -967,6 +981,7 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
             perks.lifestealPerHits = 6;
             break;
         case BrawlerPerkEvasion:       perks.bonusDodgeCharges += 1; break;
+        case BrawlerPerkDodgeChance:   perks.dodgeChance += 0.05f; break;
         case BrawlerPerkCount:  break;
     }
     if (chosen >= 0 && chosen < BrawlerPerkCount) {
@@ -1118,6 +1133,7 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
     stats.speedMult   = perks.speedMult;
     stats.knockbackMult = perks.knockbackMult;
     stats.dodgeCooldownMult = perks.dodgeCooldownMult;
+    stats.dodgeChance = fminf(perks.dodgeChance, 0.3f);
     stats.specialChargeMult = perks.specialChargeMult;
     stats.secondWinds = perks.secondWinds;
     stats.lifestealPerHits = perks.lifestealPerHits;
@@ -1605,6 +1621,17 @@ static NSString *meta_effect(BrawlerMetaUpgrade upgrade) {
                                   color:(simd_float4){1.0f, 0.78f, 0.18f, 1.f}];
             }
             [_audio playRoomClearSound];
+        });
+
+        _world.events().for_each(EventType::Evaded, [self](const Event& ev) {
+            uint32_t pid = ev.evaded.playerID;
+            if (_world.has_component<PositionComponent>(pid)) {
+                const auto& p = _world.get_component<PositionComponent>(pid);
+                [_renderer spawnBurstAt:(simd_float3){p.x, p.y, 90.f}
+                                  count:10 speed:240.f size:9.f
+                                  color:(simd_float4){0.55f, 0.85f, 1.0f, 1.f}];
+            }
+            [_audio playSwingSound];
         });
 
         _world.events().for_each(EventType::DamageDealt, [self](const Event& ev) {

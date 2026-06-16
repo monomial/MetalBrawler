@@ -273,6 +273,7 @@ struct StatsComponent {
     float speedMult         = 1.f; // multiplies move speed
     float knockbackMult     = 1.f; // multiplies outgoing shove velocity
     float dodgeCooldownMult = 1.f; // multiplies dodge-charge regeneration time
+    float dodgeChance       = 0.f; // passive chance to negate incoming damage
     float specialChargeMult = 1.f; // multiplies meter gained from landed hits
     int   secondWinds       = 0;   // one-time saves at 1 HP before death
     int   lifestealPerHits  = 0;   // 0 = off, otherwise heal after N landed hits

@@ -99,6 +99,11 @@ static void damage_players_in_radius(World& world, EntityID attackerID,
         const auto& pp = world.get_component<PositionComponent>(pid);
         float dx = pp.x - center.x, dy = pp.y - center.y;
         if (dx * dx + dy * dy > radius * radius) continue;
+        if (Combat_player_dodges_hit(world, pid)) {
+            if (world.has_component<DamageCooldownComponent>(pid))
+                world.get_component<DamageCooldownComponent>(pid).remaining = kContactCooldown;
+            continue;
+        }
 
         int scaledDamage = world.curse_damage(damage);
         auto& hp = world.get_component<HealthComponent>(pid);

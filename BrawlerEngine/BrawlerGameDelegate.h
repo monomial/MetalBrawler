@@ -87,6 +87,8 @@ typedef NS_ENUM(NSInteger, BrawlerGamePhase) {
 - (BOOL)debugPerkThornsForPlayer:(int)playerIndex;
 - (BOOL)debugPerkWhirlwindForPlayer:(int)playerIndex;
 - (BOOL)debugPerkPassiveSpecialForPlayer:(int)playerIndex;
+- (float)debugPerkDodgeChanceForPlayer:(int)playerIndex;
+- (NSString *)debugPerkLabelForID:(int)perkID;
 - (void)debugApplyPerkID:(int)perkID toPlayer:(int)playerIndex;
 - (void)debugRegisterEnemyDamage:(int)amount;
 - (void)debugRegisterPlayerDamage:(int)amount;

@@ -355,6 +355,10 @@ void CombatSystem_update(World& world, float gameDt) {
                 world.players_invincible() &&
                 world.has_component<PlayerTagComponent>(targetID))
                 continue;
+            if (atkFaction == FactionComponent::Enemy &&
+                world.has_component<PlayerTagComponent>(targetID) &&
+                Combat_player_dodges_hit(world, targetID))
+                continue;
 
             // Perk-modified damage: players carry a StatsComponent with run-level bonuses.
             int damage = win.damage;

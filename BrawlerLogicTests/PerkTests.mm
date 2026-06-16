@@ -1,5 +1,7 @@
 #import <XCTest/XCTest.h>
+#import "BrawlerGameDelegate.h"
 #include "Simulation/World.h"
+#include "Simulation/Systems/CombatHelpers.h"
 #include "Platform/InputState.h"
 
 static constexpr float kFixedDt   = 1.0f / 120.0f;
@@ -158,6 +160,113 @@ static int countEvents(World& world, EventType type) {
     int quickTicks = ticksUntilChargeRegens(0.7f);
     XCTAssertLessThan(quickTicks, baseTicks);
     XCTAssertEqualWithAccuracy((float)quickTicks / (float)baseTicks, 0.7f, 0.12f);
+}
+
+- (void)test_passiveDodgeChanceZeroDoesNotConsumeRNG {
+    World control;
+    World world;
+    control.set_seed(12345);
+    world.set_seed(12345);
+    EntityID player = spawnPlayer(world);
+    world.add_component<StatsComponent>(player).dodgeChance = 0.f;
+
+    XCTAssertFalse(Combat_player_dodges_hit(world, player));
+    XCTAssertEqual(world.rand_u32(), control.rand_u32());
+}
+
+- (void)test_passiveDodgeChanceUsesSeededRollAndCapsChance {
+    uint32_t successSeed = 1;
+    for (; successSeed < 1000; ++successSeed) {
+        World probe;
+        probe.set_seed(successSeed);
+        if (probe.rand_float01() < 0.3f) break;
+    }
+    World successWorld;
+    successWorld.set_seed(successSeed);
+    EntityID successPlayer = spawnPlayer(successWorld);
+    successWorld.add_component<StatsComponent>(successPlayer).dodgeChance = 0.3f;
+    XCTAssertTrue(Combat_player_dodges_hit(successWorld, successPlayer));
+    XCTAssertEqual(countEvents(successWorld, EventType::Evaded), 1);
+
+    uint32_t cappedFailSeed = 1;
+    for (; cappedFailSeed < 20000; ++cappedFailSeed) {
+        World probe;
+        probe.set_seed(cappedFailSeed);
+        if (probe.rand_float01() >= 0.3f) break;
+    }
+    World cappedWorld;
+    cappedWorld.set_seed(cappedFailSeed);
+    EntityID cappedPlayer = spawnPlayer(cappedWorld);
+    cappedWorld.add_component<StatsComponent>(cappedPlayer).dodgeChance = 1.0f;
+    XCTAssertFalse(Combat_player_dodges_hit(cappedWorld, cappedPlayer));
+    XCTAssertEqual(countEvents(cappedWorld, EventType::Evaded), 0);
+}
+
+- (void)test_passiveDodgeChanceBlocksProjectileHazardAndMeleeDamage {
+    auto seedForDodge = []() {
+        for (uint32_t seed = 1; seed < 1000; ++seed) {
+            World probe;
+            probe.set_seed(seed);
+            if (probe.rand_float01() < 0.3f) return seed;
+        }
+        return (uint32_t)1;
+    };
+
+    World projectileWorld;
+    projectileWorld.set_seed(seedForDodge());
+    EntityID projectilePlayer = spawnPlayer(projectileWorld);
+    projectileWorld.add_component<StatsComponent>(projectilePlayer).dodgeChance = 1.0f;
+    EntityID projectile = projectileWorld.defer_create();
+    projectileWorld.add_component<PositionComponent>(projectile) = {0.f, 0.f, 0.f};
+    projectileWorld.add_component<ProjectileComponent>(projectile).damage = 3;
+    projectileWorld.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(projectileWorld.get_component<HealthComponent>(projectilePlayer).current, 10);
+    XCTAssertEqual(countEvents(projectileWorld, EventType::Evaded), 1);
+
+    World hazardWorld;
+    hazardWorld.set_seed(seedForDodge());
+    EntityID hazardPlayer = spawnPlayer(hazardWorld);
+    hazardWorld.add_component<StatsComponent>(hazardPlayer).dodgeChance = 1.0f;
+    EntityID lava = hazardWorld.defer_create();
+    hazardWorld.add_component<PositionComponent>(lava) = {0.f, 0.f, 0.f};
+    hazardWorld.add_component<HazardComponent>(lava).damage = 3;
+    hazardWorld.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(hazardWorld.get_component<HealthComponent>(hazardPlayer).current, 10);
+    XCTAssertEqual(countEvents(hazardWorld, EventType::Evaded), 1);
+
+    World meleeWorld;
+    meleeWorld.set_seed(seedForDodge());
+    EntityID meleePlayer = spawnPlayer(meleeWorld, 50.f, 0.f);
+    meleeWorld.add_component<StatsComponent>(meleePlayer).dodgeChance = 1.0f;
+    EntityID enemy = spawnEnemy(meleeWorld, 0.f, 0.f, 5, 1.f, 0.f);
+    setAttacking(meleeWorld, enemy);
+    meleeWorld.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(meleeWorld.get_component<HealthComponent>(meleePlayer).current, 10);
+    XCTAssertEqual(countEvents(meleeWorld, EventType::Evaded), 1);
+}
+
+- (void)test_passiveDodgeChanceZeroTakesNormalDamage {
+    World world;
+    EntityID player = spawnPlayer(world);
+    world.add_component<StatsComponent>(player).dodgeChance = 0.f;
+    EntityID lava = world.defer_create();
+    world.add_component<PositionComponent>(lava) = {0.f, 0.f, 0.f};
+    world.add_component<HazardComponent>(lava).damage = 2;
+
+    world.update(kFixedDt, kFixedDt);
+
+    XCTAssertEqual(world.get_component<HealthComponent>(player).current, 8);
+    XCTAssertEqual(countEvents(world, EventType::Evaded), 0);
+}
+
+- (void)test_dodgeChancePerkAndRelabels {
+    BrawlerGameDelegate *d = [[BrawlerGameDelegate alloc] initHeadless];
+    [d debugApplyPerkID:16 toPlayer:0];
+
+    XCTAssertEqualWithAccuracy([d debugPerkDodgeChanceForPlayer:0], 0.05f, 0.001f);
+    XCTAssertEqualObjects([d debugPerkLabelForID:5], @"Quick Dash");
+    XCTAssertEqualObjects([d debugPerkLabelForID:15], @"Extra Dash");
+    XCTAssertEqualObjects([d debugPerkLabelForID:16], @"Dodge");
 }
 
 - (void)test_secondWind_savesFromMeleeOnce {

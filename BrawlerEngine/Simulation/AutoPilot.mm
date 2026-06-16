@@ -185,8 +185,11 @@ InputState AutoPilot_input(World& world, int playerIndex) {
     float dist = sqrtf(bestD2);
 
     // Defense: dodge deliberate incoming threats while continuing to trade
-    // ordinary melee pressure.
-    if (s_dodgeEnabled && world.has_component<DodgeComponent>(me))
+    // ordinary melee pressure. Hold the dash only briefly (one short i-frame
+    // roll), then release — a competent player crosses the threat and resumes
+    // attacking rather than chaining both charges into a long roll.
+    if (s_dodgeEnabled && world.has_component<DodgeComponent>(me) &&
+        world.get_component<DodgeComponent>(me).elapsed < 0.35f)
         in.dodge = true;
     bool meCanDodge = world.has_component<AnimationComponent>(me) &&
                       (world.get_component<AnimationComponent>(me).currentClip == AnimClipID::Idle ||

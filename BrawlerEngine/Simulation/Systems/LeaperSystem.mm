@@ -100,6 +100,11 @@ static void damage_players_under_leaper(World& world, EntityID leaperID, const P
         float dx = pp.x - pos.x;
         float dy = pp.y - pos.y;
         if (dx * dx + dy * dy > kHitRadius * kHitRadius) continue;
+        if (Combat_player_dodges_hit(world, pid)) {
+            if (world.has_component<DamageCooldownComponent>(pid))
+                world.get_component<DamageCooldownComponent>(pid).remaining = kLeaperRehit;
+            continue;
+        }
 
         int damage = world.curse_damage(3);
         HealthComponent& hp = world.get_component<HealthComponent>(pid);

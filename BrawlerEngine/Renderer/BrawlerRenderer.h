@@ -3,7 +3,7 @@ class World;
 struct LoadedCharacter;
 
 static constexpr int kBrawlerMaxPlayers = 4;
-static constexpr int kBrawlerPerkTypeCount = 16;
+static constexpr int kBrawlerPerkTypeCount = 17;
 
 struct BrawlerPerkSummary {
     uint8_t counts[kBrawlerPerkTypeCount];
