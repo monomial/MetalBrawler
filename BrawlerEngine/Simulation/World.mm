@@ -75,6 +75,7 @@ World::World()
     , _scrap(0)
     , _difficulty(0)
     , _curseMult(1.f)
+    , _playersInvincible(false)
 {}
 
 World::~World() {}

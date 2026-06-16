@@ -111,6 +111,7 @@ void HazardSystem_update(World& world, float gameDt) {
         }
 
         // Area damage to players inside the radius.
+        if (world.players_invincible()) continue; // victory window — no chip
         for (EntityID pid = 0; pid < count; ++pid) {
             if (!world.player_tags().present(pid)) continue;
             if (!world.has_component<PositionComponent>(pid)) continue;

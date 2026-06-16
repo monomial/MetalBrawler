@@ -107,6 +107,10 @@ public:
         int scaled = (int)lroundf((float)base * _curseMult);
         return scaled < 1 ? 1 : scaled;
     }
+    // True during the victory window (set when the room's final kill triggers
+    // slow-mo): players take no damage so lingering hazards can't chip them.
+    void set_players_invincible(bool v) { _playersInvincible = v; }
+    bool players_invincible() const { return _playersInvincible; }
 
     // Per-frame event bus — cleared at top of each tick, readable by all systems.
     EventBus& events() { return _events; }
@@ -170,6 +174,7 @@ private:
     int        _scrap;          // delegate-mirrored run currency for deterministic shop logic
     int        _difficulty;     // 0-based room difficulty, mirrored by delegate at room load
     float      _curseMult;      // delegate-mirrored enemy HP/damage multiplier
+    bool       _playersInvincible; // true during the victory/final-kill window
 
     ComponentStorage<PositionComponent>  _positions;
     ComponentStorage<VelocityComponent>  _velocities;

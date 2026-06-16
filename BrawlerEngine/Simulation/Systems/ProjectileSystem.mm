@@ -97,6 +97,7 @@ void ProjectileSystem_update(World& world, float gameDt) {
             continue;
         }
 
+        if (world.players_invincible()) break; // victory window — no chip
         for (EntityID pid = 0; pid < count; ++pid) {
             if (!world.player_tags().present(pid)) continue;
             if (!world.has_component<PositionComponent>(pid)) continue;

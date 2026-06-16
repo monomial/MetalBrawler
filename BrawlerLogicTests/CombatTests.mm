@@ -321,6 +321,31 @@ static EntityID spawnAttackingEnemy(World& world, float x, float y,
     XCTAssertTrue(payloadOK);
 }
 
+- (void)test_finalKill_clearsHazardsAndGrantsPlayerInvincibility {
+    World world;
+    EntityID p = spawnPlayer(world, 0, 0);
+    setPlayerAttacking(world, p);
+    spawnEnemy(world, 50, 0, 1);
+    addWaveController(world, 0, 1);
+    // A lingering lava pool away from the player — must be cleared on the win.
+    EntityID hazard = world.defer_create();
+    world.add_component<PositionComponent>(hazard) = {300.f, 300.f, 0.f};
+    world.add_component<HazardComponent>(hazard);
+
+    world.update(kFixedDt, kFixedDt); // player kills the lone enemy → final kill
+
+    XCTAssertTrue(world.players_invincible());
+    XCTAssertFalse(world.has_component<HazardComponent>(hazard)); // lava cleared
+
+    // A fresh hazard right on the player deals no damage during the win window.
+    int hpBefore = world.get_component<HealthComponent>(p).current;
+    EntityID pool = world.defer_create();
+    world.add_component<PositionComponent>(pool) = {0.f, 0.f, 0.f};
+    world.add_component<HazardComponent>(pool);
+    world.update(kFixedDt, kFixedDt);
+    XCTAssertEqual(world.get_component<HealthComponent>(p).current, hpBefore);
+}
+
 - (void)test_twinBossFirstDeathDoesNotSweepSecondLastDeathSweepsMinions {
     World world;
     EntityID player = spawnPlayer(world, 0, 0);

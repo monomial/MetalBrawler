@@ -89,6 +89,7 @@ static bool pick_destination(World& world, const PositionComponent& start,
 }
 
 static void damage_players_under_leaper(World& world, EntityID leaperID, const PositionComponent& pos) {
+    if (world.players_invincible()) return; // victory window — no chip
     for (EntityID pid = 0; pid < world.entity_count(); ++pid) {
         if (!living_player(world, pid)) continue;
         if (world.has_component<DodgeComponent>(pid)) continue;

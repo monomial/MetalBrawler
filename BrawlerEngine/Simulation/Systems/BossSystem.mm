@@ -88,6 +88,7 @@ static void damage_players_in_radius(World& world, EntityID attackerID,
                                      const PositionComponent& center,
                                      float radius, int damage, int hitStop,
                                      float shake) {
+    if (world.players_invincible()) return; // victory window — no chip
     for (EntityID pid = 0; pid < world.entity_count(); ++pid) {
         if (!living_player(world, pid)) continue;
         if (world.has_component<DodgeComponent>(pid)) continue;

@@ -350,6 +350,12 @@ void CombatSystem_update(World& world, float gameDt) {
                 if (dot < arcCosine) continue;
             }
 
+            // Victory window: enemies can't damage players once the room is won.
+            if (atkFaction == FactionComponent::Enemy &&
+                world.players_invincible() &&
+                world.has_component<PlayerTagComponent>(targetID))
+                continue;
+
             // Perk-modified damage: players carry a StatsComponent with run-level bonuses.
             int damage = win.damage;
             if (world.has_component<StatsComponent>(attackerID))

@@ -116,6 +116,19 @@ static void trigger_final_kill_if_needed(World& world, EntityID victimID, Entity
 
     world.trigger_slow_motion(kSlowMoTicks, kSlowMoScale);
     world.events().emit_final_kill(killerID, victimID);
+
+    // Victory window: the room is won. Players become invincible (no chip from
+    // lingering threats during the slow-mo) and every active damage source —
+    // lava pools/snakes, in-flight projectiles, airborne lava lobs — is cleared
+    // so the floor visibly clears out as the last enemy falls.
+    world.set_players_invincible(true);
+    for (EntityID id = 0; id < world.entity_count(); ++id) {
+        if (world.hazards().present(id) ||
+            world.projectiles().present(id) ||
+            world.lava_lobs().present(id)) {
+            world.defer_destroy(id);
+        }
+    }
 }
 
 static void Combat_apply_death_internal(World& world, EntityID victimID, EntityID killerID,
