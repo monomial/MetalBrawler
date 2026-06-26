@@ -87,6 +87,11 @@
                name:GCControllerDidConnectNotification
              object:nil];
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
+
+    // Controllers already connected at launch don't re-post the connect
+    // notification — wire them up explicitly.
+    for (GCController *ctrl in [GCController controllers])
+        [self _attachController:ctrl];
 }
 
 - (void)_pauseTapped      { [_delegate triggerPause]; }
@@ -170,7 +175,10 @@
 }
 
 - (void)_controllerConnected:(NSNotification *)note {
-    GCController *ctrl = note.object;
+    [self _attachController:note.object];
+}
+
+- (void)_attachController:(GCController *)ctrl {
     if (!ctrl.extendedGamepad) return;
     __weak GameViewController *weakSelf = self;
     GCExtendedGamepad *ext = ctrl.extendedGamepad;

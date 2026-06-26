@@ -76,6 +76,12 @@ static const int kMaxPlayers = 4;
              object:nil];
     [GCController startWirelessControllerDiscoveryWithCompletionHandler:nil];
 
+    // Controllers already paired/connected at launch don't re-post the connect
+    // notification, so the observer above never sees them. Wire up anything
+    // already attached so input works from the title screen without the user
+    // having to re-pair the controller.
+    for (GCController *ctrl in [GCController controllers])
+        [self _attachController:ctrl];
 }
 
 - (void)pauseRendering  { [_delegate resetInput]; _mtkView.paused = YES; }
@@ -201,9 +207,13 @@ static const int kMaxPlayers = 4;
     if (!handled) [super pressesCancelled:presses withEvent:event];
 }
 
-- (void)_controllerConnected:(NSNotification *)note {
-    GCController *ctrl = note.object;
+- (void)_attachController:(GCController *)ctrl {
     if (!ctrl) return;
+
+    // Both the connect notification and the startup enumeration can surface the
+    // same controller — don't assign it to a second slot.
+    for (int i = 0; i < kMaxPlayers; ++i)
+        if (_assignedControllers[i] == ctrl) return;
 
     int slot = -1;
     for (int i = 0; i < kMaxPlayers; ++i) {
@@ -213,6 +223,10 @@ static const int kMaxPlayers = 4;
 
     _assignedControllers[slot] = ctrl;
     [self _wireController:ctrl toSlot:slot];
+}
+
+- (void)_controllerConnected:(NSNotification *)note {
+    [self _attachController:note.object];
 }
 
 - (void)_controllerDisconnected:(NSNotification *)note {
