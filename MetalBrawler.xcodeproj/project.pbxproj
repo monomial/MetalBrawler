@@ -323,7 +323,7 @@
 		919D57C7ED2481D89652E04D /* HazardSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HazardSystem.h; sourceTree = "<group>"; };
 		91E2F48A1CB34DD4FE3EAC5F /* Brawler.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Brawler.metal; sourceTree = "<group>"; };
 		93B9C1EC9E3813A99222392F /* PerkTests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PerkTests.mm; sourceTree = "<group>"; };
-		944C66793805FF7C35F893F2 /* Brawler-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Brawler-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		944C66793805FF7C35F893F2 /* Brawler-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Brawler-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9554ED6DCA1FBC56DE56FD0F /* LeaperSystem.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = LeaperSystem.mm; sourceTree = "<group>"; };
 		9872E2A72357EB6205023978 /* EnemyAITests.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EnemyAITests.mm; sourceTree = "<group>"; };
 		9961037DF203AB455E73AEA4 /* Brawler-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Brawler-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -870,8 +870,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 5B064B3242CF9581D2D7BAC2 /* Build configuration list for PBXProject "MetalBrawler" */;
 			developmentRegion = en;
@@ -1164,6 +1162,7 @@
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
+				DEVELOPMENT_TEAM = 74V7G3NQ7Y;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
 				INFOPLIST_FILE = "Brawler-tvOS/Info.plist";
@@ -1245,7 +1244,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests";
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/BrawlerEngine",
+					"$(SRCROOT)/BrawlerLogicTests",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1306,6 +1308,7 @@
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
 				CLANG_CXX_LIBRARY = "libc++";
+				DEVELOPMENT_TEAM = 74V7G3NQ7Y;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine";
 				INFOPLIST_FILE = "Brawler-tvOS/Info.plist";
@@ -1416,7 +1419,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/BrawlerEngine $(SRCROOT)/BrawlerLogicTests";
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/BrawlerEngine",
+					"$(SRCROOT)/BrawlerLogicTests",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
